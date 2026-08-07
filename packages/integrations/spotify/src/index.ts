@@ -12,3 +12,10 @@ export interface SpotifyTrackMetadata {
 export interface SpotifyClient {
   searchTracksBySeed(seed: string, limit: number): Promise<SpotifyTrackMetadata[]>;
 }
+
+export {
+  fetchClientCredentialsToken,
+  SpotifyTokenProvider,
+  type AccessToken,
+  type SpotifyTokenProviderParams,
+} from "./token-provider.js";

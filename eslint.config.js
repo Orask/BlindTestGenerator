@@ -21,5 +21,17 @@ export default tseslint.config(
       "@typescript-eslint/no-floating-promises": "error",
     },
   },
+  {
+    // Vitest's asymmetric matchers (expect.objectContaining, etc.) and mock
+    // helpers type loosely as `any`, which is expected and fine in tests.
+    files: ["**/*.test.ts", "**/*.test.tsx"],
+    rules: {
+      "@typescript-eslint/no-unsafe-assignment": "off",
+      "@typescript-eslint/no-unsafe-argument": "off",
+      "@typescript-eslint/no-unsafe-call": "off",
+      "@typescript-eslint/no-unsafe-member-access": "off",
+      "@typescript-eslint/no-unsafe-return": "off",
+    },
+  },
   eslintConfigPrettier,
 );
