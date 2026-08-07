@@ -1,9 +1,7 @@
-import { loadFont } from "@remotion/google-fonts/Poppins";
 import type { CSSProperties, ReactElement } from "react";
 import { AbsoluteFill, Audio, Sequence, staticFile } from "remotion";
 import { BEAT_FRAMES, Beat } from "./Beat";
-
-const { fontFamily } = loadFont();
+import { poppinsFontFamily as fontFamily } from "./fonts";
 
 export interface OutroProps {
   readonly accentColor: string;

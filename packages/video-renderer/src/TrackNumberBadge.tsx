@@ -1,7 +1,5 @@
-import { loadFont } from "@remotion/google-fonts/Poppins";
 import type { ReactElement } from "react";
-
-const { fontFamily } = loadFont();
+import { poppinsFontFamily as fontFamily } from "./fonts";
 
 export interface TrackNumberBadgeProps {
   readonly trackNumber: number;

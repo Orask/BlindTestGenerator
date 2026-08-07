@@ -30,7 +30,7 @@ export async function renderEpisode(params: RenderEpisodeParams): Promise<void> 
   // GL renderer, and a longer timeout avoids false "initial render" timeouts
   // on a slow/cold headless Chrome start.
   const chromiumOptions = { gl: "swiftshader" as const };
-  const timeoutInMilliseconds = 120_000;
+  const timeoutInMilliseconds = 180_000;
 
   const serveUrl = await bundle({ entryPoint: VIDEO_RENDERER_ENTRY });
   const composition = await selectComposition({

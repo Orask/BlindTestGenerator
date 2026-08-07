@@ -1,9 +1,7 @@
-import { loadFont } from "@remotion/google-fonts/Baloo2";
 import type { ReactElement } from "react";
 import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { ringProgress, secondsRemaining } from "./countdown-math";
-
-const { fontFamily } = loadFont();
+import { baloo2FontFamily as fontFamily } from "./fonts";
 
 const RING_SIZE = 340;
 const RING_STROKE = 18;
