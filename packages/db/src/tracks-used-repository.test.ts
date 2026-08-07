@@ -16,8 +16,8 @@ beforeEach(() => {
     "private",
   );
   db.prepare(
-    "INSERT INTO channel_themes (id, channel_id, day, label, spotify_seed, youtube_playlist_id) VALUES (?, ?, ?, ?, ?, ?)",
-  ).run("annees-80", "blindtest-fr", "monday", "Années 80", "genre:80s-fr", null);
+    "INSERT INTO channel_themes (id, channel_id, day, label, youtube_playlist_id) VALUES (?, ?, ?, ?, ?)",
+  ).run("annees-80", "blindtest-fr", "monday", "Années 80", null);
 });
 
 describe("tracks_used repository", () => {

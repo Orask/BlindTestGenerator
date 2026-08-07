@@ -5,3 +5,20 @@ export {
   recordTrackUsage,
   type RecordTrackUsageParams,
 } from "./tracks-used-repository.js";
+export {
+  upsertChannel,
+  upsertChannelTheme,
+  getPlaylistId,
+  setPlaylistId,
+  type ChannelRow,
+  type ChannelThemeRow,
+} from "./channel-repository.js";
+export {
+  createVideo,
+  markVideoUploaded,
+  markVideoFailed,
+  countVideosForTheme,
+  type CreateVideoParams,
+  type VideoStatus,
+  type VideoFormat,
+} from "./videos-repository.js";

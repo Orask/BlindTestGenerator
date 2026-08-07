@@ -6,12 +6,15 @@ CREATE TABLE IF NOT EXISTS channels (
   visibility TEXT NOT NULL CHECK (visibility IN ('private', 'unlisted', 'public'))
 );
 
+-- seedArtists lives in the channel's JSON config file, not here — this table
+-- only exists to satisfy foreign keys from tracks_used/videos and to persist
+-- the YouTube playlist id once created (the DB is the source of truth for
+-- that; the JSON config's youtubePlaylistId is just a static placeholder).
 CREATE TABLE IF NOT EXISTS channel_themes (
   id TEXT PRIMARY KEY,
   channel_id TEXT NOT NULL REFERENCES channels(id),
   day TEXT NOT NULL,
   label TEXT NOT NULL,
-  spotify_seed TEXT NOT NULL,
   youtube_playlist_id TEXT
 );
 
