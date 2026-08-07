@@ -8,6 +8,16 @@ export interface EpisodeTrack extends Track {
 
 const MAX_TRACKS_PER_ARTIST = 2;
 
+// Spaces out iTunes lookups so a large episode (60+ candidates checked)
+// doesn't burst-trigger their undocumented rate limiting in the first place
+// (the client itself also retries on a 403/429, this is just to avoid
+// hitting that path routinely).
+const ITUNES_LOOKUP_DELAY_MS = 200;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 /**
  * Applies anti-repeat + de-duplication (like core's selectEpisodeTracks),
  * audio resolution, and a per-artist cap in a single pass, since a track
@@ -21,6 +31,7 @@ export async function buildEpisodeTracks(
   alreadyUsedTrackIds: ReadonlySet<string>,
   itunes: ItunesClient,
   count: number,
+  lookupDelayMs: number = ITUNES_LOOKUP_DELAY_MS,
 ): Promise<EpisodeTrack[]> {
   const seenIds = new Set<string>();
   const artistCounts = new Map<string, number>();
@@ -39,6 +50,7 @@ export async function buildEpisodeTracks(
     seenIds.add(track.id);
 
     const preview = await itunes.findPreviewByTitleAndArtist(track.title, track.artist);
+    await sleep(lookupDelayMs);
     if (!preview) {
       continue;
     }

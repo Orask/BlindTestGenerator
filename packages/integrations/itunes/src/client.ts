@@ -15,6 +15,18 @@ interface ItunesSearchResponse {
 
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
 
+// iTunes Search throttles bursts of requests (undocumented, observed as
+// intermittent 403s — the exact same query can return 200 a moment later).
+// Retrying with backoff is cheap insurance against a daily batch of ~100+
+// lookups occasionally tripping it.
+const RATE_LIMIT_STATUSES = new Set([403, 429]);
+const MAX_ATTEMPTS = 4;
+const BASE_RETRY_DELAY_MS = 1000;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function normalize(value: string): string {
   return value
     .normalize("NFD")
@@ -48,21 +60,35 @@ export function createItunesClient(fetchImpl: typeof fetch = fetch): ItunesClien
     ): Promise<ItunesPreviewResult | null> {
       const term = `${artist} ${title}`;
       const params = new URLSearchParams({ term, entity: "song", limit: "5" });
-      const response = await fetchImpl(`https://itunes.apple.com/search?${params.toString()}`);
+      const url = `https://itunes.apple.com/search?${params.toString()}`;
 
-      if (!response.ok) {
-        throw new Error(
+      let lastError: Error | undefined;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        const response = await fetchImpl(url);
+
+        if (response.ok) {
+          const body = (await response.json()) as ItunesSearchResponse;
+          const match = body.results.find((track) => isPlausibleMatch(track, title, artist));
+          if (!match || !match.previewUrl) {
+            return null;
+          }
+          return { previewUrl: match.previewUrl };
+        }
+
+        if (RATE_LIMIT_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS) {
+          await sleep(BASE_RETRY_DELAY_MS * attempt);
+          continue;
+        }
+
+        lastError = new Error(
           `iTunes search failed for "${artist} - ${title}": ${response.status} ${await response.text()}`,
         );
+        break;
       }
 
-      const body = (await response.json()) as ItunesSearchResponse;
-      const match = body.results.find((track) => isPlausibleMatch(track, title, artist));
-      if (!match || !match.previewUrl) {
-        return null;
-      }
-
-      return { previewUrl: match.previewUrl };
+      throw (
+        lastError ?? new Error(`iTunes search failed for "${artist} - ${title}": exhausted retries`)
+      );
     },
   };
 }

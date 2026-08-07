@@ -88,4 +88,52 @@ describe("createItunesClient.findPreviewByTitleAndArtist", () => {
       "iTunes search failed",
     );
   });
+
+  it("retries after a 403 (iTunes' undocumented rate limiting) and succeeds", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 403, text: () => Promise.resolve("") })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            resultCount: 1,
+            results: [
+              {
+                trackName: "Dernière danse",
+                artistName: "Indila",
+                previewUrl: "https://example.com/preview.m4a",
+              },
+            ],
+          }),
+      }) as unknown as typeof fetch;
+    const client = createItunesClient(fetchImpl);
+
+    const resultPromise = client.findPreviewByTitleAndArtist("Dernière danse", "Indila");
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({ previewUrl: "https://example.com/preview.m4a" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("gives up after repeated 403s", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: () => Promise.resolve("blocked"),
+    }) as unknown as typeof fetch;
+    const client = createItunesClient(fetchImpl);
+
+    const resultPromise = client.findPreviewByTitleAndArtist("Title", "Artist");
+    const expectation = expect(resultPromise).rejects.toThrow("iTunes search failed");
+    await vi.runAllTimersAsync();
+    await expectation;
+
+    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    vi.useRealTimers();
+  });
 });
