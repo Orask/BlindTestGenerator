@@ -1,20 +1,13 @@
 /**
- * Contract for the YouTube Data API v3 integration.
- * Implementation lands once OAuth credentials exist (see
- * docs/CAHIER_DES_CHARGES.md section 8).
+ * YouTube Data API v3 integration. Requires OAuth credentials — see
+ * docs/CAHIER_DES_CHARGES.md section 8 and scripts/authorize.ts.
  */
-export type VideoVisibility = "private" | "unlisted" | "public";
-
-export interface UploadVideoParams {
-  readonly filePath: string;
-  readonly title: string;
-  readonly description: string;
-  readonly tags: readonly string[];
-  readonly visibility: VideoVisibility;
-}
-
-export interface YoutubeClient {
-  uploadVideo(params: UploadVideoParams): Promise<{ videoId: string }>;
-  ensurePlaylist(title: string): Promise<{ playlistId: string }>;
-  addVideoToPlaylist(videoId: string, playlistId: string): Promise<void>;
-}
+export type { VideoVisibility, UploadVideoParams, YoutubeClient } from "./types.js";
+export {
+  createOAuth2Client,
+  YOUTUBE_OAUTH_SCOPES,
+  YOUTUBE_LOOPBACK_REDIRECT_PORT,
+  YOUTUBE_LOOPBACK_REDIRECT_URI,
+  type YoutubeOAuthConfig,
+} from "./oauth-client.js";
+export { createYoutubeClient } from "./client.js";

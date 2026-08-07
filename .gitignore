@@ -14,6 +14,7 @@ packages/video-renderer/out
 # Secrets / credentials — never commit these
 .env
 .env.*
+!.env.example
 **/client_secret*.json
 **/*-oauth-token.json
 
