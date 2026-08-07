@@ -8,11 +8,13 @@ export interface EpisodeTrack extends Track {
 
 const MAX_TRACKS_PER_ARTIST = 2;
 
-// Spaces out iTunes lookups so a large episode (60+ candidates checked)
-// doesn't burst-trigger their undocumented rate limiting in the first place
-// (the client itself also retries on a 403/429, this is just to avoid
-// hitting that path routinely).
-const ITUNES_LOOKUP_DELAY_MS = 200;
+// iTunes Search's unofficial limit is ~20 requests/minute per IP (confirmed
+// live: 200ms spacing — ~300/min — reliably tripped a sustained block after
+// a few dozen calls that even 8 retries with backoff couldn't outlast).
+// 3.5s keeps us under that with margin; a full 60-track episode can need
+// ~150-200 lookups, so this adds several minutes, which is fine for a
+// once-a-day background job.
+const ITUNES_LOOKUP_DELAY_MS = 3500;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
