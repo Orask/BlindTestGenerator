@@ -102,6 +102,7 @@ Une fois l'app développeur Spotify créée, des tests en direct ont confirmé e
 | `/artists/{id}/top-tracks`                         | `403 Forbidden`                                                                                                                               | Impossible de demander directement les titres les plus populaires d'un artiste |
 | `/search?q=genre:"..."&type=track`                 | `200 OK` mais résultats peu qualitatifs (versions live/instrumentales, artistes obscurs)                                                      | Utilisable mais pas fiable pour des titres reconnaissables                     |
 | `/search?q=artist:"Nom"&type=track`                | `200 OK`, bon classement par pertinence (les titres les plus connus de l'artiste ressortent en premier, même sans score de popularité exposé) | **Solution retenue**                                                           |
+| `/search` avec `limit` > 10                        | `400 "Invalid limit"` — documenté à 50, mais recherche binaire en direct confirme 10 comme plafond réel pour une nouvelle app                 | `@blindtest/spotify` plafonne `limit` à 10 côté client                         |
 
 **Décision** : chaque thème est désormais défini par une **liste d'artistes curatée** (`seedArtists`) plutôt que par un genre Spotify. Le client Spotify (`@blindtest/spotify`) recherche par `artist:"Nom"`, filtre les versions non originales (remix/live/instrumental/edit...) par correspondance sur le titre, et dé-doublonne par titre normalisé. C'est une heuristique imparfaite (peut exclure à tort un titre contenant légitimement un de ces mots, ou laisser passer une version peu connue) mais c'est la voie la plus fiable disponible pour une app sans accès étendu.
 
@@ -116,6 +117,15 @@ Deezer était le choix initial pour l'audio (extraits publics, sans auth). En pr
 Différence importante avec Deezer : iTunes fait une recherche floue en texte libre et renvoie toujours des résultats, même pour une requête qui n'existe pas — le filtrage par correspondance titre+artiste (déjà en place pour Deezer) n'est donc plus une simple sécurité, il est indispensable pour éviter d'associer un morceau au mauvais extrait.
 
 Limite constatée : la couverture du catalogue iTunes n'est pas totale (ex: "Formidable" de Stromae n'est ressorti dans aucune recherche testée, même en forçant le store français avec `country=FR` — uniquement des covers/karaokés) — le filtrage anti-cover a correctement renvoyé "aucun match" plutôt que de se rabattre sur une mauvaise version, ce qui déclenche normalement le mécanisme de remplacement déjà prévu à l'étape 2 du pipeline.
+
+### 3quater. Pipeline validé de bout en bout en conditions réelles (2026-08-07)
+
+Premier run complet réel, sans mock : sélection Spotify (40 morceaux, thème "Variété actuelle") → résolution audio iTunes → rendu Remotion (vidéo de 10 min, 18 000 frames) → upload YouTube (`private`) → création de la playlist du thème → enregistrement des 40 morceaux en base. Résultat : [https://youtu.be/cCXG72AXfxs](https://youtu.be/cCXG72AXfxs).
+
+Deux ajustements nécessaires découverts par ce run réel (au-delà des restrictions déjà documentées ci-dessus) :
+
+- Le rendu Remotion nécessite `chromiumOptions.gl = "swiftshader"` (rendu logiciel) et un timeout allongé (120s) dans un environnement sans GPU — sinon "Timeout exceeded rendering the component initially" au démarrage.
+- Premier lancement uniquement : téléchargement de Chrome Headless Shell par Remotion (~93 Mo), à prévoir dans le temps du tout premier run.
 
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
