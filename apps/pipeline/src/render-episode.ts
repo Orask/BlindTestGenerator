@@ -24,14 +24,36 @@ export async function renderEpisode(params: RenderEpisodeParams): Promise<void> 
     })),
   };
 
-  const serveUrl = await bundle({ entryPoint: VIDEO_RENDERER_ENTRY });
-  const composition = await selectComposition({ serveUrl, id: "Episode", inputProps });
+  // No GPU in this sandboxed environment — swiftshader is Chrome's software
+  // GL renderer, and a longer timeout avoids false "initial render" timeouts
+  // on a slow/cold headless Chrome start.
+  const chromiumOptions = { gl: "swiftshader" as const };
+  const timeoutInMilliseconds = 120_000;
 
+  const serveUrl = await bundle({ entryPoint: VIDEO_RENDERER_ENTRY });
+  const composition = await selectComposition({
+    serveUrl,
+    id: "Episode",
+    inputProps,
+    chromiumOptions,
+    timeoutInMilliseconds,
+  });
+
+  let lastLoggedFrame = -1;
   await renderMedia({
     composition,
     serveUrl,
     codec: "h264",
     outputLocation: params.outputPath,
     inputProps,
+    chromiumOptions,
+    timeoutInMilliseconds,
+    onProgress: ({ renderedFrames }) => {
+      const bucket = Math.floor(renderedFrames / 60) * 60;
+      if (bucket !== lastLoggedFrame) {
+        lastLoggedFrame = bucket;
+        console.log(`Rendu: ${renderedFrames}/${composition.durationInFrames} frames`);
+      }
+    },
   });
 }

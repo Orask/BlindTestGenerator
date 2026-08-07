@@ -18,6 +18,10 @@ interface RawSpotifyTrack {
 const NON_ORIGINAL_VERSION_PATTERN =
   /\b(remix|live|instrumental|edit|version|mix|karaoke|acoustic|remaster(ed)?)\b/i;
 
+// Documented as 50, but new apps get a 400 "Invalid limit" above 10 —
+// verified empirically (see docs/CAHIER_DES_CHARGES.md section 3bis).
+const MAX_SEARCH_LIMIT = 10;
+
 export function createSpotifyClient(
   tokenProvider: TokenProvider,
   fetchImpl: typeof fetch = fetch,
@@ -26,8 +30,9 @@ export function createSpotifyClient(
     async searchTracksByArtist(artistName: string, limit: number): Promise<SpotifyTrackMetadata[]> {
       const accessToken = await tokenProvider.getAccessToken();
       const query = encodeURIComponent(`artist:"${artistName}"`);
+      const apiLimit = Math.min(limit, MAX_SEARCH_LIMIT);
       const response = await fetchImpl(
-        `https://api.spotify.com/v1/search?q=${query}&type=track&limit=50`,
+        `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${apiLimit}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
 
