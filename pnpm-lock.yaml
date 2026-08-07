@@ -71,7 +71,7 @@ importers:
         specifier: 9.6.0
         version: 9.6.0
 
-  packages/integrations/deezer: {}
+  packages/integrations/itunes: {}
 
   packages/integrations/spotify:
     devDependencies:

@@ -36,7 +36,7 @@ packages/
   db/                   # schéma et accès SQLite
   integrations/
     spotify/            # métadonnées des morceaux
-    deezer/             # extraits audio
+    itunes/             # extraits audio (iTunes Search API)
     youtube/            # upload et playlists
   video-renderer/       # composition Remotion (rendu vidéo)
 apps/

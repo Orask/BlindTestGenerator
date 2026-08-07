@@ -1,6 +1,6 @@
-import { createDeezerClient } from "../src/client.js";
+import { createItunesClient } from "../src/client.js";
 
-const client = createDeezerClient();
+const client = createItunesClient();
 
 const samples: readonly { readonly title: string; readonly artist: string }[] = [
   { title: "Dernière danse", artist: "Indila" },
