@@ -118,6 +118,9 @@ importers:
 
   packages/video-renderer:
     dependencies:
+      '@remotion/google-fonts':
+        specifier: 4.0.506
+        version: 4.0.506(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
       '@remotion/zod-types':
         specifier: 4.0.506
         version: 4.0.506(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
@@ -570,6 +573,9 @@ packages:
     resolution: {integrity: sha512-u6Y100rmEiQpGj+vnyXihk2/0rYmPJuB4RuE/RaDh0S5hLrOwEHNSaDyeXaakDs/a+VIRnTLmIqy+xR5A2Cs7g==}
     cpu: [x64]
     os: [win32]
+
+  '@remotion/google-fonts@4.0.506':
+    resolution: {integrity: sha512-H+rRzh/WzGFAYAUuMajn5hXVjcAnCZgszXU7R19M9etx3GEh0HV+HvpcUdCASVmznL5YHjGMK9QFMntZwNj3bw==}
 
   '@remotion/licensing@4.0.506':
     resolution: {integrity: sha512-uot25BO2Xhjc1y/mFyuwfEm6gGEckVd29z1ln67iI1n/sbfMKYrv5qni6OJfReH68gUamElC1VmD/tKftFicyQ==}
@@ -2953,6 +2959,13 @@ snapshots:
 
   '@remotion/compositor-win32-x64-msvc@4.0.506':
     optional: true
+
+  '@remotion/google-fonts@4.0.506(react-dom@19.2.8(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      remotion: 4.0.506(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+    transitivePeerDependencies:
+      - react
+      - react-dom
 
   '@remotion/licensing@4.0.506': {}
 

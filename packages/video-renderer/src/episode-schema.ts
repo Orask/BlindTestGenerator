@@ -9,6 +9,7 @@ export const trackSchema = z.object({
 });
 
 export const episodeSchema = z.object({
+  themeLabel: z.string(),
   tracks: z.array(trackSchema).min(1),
   accentColors: z
     .array(zColor())

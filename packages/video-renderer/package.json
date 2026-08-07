@@ -11,6 +11,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@remotion/google-fonts": "4.0.506",
     "@remotion/zod-types": "4.0.506",
     "react": "19.2.8",
     "react-dom": "19.2.8",

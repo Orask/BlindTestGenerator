@@ -1,9 +1,12 @@
+import { loadFont } from "@remotion/google-fonts/Baloo2";
 import type { ReactElement } from "react";
-import { spring, useCurrentFrame, useVideoConfig } from "remotion";
+import { interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 import { ringProgress, secondsRemaining } from "./countdown-math";
 
-const RING_SIZE = 320;
-const RING_STROKE = 16;
+const { fontFamily } = loadFont();
+
+const RING_SIZE = 340;
+const RING_STROKE = 18;
 const RING_RADIUS = (RING_SIZE - RING_STROKE) / 2;
 const RING_CIRCUMFERENCE = 2 * Math.PI * RING_RADIUS;
 
@@ -19,49 +22,65 @@ export function CountdownRing({ durationInFrames, accentColor }: CountdownRingPr
   const progress = ringProgress(frame, durationInFrames);
   const remaining = secondsRemaining(frame, fps, durationInFrames);
 
-  // Re-triggers every second: a quick pulse-down on each tick.
+  // Re-triggers every second: a quick pulse-down on each tick, plus a soft
+  // glow behind the ring that breathes with it — the "less empty" ask.
   const framesIntoSecond = frame % fps;
   const pop = spring({ frame: framesIntoSecond, fps, config: { damping: 12, stiffness: 220 } });
   const scale = 1 + 0.12 * (1 - pop);
+  const glowSize = interpolate(pop, [0, 1], [520, 420]);
 
   return (
-    <svg
-      width={RING_SIZE}
-      height={RING_SIZE}
-      style={{ transform: `scale(${scale})`, overflow: "visible" }}
-    >
-      <circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={RING_RADIUS}
-        fill="none"
-        stroke="rgba(255,255,255,0.15)"
-        strokeWidth={RING_STROKE}
+    <div style={{ position: "relative", width: RING_SIZE, height: RING_SIZE }}>
+      <div
+        style={{
+          position: "absolute",
+          left: "50%",
+          top: "50%",
+          width: glowSize,
+          height: glowSize,
+          transform: "translate(-50%, -50%)",
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${accentColor}40 0%, transparent 70%)`,
+        }}
       />
-      <circle
-        cx={RING_SIZE / 2}
-        cy={RING_SIZE / 2}
-        r={RING_RADIUS}
-        fill="none"
-        stroke={accentColor}
-        strokeWidth={RING_STROKE}
-        strokeLinecap="round"
-        strokeDasharray={RING_CIRCUMFERENCE}
-        strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
-        transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
-      />
-      <text
-        x="50%"
-        y="50%"
-        textAnchor="middle"
-        dominantBaseline="central"
-        fontSize={120}
-        fontWeight={700}
-        fontFamily="sans-serif"
-        fill="white"
+      <svg
+        width={RING_SIZE}
+        height={RING_SIZE}
+        style={{ position: "relative", transform: `scale(${scale})`, overflow: "visible" }}
       >
-        {remaining}
-      </text>
-    </svg>
+        <circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          r={RING_RADIUS}
+          fill="none"
+          stroke="rgba(255,255,255,0.15)"
+          strokeWidth={RING_STROKE}
+        />
+        <circle
+          cx={RING_SIZE / 2}
+          cy={RING_SIZE / 2}
+          r={RING_RADIUS}
+          fill="none"
+          stroke={accentColor}
+          strokeWidth={RING_STROKE}
+          strokeLinecap="round"
+          strokeDasharray={RING_CIRCUMFERENCE}
+          strokeDashoffset={RING_CIRCUMFERENCE * (1 - progress)}
+          transform={`rotate(-90 ${RING_SIZE / 2} ${RING_SIZE / 2})`}
+        />
+        <text
+          x="50%"
+          y="50%"
+          textAnchor="middle"
+          dominantBaseline="central"
+          fontSize={130}
+          fontWeight={700}
+          fontFamily={fontFamily}
+          fill="white"
+        >
+          {remaining}
+        </text>
+      </svg>
+    </div>
   );
 }

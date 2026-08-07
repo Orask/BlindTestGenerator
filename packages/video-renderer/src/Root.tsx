@@ -1,6 +1,6 @@
 import type { ReactElement } from "react";
 import { Composition } from "remotion";
-import { SEGMENT_FRAMES, FPS } from "./constants";
+import { FPS, INTRO_FRAMES, OUTRO_FRAMES, SEGMENT_FRAMES } from "./constants";
 import { Episode } from "./Episode";
 import { episodeSchema } from "./episode-schema";
 
@@ -22,6 +22,10 @@ const SAMPLE_TRACKS = [
   },
 ];
 
+function totalDurationInFrames(trackCount: number): number {
+  return INTRO_FRAMES + trackCount * SEGMENT_FRAMES + OUTRO_FRAMES;
+}
+
 export function RemotionRoot(): ReactElement {
   return (
     <Composition
@@ -31,13 +35,14 @@ export function RemotionRoot(): ReactElement {
       fps={FPS}
       width={1920}
       height={1080}
-      durationInFrames={SEGMENT_FRAMES * SAMPLE_TRACKS.length}
+      durationInFrames={totalDurationInFrames(SAMPLE_TRACKS.length)}
       defaultProps={{
+        themeLabel: "Variété actuelle",
         tracks: SAMPLE_TRACKS,
         accentColors: ["#ff5f6d", "#4facfe", "#f6d365"],
       }}
       calculateMetadata={({ props }) => ({
-        durationInFrames: props.tracks.length * SEGMENT_FRAMES,
+        durationInFrames: totalDurationInFrames(props.tracks.length),
       })}
     />
   );
