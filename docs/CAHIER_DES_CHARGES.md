@@ -15,12 +15,12 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 
 **Inclus :**
 
-- Génération d'une vidéo longue (10-15 min) de blind test, format fixe : **40 morceaux** par épisode (~15s/morceau : 10s timer + 5s révélation), ajustable via config.
+- Génération d'une vidéo longue (~17 min) de blind test, format fixe : **60 morceaux** par épisode (~17s/morceau : 12s timer + 5s révélation), plus une intro (~12s, règles du jeu + rappel abonnement) et une outro (~6s, rappel abonnement) — ajustable via config. Durée et nombre de morceaux alignés sur l'observation concurrentielle (12s/morceau, vidéos de 15-20 min).
 - **Publication quotidienne** (1 vidéo/jour) avec **rotation de 7 thèmes musicaux, un par jour de la semaine** (voir section 5bis) — chaque thème a sa propre playlist YouTube et un titre de vidéo explicite sur son contenu. Ce mécanisme de rotation par config est volontairement générique : une future chaîne mono-thème spécialisée (autre langue/genre) réutilisera le même code avec une liste d'un seul thème répété tous les jours.
 - **Visibilité progressive** : tant que le pipeline n'est pas validé de bout en bout, les vidéos sont uploadées en **privé** (visibilité YouTube `private`) — bascule manuelle vers `public` une fois la qualité confirmée sur plusieurs runs. Paramètre de config, pas de logique de bascule automatique en v1.
-- Sélection des morceaux via l'API Spotify (recherche par liste d'artistes curatée par thème, voir section 3bis), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base, tous thèmes confondus).
+- Sélection des morceaux via l'API Spotify (recherche par liste d'artistes curatée par thème, voir section 3bis), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base, tous thèmes confondus) et **maximum 2 morceaux du même artiste par épisode, jamais consécutifs**.
 - Récupération de l'extrait audio réel via l'API publique iTunes Search d'Apple (`previewUrl`, ~30s, sans authentification), matché par titre+artiste depuis les métadonnées Spotify — voir section 3ter pour le changement de fournisseur (Deezer initialement prévu, bloqué en pratique).
-- Rendu vidéo via **Remotion** (TypeScript/React) : compte à rebours 10s (cercle de progression + chiffres), révélation animée sur 5s (flash + zoom sur la pochette avec glow), habillage visuel générique/neutre pour la v1 (waveform, transitions, typographie).
+- Rendu vidéo via **Remotion** (TypeScript/React) : intro (règles + rappel abonnement), compte à rebours 12s par morceau (cercle de progression + chiffres, police Baloo2, glow pulsé), numéro du morceau affiché en haut à gauche, révélation animée sur 5s (flash + zoom sur la pochette avec glow), outro (rappel abonnement), musique de fond libre de droits sur l'intro/outro.
 - Upload automatique sur YouTube via YouTube Data API v3 (OAuth), avec titre/description/tags générés depuis un template par thème, puis ajout de la vidéo à la playlist YouTube du thème correspondant.
 - Une seule chaîne pilote, nom générique temporaire (ex. **« BlindTest FR »**, à renommer avant lancement public réel), en **français** — choix motivé par la capacité à contrôler soi-même la qualité du matching audio/métadonnées et la justesse des textes générés ; l'espagnol est envisagé comme deuxième chaîne de croissance une fois le pipeline validé (bassin d'audience YouTube parmi les plus grands au monde, niche moins saturée que l'anglais sur ce format).
 - Exécution déclenchée localement sur le Mac (launchd/cron, une exécution par jour) — pas encore de vrai "hébergement cloud" en v1.
@@ -127,32 +127,49 @@ Deux ajustements nécessaires découverts par ce run réel (au-delà des restric
 - Le rendu Remotion nécessite `chromiumOptions.gl = "swiftshader"` (rendu logiciel) et un timeout allongé (120s) dans un environnement sans GPU — sinon "Timeout exceeded rendering the component initially" au démarrage.
 - Premier lancement uniquement : téléchargement de Chrome Headless Shell par Remotion (~93 Mo), à prévoir dans le temps du tout premier run.
 
+### 3quinquies. Retours après visionnage du premier épisode réel (2026-08-07)
+
+Suite au visionnage de la vidéo produite en 3quater, ajustements v1.1 :
+
+- **Durée/format** : passage à 12s de son par morceau (au lieu de 10s) et 60 morceaux par épisode (au lieu de 40), pour se rapprocher de la concurrence observée (12s/morceau, vidéos 15-20 min) — voir calcul en section 2.
+- **Diversité des artistes** : les 40 premiers morceaux réels contenaient des répétitions d'artiste trop rapprochées. Ajout d'un plafond strict de 2 morceaux par artiste par épisode, et d'un réordonnancement (`spreadOutArtists` dans `@blindtest/pipeline`) qui garantit qu'ils ne sont jamais consécutifs.
+- **Conséquence directe** : avec ce plafond, il faut au moins 30 artistes distincts par thème pour atteindre 60 morceaux. Les listes `seedArtists` de `channels/blindtest-fr.json` ont été étendues à ~30 artistes pour 6 des 7 thèmes. Le thème "Génériques dessins animés/films" ne compte que 18 artistes (~36 morceaux max) — **insuffisant pour 60**, à enrichir avant le premier dimanche (voir section 11).
+- **Intro/outro ajoutées** : intro de 12s (règles du jeu : nombre de morceaux, durée du chrono, barème de points — +1 titre / +1 bonus artiste — puis rappel d'abonnement) et outro de 6s (rappel d'abonnement + teaser du thème du lendemain), toutes deux avec une musique de fond libre de droits ("Success - Opening Show Loop" par MusicInMedia, licence Pixabay Content License, `packages/video-renderer/public/audio/intro-outro-music.mp3`).
+- **Numéro de morceau** : badge "N / 60" affiché en haut à gauche pendant tout le segment (compte à rebours + reveal).
+- **Style du compte à rebours** : police Baloo2 (plus ronde/engageante que la police système par défaut) + glow radial pulsé derrière l'anneau, pour un rendu jugé "trop vide" auparavant.
+- **Description YouTube** : liste numérotée "titre — artiste" de tous les morceaux ajoutée en fin de description, comme geste minimal de protection/attribution des droits (voir section 7).
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
-1. **Sélection** : pour chaque artiste de `seedArtists` du thème du jour, rechercher ses morceaux via Spotify (voir section 3bis), regrouper les candidats, exclure les `track_id` déjà présents dans l'historique de cette chaîne (tous thèmes confondus), retenir 40 morceaux.
+1. **Sélection** : pour chaque artiste de `seedArtists` du thème du jour, rechercher ses morceaux via Spotify (voir section 3bis), regrouper les candidats, exclure les `track_id` déjà présents dans l'historique de cette chaîne (tous thèmes confondus) et plafonner à 2 morceaux par artiste, retenir 60 morceaux, puis les réordonner pour qu'aucun artiste ne se retrouve deux fois de suite.
 2. **Résolution audio** : pour chaque morceau, chercher le `previewUrl` correspondant via iTunes Search (voir section 3ter, match titre + artiste), échouer proprement et piocher un remplaçant si aucun match fiable.
-3. **Rendu vidéo** : appeler Remotion avec la liste des 40 morceaux (audio + métadonnées + pochette) → génère un `.mp4` avec pour chaque morceau : 10s timer + 5s reveal animé.
+3. **Rendu vidéo** : appeler Remotion avec la liste des 60 morceaux (audio + métadonnées + pochette) → génère un `.mp4` avec intro, puis pour chaque morceau 12s timer + 5s reveal animé, puis outro.
 4. **Génération de la miniature** (thumbnail) : image statique générée (probablement une frame Remotion dédiée), incluant le nom du thème du jour.
-5. **Publication YouTube** : upload du fichier avec titre/description/tags templatés selon le thème du jour, visibilité lue depuis la config de la chaîne (`private` tant que le pipeline n'est pas validé, `public` une fois basculé manuellement).
-6. **Playlist** : créer la playlist YouTube du thème si elle n'existe pas encore (et persister son id dans la config), puis y ajouter la vidéo.
-7. **Enregistrement** : écrire en base les 40 morceaux utilisés (liés à la chaîne + au thème) + les métadonnées du run (date, thème, id vidéo YouTube, statut, visibilité).
+5. **Publication YouTube** : upload du fichier avec titre/description (incluant la liste des morceaux)/tags templatés selon le thème du jour, visibilité lue depuis la config de la chaîne (`private` tant que le pipeline n'est pas validé, `public` une fois basculé manuellement).
+6. **Playlist** : créer la playlist YouTube du thème si elle n'existe pas encore (id persisté en base, pas dans le JSON de config), puis y ajouter la vidéo.
+7. **Enregistrement** : écrire en base les 60 morceaux utilisés (liés à la chaîne + au thème) + les métadonnées du run (date, thème, id vidéo YouTube, statut, visibilité).
 
 ## 5. Format vidéo — détail
 
-Par morceau (~15s) :
+Intro (~12s) : règles du jeu (nombre de morceaux, durée du chrono, barème de points) puis rappel d'abonnement, musique de fond libre de droits.
 
-- 0–10s : minuteur visible, extrait audio en lecture, visuel générique (waveform / arrière-plan animé) — le spectateur doit deviner.
-- 10–15s : révélation animée — pochette de l'album, nom de l'artiste, titre du morceau, effet de transition/particules pour rendre ça "satisfaisant".
+Par morceau (~17s) :
+
+- 0–12s : minuteur visible (cercle + chiffres, police Baloo2, glow pulsé), extrait audio en lecture, numéro du morceau affiché en haut à gauche — le spectateur doit deviner.
+- 12–17s : révélation animée — pochette de l'album, nom de l'artiste, titre du morceau, effet de transition/particules pour rendre ça "satisfaisant".
+
+Outro (~6s) : rappel d'abonnement + teaser du thème du lendemain, même musique de fond.
 
 Décidé :
 
-- animation du compte à rebours : **cercle de progression (ring) combiné à des chiffres qui défilent** — combo jugé le plus satisfaisant visuellement.
+- animation du compte à rebours : **cercle de progression (ring) combiné à des chiffres qui défilent**, police **Baloo2** (Google Fonts via `@remotion/google-fonts`), glow radial pulsé derrière l'anneau à chaque seconde.
 - transition de révélation : **flash lumineux bref + zoom sur la pochette avec glow coloré**, texte artiste/titre en fondu juste après — effet d'impact fort adapté au rythme du format.
+- musique d'intro/outro : "Success - Opening Show Loop" par MusicInMedia (Pixabay, licence gratuite y compris usage commercial, enregistrée YouTube Content ID par Pixabay).
 
 Point à figer avec le rendu Remotion (à itérer visuellement une fois le pipeline technique validé) :
 
-- habillage sonore (tic-tac ? sting à la révélation ?) — à définir.
+- habillage sonore pendant le compte à rebours lui-même (tic-tac ? sting à la révélation ?) — à définir, distinct de la musique d'intro/outro déjà en place.
 
 ### Thèmes de la chaîne pilote et templates YouTube
 
@@ -168,24 +185,30 @@ Rotation par défaut (modifiable en config, un thème par jour de la semaine) :
 | Samedi   | Chansons françaises classiques  |
 | Dimanche | Génériques dessins animés/films |
 
-Proposition de template titre/description (à valider, ajustable par thème) :
+Template titre/description implémenté dans `apps/pipeline/src/youtube-metadata.ts` :
 
-- **Titre** : `BLIND TEST {ThemeLabel} 🎧 | Devine 40 chansons en 10 secondes ! (Ép. {n})`
+- **Titre** : `BLIND TEST {ThemeLabel} 🎧 | Devine {N} chansons en 12 secondes ! (Ép. {n})`
 - **Description** :
   ```
-  🎵 Blind Test spécial {ThemeLabel} — 40 extraits à deviner en 10 secondes chrono !
+  🎵 Blind Test spécial {ThemeLabel} — {N} extraits à deviner en 12 secondes chrono !
   Combien as-tu trouvé ? Dis ton score en commentaire 👇
 
   🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !
 
   #blindtest #quizmusical #{themeHashtag}
+
+  🎶 Morceaux de l'épisode :
+  1. {Titre} — {Artiste}
+  2. {Titre} — {Artiste}
+  ...
   ```
-- **Tags** : `blind test`, `quiz musical`, `{theme label}`, `devine la chanson`, `musique {langue}`.
+  La liste numérotée de tous les morceaux est un geste minimal de protection/attribution des droits (section 7).
+- **Tags** : `blind test`, `quiz musical`, `{theme label}`, `devine la chanson`.
 
 ## 6. Modèle de données (SQLite)
 
 - `channels` : id, nom, langue, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), visibilité courante (`private`/`unlisted`/`public`).
-- `channel_themes` : id, channel_id, day (lundi..dimanche), label, seed_artists (liste), youtube_playlist_id (nullable, rempli au premier upload).
+- `channel_themes` : id, channel_id, day (lundi..dimanche), label, youtube_playlist_id (nullable, rempli au premier upload). `seedArtists` n'est pas dupliqué en base : il vit uniquement dans le JSON de config, relu à chaque run.
 - `tracks_used` : channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). L'anti-repeat se fait sur `(channel_id, spotify_track_id)` sans filtrer par thème — un morceau déjà utilisé n'est jamais reproposé sur la chaîne, même dans un thème différent.
 - `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short).
 
@@ -224,17 +247,20 @@ Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `
 | iTunes Search ne retourne pas de preview fiable pour un morceau (catalogue incomplet, que des covers)                                         | Morceau à écarter                                                                                                | Fallback : piocher un autre candidat dans la sélection (déjà observé en test, voir section 3ter)                                                          |
 | Quota YouTube Data API (10 000 unités/jour, upload = 1600)                                                                                    | Limite ~6 uploads/jour/projet GCP                                                                                | Non bloquant pour du hebdo multi-chaînes en v1 ; à surveiller si scale fort                                                                               |
 | Réclamation Content ID                                                                                                                        | Vidéo monétisée au profit de l'ayant droit, parfois blocage régional                                             | Extraits courts, montage transformatif, config de durée ajustable                                                                                         |
-| Rendu Remotion trop lent pour 40 segments                                                                                                     | Temps de génération long                                                                                         | Mesurer dès le prototype, optimiser (rendu parallèle Remotion) si besoin                                                                                  |
+| Rendu Remotion trop lent pour 60 segments                                                                                                     | Temps de génération long                                                                                         | Mesuré en réel sur 40 segments (section 3quater) ; optimiser (rendu parallèle Remotion) si besoin au-delà                                                 |
 | API TikTok/Snapchat peu ouvertes pour publication auto                                                                                        | Bloquant pour le multi-plateforme v2                                                                             | À valider au moment venu ; publication manuelle possible en repli                                                                                         |
 | 7 thèmes = catalogues Spotify/iTunes de tailles très inégales (ex: génériques dessins animés a un vivier plus restreint que variété actuelle) | Un thème s'épuise plus vite (répétitions ou plus assez de candidats après filtrage anti-repeat)                  | Vivier de secours plus large par thème en config, alerte si le nombre de candidats restants passe sous un seuil                                           |
 | iTunes Search est un service Apple non contractuel pour cet usage (pas d'accord officiel ni de SLA)                                           | Pourrait se fermer ou se durcir comme Deezer/Spotify                                                             | Le client est isolé dans `@blindtest/itunes` derrière la même interface `findPreviewByTitleAndArtist` — remplacer le fournisseur ne touche que ce package |
 | Filtrage heuristique des versions non originales (regex sur le titre, section 3bis) trop strict ou trop laxiste                               | Faux positifs (titre légitime exclu) ou faux négatifs (remix qui passe)                                          | Ajuster la regex au fil de l'usage réel ; pas de solution parfaite sans les endpoints désormais fermés                                                    |
 | Publication quotidienne dès la v1 (vs hebdo initialement prévu)                                                                               | Plus d'occasions de détecter un bug en prod, plus de volume à corriger si un run échoue plusieurs jours de suite | Visibilité `private` tant que non validé (déjà prévu) ; ajouter un contrôle simple avant bascule en public (ex: vérifier N runs consécutifs sans erreur)  |
+| Thème "Génériques dessins animés/films" n'a que 18 artistes curatés (~36 morceaux max avec le plafond de 2/artiste), sous les 60 requis       | `InsufficientTracksError` au premier dimanche si non corrigé                                                     | Enrichir `seedArtists` de ce thème avant dimanche, ou réduire le nombre de morceaux spécifiquement pour ce thème en attendant                             |
+| Musique d'intro/outro Pixabay enregistrée YouTube Content ID                                                                                  | Réclamation Content ID possible malgré la licence gratuite (comportement normal de Pixabay/Content ID)           | Attendu et accepté (section 7) ; changer de piste si le comportement réel diffère                                                                         |
 
 ## 11. Points encore ouverts
 
-- Confirmer/ajuster le template titre/description/tags proposé en section 5 (texte définitif).
-- Habillage sonore (tic-tac, sting de révélation) — à définir.
+- **Thème "Génériques dessins animés/films" à enrichir en urgence** (18 artistes actuellement, ~30 nécessaires) avant le premier dimanche de diffusion.
+- Habillage sonore pendant le compte à rebours (tic-tac, sting de révélation) — distinct de la musique d'intro/outro déjà en place.
 - Seuil exact de validation avant bascule automatique-privé → public (ex: "N jours consécutifs sans erreur" — nombre à définir).
 - Nom définitif de la chaîne pilote (le placeholder « BlindTest FR » sera utilisé jusque-là).
+- Vérifier en conditions réelles si la musique Pixabay déclenche effectivement une réclamation Content ID sur la vidéo, et son impact (blocage vs monétisation partagée).
 - Liste d'artistes du thème "Génériques dessins animés/films" à affiner (voir section 3bis, cas le moins évident pour une recherche par artiste).
