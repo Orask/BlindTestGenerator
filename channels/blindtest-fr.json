@@ -8,49 +8,115 @@
       "day": "monday",
       "id": "annees-80",
       "label": "Années 80",
-      "spotifySeed": "genre:80s-fr",
+      "seedArtists": [
+        "Jean-Jacques Goldman",
+        "France Gall",
+        "Étienne Daho",
+        "Indochine",
+        "Téléphone",
+        "Renaud",
+        "Michel Berger",
+        "Véronique Sanson",
+        "Elsa",
+        "Mylène Farmer"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "tuesday",
       "id": "annees-90",
       "label": "Années 90",
-      "spotifySeed": "genre:90s-fr",
+      "seedArtists": [
+        "Mylène Farmer",
+        "IAM",
+        "MC Solaar",
+        "Patrick Bruel",
+        "Alliance Ethnik",
+        "Zebda",
+        "Faudel",
+        "Lara Fabian",
+        "Ophélie Winter",
+        "Native"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "wednesday",
       "id": "annees-2000",
       "label": "Années 2000",
-      "spotifySeed": "genre:2000s-fr",
+      "seedArtists": [
+        "Superbus",
+        "Kyo",
+        "Diam's",
+        "Calogero",
+        "Zazie",
+        "Tryo",
+        "Sinsemilia",
+        "Nolwenn Leroy",
+        "Christophe Maé",
+        "Shy'm"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "thursday",
       "id": "rap-fr",
       "label": "Rap FR",
-      "spotifySeed": "genre:french-rap",
+      "seedArtists": [
+        "IAM",
+        "NTM",
+        "Booba",
+        "Diam's",
+        "Nekfeu",
+        "PNL",
+        "Bigflo & Oli",
+        "Orelsan",
+        "Jul",
+        "Ninho"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "friday",
       "id": "variete-actuelle",
       "label": "Variété actuelle",
-      "spotifySeed": "genre:french-pop",
+      "seedArtists": [
+        "Angèle",
+        "Clara Luciani",
+        "Vianney",
+        "Louane",
+        "Slimane",
+        "Grand Corps Malade",
+        "Zaz",
+        "Kendji Girac",
+        "Amir",
+        "Christophe Maé"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "saturday",
       "id": "classiques-fr",
       "label": "Chansons françaises classiques",
-      "spotifySeed": "genre:chanson-fr",
+      "seedArtists": [
+        "Édith Piaf",
+        "Charles Aznavour",
+        "Jacques Brel",
+        "Georges Brassens",
+        "Serge Gainsbourg",
+        "Claude François",
+        "Johnny Hallyday",
+        "Dalida",
+        "Michel Sardou",
+        "Barbara"
+      ],
       "youtubePlaylistId": null
     },
     {
       "day": "sunday",
       "id": "generiques",
       "label": "Génériques dessins animés/films",
-      "spotifySeed": "genre:cartoon-themes",
+      "seedArtists": ["Dorothée", "Bernard Minet", "Hélène", "Claude Lombard", "AB Kids"],
       "youtubePlaylistId": null
     }
   ]

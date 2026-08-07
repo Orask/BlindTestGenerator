@@ -17,14 +17,14 @@ describe("resolveThemeForDay", () => {
       day: "monday",
       id: "annees-80",
       label: "Années 80",
-      spotifySeed: "genre:80s-fr",
+      seedArtists: ["Jean-Jacques Goldman"],
       youtubePlaylistId: null,
     },
     {
       day: "friday",
       id: "variete-actuelle",
       label: "Variété actuelle",
-      spotifySeed: "genre:french-pop",
+      seedArtists: ["Angèle"],
       youtubePlaylistId: null,
     },
   ];

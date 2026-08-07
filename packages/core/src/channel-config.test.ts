@@ -11,7 +11,7 @@ const validConfig = {
       day: "monday",
       id: "annees-80",
       label: "Années 80",
-      spotifySeed: "genre:80s-fr",
+      seedArtists: ["Jean-Jacques Goldman", "Mylène Farmer"],
       youtubePlaylistId: null,
     },
   ],
@@ -34,6 +34,14 @@ describe("parseChannelConfig", () => {
     const invalid = {
       ...validConfig,
       themes: [{ ...validConfig.themes[0], day: "someday" }],
+    };
+    expect(() => parseChannelConfig(invalid)).toThrow();
+  });
+
+  it("rejects a theme with no seed artists", () => {
+    const invalid = {
+      ...validConfig,
+      themes: [{ ...validConfig.themes[0], seedArtists: [] }],
     };
     expect(() => parseChannelConfig(invalid)).toThrow();
   });

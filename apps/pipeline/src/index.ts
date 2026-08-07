@@ -10,5 +10,7 @@ if (!channelConfigPath) {
 const channel = await loadChannelConfig(channelConfigPath);
 const today = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
 
-console.log(`[${channel.name}] Thème du jour : ${today.label} (seed: ${today.spotifySeed})`);
+console.log(
+  `[${channel.name}] Thème du jour : ${today.label} (${today.seedArtists.length} artiste(s) en config)`,
+);
 console.log("Le reste du pipeline (sélection, rendu, upload) n'est pas encore implémenté.");

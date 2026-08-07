@@ -16,7 +16,11 @@ const channelThemeSchema = z.object({
   day: weekdaySchema,
   id: z.string().min(1),
   label: z.string().min(1),
-  spotifySeed: z.string().min(1),
+  // Spotify locks down genre/playlist/recommendation-based discovery for new
+  // apps (see docs/CAHIER_DES_CHARGES.md section 7bis) — searching by a
+  // curated artist list is what's left that reliably surfaces well-known
+  // songs.
+  seedArtists: z.array(z.string().min(1)).min(1),
   youtubePlaylistId: z.string().nullable(),
 });
 

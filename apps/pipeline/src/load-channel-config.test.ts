@@ -29,7 +29,7 @@ describe("loadChannelConfig", () => {
             day: "monday",
             id: "annees-80",
             label: "Années 80",
-            spotifySeed: "genre:80s-fr",
+            seedArtists: ["Jean-Jacques Goldman"],
             youtubePlaylistId: null,
           },
         ],
