@@ -7,9 +7,10 @@ coverage
 # Remotion render output
 packages/video-renderer/out
 
-# Local SQLite databases
+# Local SQLite databases and rendered episodes
 *.sqlite
 *.sqlite3
+/data/
 
 # Secrets / credentials — never commit these
 .env

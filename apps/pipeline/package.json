@@ -7,13 +7,22 @@
     "build": "tsc -p tsconfig.build.json",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "run": "node --env-file=../../.env dist/index.js"
   },
   "dependencies": {
-    "@blindtest/core": "workspace:*"
+    "@blindtest/core": "workspace:*",
+    "@blindtest/db": "workspace:*",
+    "@blindtest/itunes": "workspace:*",
+    "@blindtest/spotify": "workspace:*",
+    "@blindtest/youtube": "workspace:*",
+    "@remotion/bundler": "4.0.506",
+    "@remotion/renderer": "4.0.506",
+    "better-sqlite3": "13.0.3"
   },
   "devDependencies": {
+    "@types/better-sqlite3": "9.6.0",
     "@types/node": "24.13.3"
   }
 }

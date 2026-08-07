@@ -1,5 +1,7 @@
-import { resolveThemeForDay, weekdayFromDate } from "@blindtest/core";
+import { fileURLToPath } from "node:url";
+import { createClientsFromEnv } from "./create-clients.js";
 import { loadChannelConfig } from "./load-channel-config.js";
+import { runPipeline } from "./pipeline.js";
 
 const channelConfigPath = process.argv[2];
 if (!channelConfigPath) {
@@ -8,9 +10,15 @@ if (!channelConfigPath) {
 }
 
 const channel = await loadChannelConfig(channelConfigPath);
-const today = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
+const clients = createClientsFromEnv();
 
-console.log(
-  `[${channel.name}] Thème du jour : ${today.label} (${today.seedArtists.length} artiste(s) en config)`,
-);
-console.log("Le reste du pipeline (sélection, rendu, upload) n'est pas encore implémenté.");
+const tracksPerEpisode = process.env["PIPELINE_TRACK_COUNT"]
+  ? Number(process.env["PIPELINE_TRACK_COUNT"])
+  : undefined;
+
+await runPipeline(channel, {
+  ...clients,
+  dbPath: fileURLToPath(new URL("../../../data/blindtest.sqlite", import.meta.url)),
+  outputDir: fileURLToPath(new URL("../../../data/renders/", import.meta.url)),
+  tracksPerEpisode,
+});
