@@ -133,7 +133,7 @@ describe("createItunesClient.findPreviewByTitleAndArtist", () => {
     await vi.runAllTimersAsync();
     await expectation;
 
-    expect(fetchImpl).toHaveBeenCalledTimes(4);
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
     vi.useRealTimers();
   });
 });

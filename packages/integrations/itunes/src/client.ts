@@ -15,13 +15,17 @@ interface ItunesSearchResponse {
 
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
 
-// iTunes Search throttles bursts of requests (undocumented, observed as
-// intermittent 403s — the exact same query can return 200 a moment later).
-// Retrying with backoff is cheap insurance against a daily batch of ~100+
-// lookups occasionally tripping it.
+// iTunes Search returns an intermittent, apparently random 403 (observed
+// live: the exact same query flips between 200 and 403 across repeated
+// calls seconds apart, roughly half the time — not correlated with query
+// content or our own request volume, likely a degraded edge node in
+// Apple's pool). A short, capped backoff with several attempts is cheap
+// and brings the odds of exhausting retries on any one lookup down to a
+// fraction of a percent.
 const RATE_LIMIT_STATUSES = new Set([403, 429]);
-const MAX_ATTEMPTS = 4;
-const BASE_RETRY_DELAY_MS = 1000;
+const MAX_ATTEMPTS = 8;
+const BASE_RETRY_DELAY_MS = 500;
+const MAX_RETRY_DELAY_MS = 4000;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -76,7 +80,7 @@ export function createItunesClient(fetchImpl: typeof fetch = fetch): ItunesClien
         }
 
         if (RATE_LIMIT_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS) {
-          await sleep(BASE_RETRY_DELAY_MS * attempt);
+          await sleep(Math.min(BASE_RETRY_DELAY_MS * attempt, MAX_RETRY_DELAY_MS));
           continue;
         }
 
