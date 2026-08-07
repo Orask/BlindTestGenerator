@@ -65,4 +65,25 @@ describe("buildEpisodeTracks", () => {
       buildEpisodeTracks([track("1"), track("2")], new Set(), itunes, 2),
     ).rejects.toThrow(InsufficientTracksError);
   });
+
+  it("never picks more than 2 tracks from the same artist, even with more candidates available", async () => {
+    const sameArtist = (id: string): Track => ({ ...track(id), artist: "Overexposed Artist" });
+    const candidates = [sameArtist("1"), sameArtist("2"), sameArtist("3"), track("4")];
+
+    const result = await buildEpisodeTracks(candidates, new Set(), itunesThatFindsAllPreviews(), 3);
+
+    const overexposedCount = result.filter((t) => t.artist === "Overexposed Artist").length;
+    expect(overexposedCount).toBe(2);
+    expect(result).toHaveLength(3);
+  });
+
+  it("never places two tracks from the same artist back-to-back", async () => {
+    const sameArtist = (id: string): Track => ({ ...track(id), artist: "Overexposed Artist" });
+    const candidates = [sameArtist("1"), sameArtist("2"), track("3"), track("4")];
+
+    const result = await buildEpisodeTracks(candidates, new Set(), itunesThatFindsAllPreviews(), 4);
+
+    const adjacentDuplicate = result.some((t, i) => i > 0 && result[i - 1]!.artist === t.artist);
+    expect(adjacentDuplicate).toBe(false);
+  });
 });

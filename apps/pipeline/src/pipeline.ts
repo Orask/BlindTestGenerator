@@ -22,7 +22,7 @@ import { renderEpisode } from "./render-episode.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
-const DEFAULT_TRACKS_PER_EPISODE = 40;
+const DEFAULT_TRACKS_PER_EPISODE = 60;
 const CANDIDATES_PER_ARTIST = 10;
 
 export interface PipelineDeps {
@@ -61,7 +61,7 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
   console.log(`${tracks.length} morceaux sélectionnés avec extrait audio résolu.`);
 
   const outputPath = `${deps.outputDir}/${channel.id}-${theme.id}-${Date.now()}.mp4`;
-  await renderEpisode({ tracks, outputPath });
+  await renderEpisode({ themeLabel: theme.label, tracks, outputPath });
   console.log(`Vidéo rendue : ${outputPath}`);
 
   const videoId = randomUUID();
@@ -77,7 +77,7 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
 
   try {
     const episodeNumber = countVideosForTheme(db, theme.id);
-    const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumber);
+    const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumber, tracks);
 
     const { videoId: youtubeVideoId } = await deps.youtube.uploadVideo({
       filePath: outputPath,

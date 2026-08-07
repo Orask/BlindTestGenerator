@@ -10,12 +10,14 @@ const VIDEO_RENDERER_ENTRY = fileURLToPath(
 );
 
 export interface RenderEpisodeParams {
+  readonly themeLabel: string;
   readonly tracks: readonly EpisodeTrack[];
   readonly outputPath: string;
 }
 
 export async function renderEpisode(params: RenderEpisodeParams): Promise<void> {
   const inputProps = {
+    themeLabel: params.themeLabel,
     tracks: params.tracks.map((track) => ({
       title: track.title,
       artist: track.artist,
