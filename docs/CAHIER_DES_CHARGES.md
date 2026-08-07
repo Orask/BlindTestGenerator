@@ -14,20 +14,23 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 
 **Inclus :**
 - Génération d'une vidéo longue (10-15 min) de blind test, format fixe : **40 morceaux** par épisode (~15s/morceau : 10s timer + 5s révélation), ajustable via config.
-- Sélection des morceaux via l'API Spotify (recherche/playlist/genre en config), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base).
+- **Publication quotidienne** (1 vidéo/jour) avec **rotation de 7 thèmes musicaux, un par jour de la semaine** (voir section 5bis) — chaque thème a sa propre playlist YouTube et un titre de vidéo explicite sur son contenu. Ce mécanisme de rotation par config est volontairement générique : une future chaîne mono-thème spécialisée (autre langue/genre) réutilisera le même code avec une liste d'un seul thème répété tous les jours.
+- **Visibilité progressive** : tant que le pipeline n'est pas validé de bout en bout, les vidéos sont uploadées en **privé** (visibilité YouTube `private`) — bascule manuelle vers `public` une fois la qualité confirmée sur plusieurs runs. Paramètre de config, pas de logique de bascule automatique en v1.
+- Sélection des morceaux via l'API Spotify (recherche/playlist/genre selon le thème du jour, en config), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base, tous thèmes confondus).
 - Récupération de l'extrait audio réel via l'API publique Deezer (`preview_url`, ~30s, sans authentification), matché par titre+artiste depuis les métadonnées Spotify.
-- Rendu vidéo via **Remotion** (TypeScript/React) : compte à rebours 10s, révélation animée (pochette, titre, artiste) sur 5s, habillage visuel générique/neutre pour la v1 (waveform, transitions, typographie).
-- Upload automatique sur YouTube via YouTube Data API v3 (OAuth), avec titre/description/tags générés depuis un template par chaîne.
-- Une seule chaîne pilote (**français**) pour valider le pipeline de bout en bout — choix motivé par la capacité à contrôler soi-même la qualité du matching audio/métadonnées et la justesse des textes générés ; l'espagnol est envisagé comme deuxième chaîne de croissance une fois le pipeline validé (bassin d'audience YouTube parmi les plus grands au monde, niche moins saturée que l'anglais sur ce format).
-- Exécution déclenchée localement sur le Mac (launchd/cron) — pas encore de vrai "hébergement cloud" en v1.
-- Base de données locale (SQLite) : configuration de chaîne, historique des morceaux utilisés, historique des runs/vidéos publiées.
+- Rendu vidéo via **Remotion** (TypeScript/React) : compte à rebours 10s (cercle de progression + chiffres), révélation animée sur 5s (flash + zoom sur la pochette avec glow), habillage visuel générique/neutre pour la v1 (waveform, transitions, typographie).
+- Upload automatique sur YouTube via YouTube Data API v3 (OAuth), avec titre/description/tags générés depuis un template par thème, puis ajout de la vidéo à la playlist YouTube du thème correspondant.
+- Une seule chaîne pilote, nom générique temporaire (ex. **« BlindTest FR »**, à renommer avant lancement public réel), en **français** — choix motivé par la capacité à contrôler soi-même la qualité du matching audio/métadonnées et la justesse des textes générés ; l'espagnol est envisagé comme deuxième chaîne de croissance une fois le pipeline validé (bassin d'audience YouTube parmi les plus grands au monde, niche moins saturée que l'anglais sur ce format).
+- Exécution déclenchée localement sur le Mac (launchd/cron, une exécution par jour) — pas encore de vrai "hébergement cloud" en v1.
+- Base de données locale (SQLite) : configuration de chaîne et de ses thèmes, historique des morceaux utilisés, historique des runs/vidéos publiées.
 
 **Explicitement hors v1** (mais prévu dans l'architecture) :
-- Multi-chaînes actives simultanément (l'architecture le permet, mais on ne lance qu'une chaîne pilote).
+- Multi-chaînes actives simultanément (l'architecture le permet — c'est même le même mécanisme que la rotation de thèmes — mais on ne lance qu'une chaîne pilote).
 - Format shorts (~1 min).
 - Publication sur TikTok/Instagram/Facebook/Snapchat.
 - Hébergement cloud / exécution indépendante du Mac.
 - Gestion active des réclamations Content ID.
+- Bascule automatique privé → public (reste manuelle en v1).
 
 ## 3. Stack technique
 
@@ -54,20 +57,44 @@ BlindTestGenerator/
 │   └── db/              # schéma + accès SQLite (historique, config)
 ├── apps/
 │   └── pipeline/        # orchestrateur : point d'entrée exécuté par launchd
-├── channels/            # un fichier de config par chaîne (langue, genre, branding, credentials)
+├── channels/            # un fichier de config par chaîne (langue, branding, credentials, liste de thèmes)
 └── docs/
 ```
 
+Exemple de config de chaîne (`channels/blindtest-fr.json`, simplifié) :
+
+```json
+{
+  "id": "blindtest-fr",
+  "name": "BlindTest FR",
+  "language": "fr",
+  "visibility": "private",
+  "themes": [
+    { "day": "monday",    "id": "annees-80",       "label": "Années 80",                     "spotifySeed": "genre:80s-fr",        "youtubePlaylistId": null },
+    { "day": "tuesday",   "id": "annees-90",       "label": "Années 90",                     "spotifySeed": "genre:90s-fr",        "youtubePlaylistId": null },
+    { "day": "wednesday", "id": "annees-2000",     "label": "Années 2000",                   "spotifySeed": "genre:2000s-fr",      "youtubePlaylistId": null },
+    { "day": "thursday",  "id": "rap-fr",          "label": "Rap FR",                        "spotifySeed": "genre:french-rap",    "youtubePlaylistId": null },
+    { "day": "friday",    "id": "variete-actuelle","label": "Variété actuelle",               "spotifySeed": "genre:french-pop",    "youtubePlaylistId": null },
+    { "day": "saturday",  "id": "classiques-fr",   "label": "Chansons françaises classiques", "spotifySeed": "genre:chanson-fr",    "youtubePlaylistId": null },
+    { "day": "sunday",    "id": "generiques",      "label": "Génériques dessins animés/films","spotifySeed": "genre:cartoon-themes","youtubePlaylistId": null }
+  ]
+}
+```
+
+`youtubePlaylistId` est `null` au départ et rempli automatiquement au premier upload de chaque thème (la playlist YouTube est créée par le pipeline si elle n'existe pas encore, puis son id est persisté).
+
 Cette séparation en packages est ce qui permet la scalabilité : ajouter une chaîne = ajouter un fichier de config, ajouter une plateforme = ajouter un module dans `integrations/` qui implémente une interface `Publisher` commune, ajouter un format = ajouter une composition Remotion qui réutilise les mêmes briques (timer, reveal, données).
 
-## 4. Pipeline de génération (par run)
+## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
-1. **Sélection** : charger la config de la chaîne, tirer N candidats depuis Spotify (playlist/genre défini en config), exclure les `track_id` déjà présents dans l'historique de cette chaîne, retenir 40 morceaux.
+0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
+1. **Sélection** : tirer N candidats depuis Spotify selon le `spotifySeed` du thème du jour, exclure les `track_id` déjà présents dans l'historique de cette chaîne (tous thèmes confondus), retenir 40 morceaux.
 2. **Résolution audio** : pour chaque morceau, chercher le `preview_url` correspondant sur Deezer (match titre + artiste), échouer proprement et piocher un remplaçant si aucun match fiable.
 3. **Rendu vidéo** : appeler Remotion avec la liste des 40 morceaux (audio + métadonnées + pochette) → génère un `.mp4` avec pour chaque morceau : 10s timer + 5s reveal animé.
-4. **Génération de la miniature** (thumbnail) : image statique générée (probablement une frame Remotion dédiée).
-5. **Publication YouTube** : upload du fichier avec titre/description/tags templatés selon la chaîne + config de confidentialité (public/non répertorié pour les tests).
-6. **Enregistrement** : écrire en base les 40 morceaux utilisés (liés à la chaîne) + les métadonnées du run (date, id vidéo YouTube, statut).
+4. **Génération de la miniature** (thumbnail) : image statique générée (probablement une frame Remotion dédiée), incluant le nom du thème du jour.
+5. **Publication YouTube** : upload du fichier avec titre/description/tags templatés selon le thème du jour, visibilité lue depuis la config de la chaîne (`private` tant que le pipeline n'est pas validé, `public` une fois basculé manuellement).
+6. **Playlist** : créer la playlist YouTube du thème si elle n'existe pas encore (et persister son id dans la config), puis y ajouter la vidéo.
+7. **Enregistrement** : écrire en base les 40 morceaux utilisés (liés à la chaîne + au thème) + les métadonnées du run (date, thème, id vidéo YouTube, statut, visibilité).
 
 ## 5. Format vidéo — détail
 
@@ -77,18 +104,47 @@ Par morceau (~15s) :
 
 Décidé :
 - animation du compte à rebours : **cercle de progression (ring) combiné à des chiffres qui défilent** — combo jugé le plus satisfaisant visuellement.
+- transition de révélation : **flash lumineux bref + zoom sur la pochette avec glow coloré**, texte artiste/titre en fondu juste après — effet d'impact fort adapté au rythme du format.
 
-Points à figer avec le rendu Remotion (à itérer visuellement une fois le pipeline technique validé) :
-- style de transition entre "devine" et "révélation",
+Point à figer avec le rendu Remotion (à itérer visuellement une fois le pipeline technique validé) :
 - habillage sonore (tic-tac ? sting à la révélation ?) — à définir.
+
+### Thèmes de la chaîne pilote et templates YouTube
+
+Rotation par défaut (modifiable en config, un thème par jour de la semaine) :
+
+| Jour | Thème |
+|---|---|
+| Lundi | Années 80 |
+| Mardi | Années 90 |
+| Mercredi | Années 2000 |
+| Jeudi | Rap FR |
+| Vendredi | Variété actuelle |
+| Samedi | Chansons françaises classiques |
+| Dimanche | Génériques dessins animés/films |
+
+Proposition de template titre/description (à valider, ajustable par thème) :
+
+- **Titre** : `BLIND TEST {ThemeLabel} 🎧 | Devine 40 chansons en 10 secondes ! (Ép. {n})`
+- **Description** :
+  ```
+  🎵 Blind Test spécial {ThemeLabel} — 40 extraits à deviner en 10 secondes chrono !
+  Combien as-tu trouvé ? Dis ton score en commentaire 👇
+
+  🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !
+
+  #blindtest #quizmusical #{themeHashtag}
+  ```
+- **Tags** : `blind test`, `quiz musical`, `{theme label}`, `devine la chanson`, `musique {langue}`.
 
 ## 6. Modèle de données (SQLite)
 
-- `channels` : id, nom, langue, genre/style musical, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), programmation (fréquence).
-- `tracks_used` : channel_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK).
-- `videos` : id, channel_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), format (long/short).
+- `channels` : id, nom, langue, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), visibilité courante (`private`/`unlisted`/`public`).
+- `channel_themes` : id, channel_id, day (lundi..dimanche), label, spotify_seed, youtube_playlist_id (nullable, rempli au premier upload).
+- `tracks_used` : channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). L'anti-repeat se fait sur `(channel_id, spotify_track_id)` sans filtrer par thème — un morceau déjà utilisé n'est jamais reproposé sur la chaîne, même dans un thème différent.
+- `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short).
 
-Ce modèle est ce qui garantit qu'on ne rejoue jamais deux fois le même morceau sur une même chaîne, et qu'on peut suivre l'historique par chaîne indépendamment.
+Ce modèle est ce qui garantit qu'on ne rejoue jamais deux fois le même morceau sur une même chaîne, et qu'on peut suivre l'historique par chaîne et par thème indépendamment.
 
 ## 7. Droits d'auteur & stratégie Content ID
 
@@ -124,10 +180,12 @@ Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — c
 | Réclamation Content ID | Vidéo monétisée au profit de l'ayant droit, parfois blocage régional | Extraits courts, montage transformatif, config de durée ajustable |
 | Rendu Remotion trop lent pour 40 segments | Temps de génération long | Mesurer dès le prototype, optimiser (rendu parallèle Remotion) si besoin |
 | API TikTok/Snapchat peu ouvertes pour publication auto | Bloquant pour le multi-plateforme v2 | À valider au moment venu ; publication manuelle possible en repli |
+| 7 thèmes = catalogues Spotify/Deezer de tailles très inégales (ex: génériques dessins animés a un vivier plus restreint que variété actuelle) | Un thème s'épuise plus vite (répétitions ou plus assez de candidats après filtrage anti-repeat) | Vivier de secours plus large par thème en config, alerte si le nombre de candidats restants passe sous un seuil |
+| Publication quotidienne dès la v1 (vs hebdo initialement prévu) | Plus d'occasions de détecter un bug en prod, plus de volume à corriger si un run échoue plusieurs jours de suite | Visibilité `private` tant que non validé (déjà prévu) ; ajouter un contrôle simple avant bascule en public (ex: vérifier N runs consécutifs sans erreur) |
 
 ## 11. Points encore ouverts
 
-- Genre musical précis de la chaîne pilote française (variété française ? toutes générations/tout genre ? un thème plus ciblé ?).
-- Style précis de la transition reveal (au-delà du timer, déjà figé sur cercle + chiffres) — à itérer visuellement une fois le pipeline technique en place.
-- Nom/identité de la chaîne pilote.
-- Titre/description/tags exacts du template YouTube pour la chaîne pilote.
+- Confirmer/ajuster le template titre/description/tags proposé en section 5 (texte définitif).
+- Habillage sonore (tic-tac, sting de révélation) — à définir.
+- Seuil exact de validation avant bascule automatique-privé → public (ex: "N jours consécutifs sans erreur" — nombre à définir).
+- Nom définitif de la chaîne pilote (le placeholder « BlindTest FR » sera utilisé jusque-là).
