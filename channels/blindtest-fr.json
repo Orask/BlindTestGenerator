@@ -1,0 +1,57 @@
+{
+  "id": "blindtest-fr",
+  "name": "BlindTest FR",
+  "language": "fr",
+  "visibility": "private",
+  "themes": [
+    {
+      "day": "monday",
+      "id": "annees-80",
+      "label": "Années 80",
+      "spotifySeed": "genre:80s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "tuesday",
+      "id": "annees-90",
+      "label": "Années 90",
+      "spotifySeed": "genre:90s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "wednesday",
+      "id": "annees-2000",
+      "label": "Années 2000",
+      "spotifySeed": "genre:2000s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "thursday",
+      "id": "rap-fr",
+      "label": "Rap FR",
+      "spotifySeed": "genre:french-rap",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "friday",
+      "id": "variete-actuelle",
+      "label": "Variété actuelle",
+      "spotifySeed": "genre:french-pop",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "saturday",
+      "id": "classiques-fr",
+      "label": "Chansons françaises classiques",
+      "spotifySeed": "genre:chanson-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "sunday",
+      "id": "generiques",
+      "label": "Génériques dessins animés/films",
+      "spotifySeed": "genre:cartoon-themes",
+      "youtubePlaylistId": null
+    }
+  ]
+}

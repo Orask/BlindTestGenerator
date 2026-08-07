@@ -5,6 +5,7 @@ Version 0.1 — brouillon de travail, à valider/amender ensemble avant le débu
 ## 1. Vision
 
 Un système qui génère et publie automatiquement des vidéos de blind test musical sur YouTube, conçu dès le départ pour scaler vers :
+
 - plusieurs chaînes en parallèle (langues/genres musicaux différents),
 - plusieurs formats (vidéo longue 10-15 min, shorts ~1 min),
 - plusieurs plateformes (YouTube d'abord, puis TikTok/Instagram/Facebook/Snapchat),
@@ -13,6 +14,7 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 ## 2. Périmètre v1
 
 **Inclus :**
+
 - Génération d'une vidéo longue (10-15 min) de blind test, format fixe : **40 morceaux** par épisode (~15s/morceau : 10s timer + 5s révélation), ajustable via config.
 - **Publication quotidienne** (1 vidéo/jour) avec **rotation de 7 thèmes musicaux, un par jour de la semaine** (voir section 5bis) — chaque thème a sa propre playlist YouTube et un titre de vidéo explicite sur son contenu. Ce mécanisme de rotation par config est volontairement générique : une future chaîne mono-thème spécialisée (autre langue/genre) réutilisera le même code avec une liste d'un seul thème répété tous les jours.
 - **Visibilité progressive** : tant que le pipeline n'est pas validé de bout en bout, les vidéos sont uploadées en **privé** (visibilité YouTube `private`) — bascule manuelle vers `public` une fois la qualité confirmée sur plusieurs runs. Paramètre de config, pas de logique de bascule automatique en v1.
@@ -25,6 +27,7 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 - Base de données locale (SQLite) : configuration de chaîne et de ses thèmes, historique des morceaux utilisés, historique des runs/vidéos publiées.
 
 **Explicitement hors v1** (mais prévu dans l'architecture) :
+
 - Multi-chaînes actives simultanément (l'architecture le permet — c'est même le même mécanisme que la rotation de thèmes — mais on ne lance qu'une chaîne pilote).
 - Format shorts (~1 min).
 - Publication sur TikTok/Instagram/Facebook/Snapchat.
@@ -70,13 +73,55 @@ Exemple de config de chaîne (`channels/blindtest-fr.json`, simplifié) :
   "language": "fr",
   "visibility": "private",
   "themes": [
-    { "day": "monday",    "id": "annees-80",       "label": "Années 80",                     "spotifySeed": "genre:80s-fr",        "youtubePlaylistId": null },
-    { "day": "tuesday",   "id": "annees-90",       "label": "Années 90",                     "spotifySeed": "genre:90s-fr",        "youtubePlaylistId": null },
-    { "day": "wednesday", "id": "annees-2000",     "label": "Années 2000",                   "spotifySeed": "genre:2000s-fr",      "youtubePlaylistId": null },
-    { "day": "thursday",  "id": "rap-fr",          "label": "Rap FR",                        "spotifySeed": "genre:french-rap",    "youtubePlaylistId": null },
-    { "day": "friday",    "id": "variete-actuelle","label": "Variété actuelle",               "spotifySeed": "genre:french-pop",    "youtubePlaylistId": null },
-    { "day": "saturday",  "id": "classiques-fr",   "label": "Chansons françaises classiques", "spotifySeed": "genre:chanson-fr",    "youtubePlaylistId": null },
-    { "day": "sunday",    "id": "generiques",      "label": "Génériques dessins animés/films","spotifySeed": "genre:cartoon-themes","youtubePlaylistId": null }
+    {
+      "day": "monday",
+      "id": "annees-80",
+      "label": "Années 80",
+      "spotifySeed": "genre:80s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "tuesday",
+      "id": "annees-90",
+      "label": "Années 90",
+      "spotifySeed": "genre:90s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "wednesday",
+      "id": "annees-2000",
+      "label": "Années 2000",
+      "spotifySeed": "genre:2000s-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "thursday",
+      "id": "rap-fr",
+      "label": "Rap FR",
+      "spotifySeed": "genre:french-rap",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "friday",
+      "id": "variete-actuelle",
+      "label": "Variété actuelle",
+      "spotifySeed": "genre:french-pop",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "saturday",
+      "id": "classiques-fr",
+      "label": "Chansons françaises classiques",
+      "spotifySeed": "genre:chanson-fr",
+      "youtubePlaylistId": null
+    },
+    {
+      "day": "sunday",
+      "id": "generiques",
+      "label": "Génériques dessins animés/films",
+      "spotifySeed": "genre:cartoon-themes",
+      "youtubePlaylistId": null
+    }
   ]
 }
 ```
@@ -99,28 +144,31 @@ Cette séparation en packages est ce qui permet la scalabilité : ajouter une ch
 ## 5. Format vidéo — détail
 
 Par morceau (~15s) :
+
 - 0–10s : minuteur visible, extrait audio en lecture, visuel générique (waveform / arrière-plan animé) — le spectateur doit deviner.
 - 10–15s : révélation animée — pochette de l'album, nom de l'artiste, titre du morceau, effet de transition/particules pour rendre ça "satisfaisant".
 
 Décidé :
+
 - animation du compte à rebours : **cercle de progression (ring) combiné à des chiffres qui défilent** — combo jugé le plus satisfaisant visuellement.
 - transition de révélation : **flash lumineux bref + zoom sur la pochette avec glow coloré**, texte artiste/titre en fondu juste après — effet d'impact fort adapté au rythme du format.
 
 Point à figer avec le rendu Remotion (à itérer visuellement une fois le pipeline technique validé) :
+
 - habillage sonore (tic-tac ? sting à la révélation ?) — à définir.
 
 ### Thèmes de la chaîne pilote et templates YouTube
 
 Rotation par défaut (modifiable en config, un thème par jour de la semaine) :
 
-| Jour | Thème |
-|---|---|
-| Lundi | Années 80 |
-| Mardi | Années 90 |
-| Mercredi | Années 2000 |
-| Jeudi | Rap FR |
-| Vendredi | Variété actuelle |
-| Samedi | Chansons françaises classiques |
+| Jour     | Thème                           |
+| -------- | ------------------------------- |
+| Lundi    | Années 80                       |
+| Mardi    | Années 90                       |
+| Mercredi | Années 2000                     |
+| Jeudi    | Rap FR                          |
+| Vendredi | Variété actuelle                |
+| Samedi   | Chansons françaises classiques  |
 | Dimanche | Génériques dessins animés/films |
 
 Proposition de template titre/description (à valider, ajustable par thème) :
@@ -149,6 +197,7 @@ Ce modèle est ce qui garantit qu'on ne rejoue jamais deux fois le même morceau
 ## 7. Droits d'auteur & stratégie Content ID
 
 Objectif affiché : chaînes publiques sérieuses avec monétisation visée à terme. Ce qui en découle pour la conception :
+
 - Les extraits doivent rester courts et clairement transformatifs (montage, minuteur, effets, habillage) — le format blind test est un usage établi sur YouTube, mais des réclamations Content ID resteront probables (généralement une monétisation reversée à l'ayant droit plutôt qu'un strike, tant qu'on respecte les policies YouTube).
 - Le champ `format`/`duration` par morceau doit être un paramètre de config facilement ajustable — si on constate trop de réclamations bloquantes, on doit pouvoir réduire la durée d'extrait sans réécrire le pipeline.
 - Prévoir dans le modèle un champ de suivi de statut Content ID par vidéo, pour pouvoir monitorer plus tard (hors v1, mais la colonne peut être prévue dans `videos`).
@@ -173,15 +222,15 @@ Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — c
 
 ## 10. Risques identifiés
 
-| Risque | Impact | Mitigation prévue |
-|---|---|---|
-| Deezer ne retourne pas de preview pour un morceau (catalogue incomplet) | Morceau à écarter | Fallback : piocher un autre candidat dans la sélection |
-| Quota YouTube Data API (10 000 unités/jour, upload = 1600) | Limite ~6 uploads/jour/projet GCP | Non bloquant pour du hebdo multi-chaînes en v1 ; à surveiller si scale fort |
-| Réclamation Content ID | Vidéo monétisée au profit de l'ayant droit, parfois blocage régional | Extraits courts, montage transformatif, config de durée ajustable |
-| Rendu Remotion trop lent pour 40 segments | Temps de génération long | Mesurer dès le prototype, optimiser (rendu parallèle Remotion) si besoin |
-| API TikTok/Snapchat peu ouvertes pour publication auto | Bloquant pour le multi-plateforme v2 | À valider au moment venu ; publication manuelle possible en repli |
-| 7 thèmes = catalogues Spotify/Deezer de tailles très inégales (ex: génériques dessins animés a un vivier plus restreint que variété actuelle) | Un thème s'épuise plus vite (répétitions ou plus assez de candidats après filtrage anti-repeat) | Vivier de secours plus large par thème en config, alerte si le nombre de candidats restants passe sous un seuil |
-| Publication quotidienne dès la v1 (vs hebdo initialement prévu) | Plus d'occasions de détecter un bug en prod, plus de volume à corriger si un run échoue plusieurs jours de suite | Visibilité `private` tant que non validé (déjà prévu) ; ajouter un contrôle simple avant bascule en public (ex: vérifier N runs consécutifs sans erreur) |
+| Risque                                                                                                                                        | Impact                                                                                                           | Mitigation prévue                                                                                                                                        |
+| --------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Deezer ne retourne pas de preview pour un morceau (catalogue incomplet)                                                                       | Morceau à écarter                                                                                                | Fallback : piocher un autre candidat dans la sélection                                                                                                   |
+| Quota YouTube Data API (10 000 unités/jour, upload = 1600)                                                                                    | Limite ~6 uploads/jour/projet GCP                                                                                | Non bloquant pour du hebdo multi-chaînes en v1 ; à surveiller si scale fort                                                                              |
+| Réclamation Content ID                                                                                                                        | Vidéo monétisée au profit de l'ayant droit, parfois blocage régional                                             | Extraits courts, montage transformatif, config de durée ajustable                                                                                        |
+| Rendu Remotion trop lent pour 40 segments                                                                                                     | Temps de génération long                                                                                         | Mesurer dès le prototype, optimiser (rendu parallèle Remotion) si besoin                                                                                 |
+| API TikTok/Snapchat peu ouvertes pour publication auto                                                                                        | Bloquant pour le multi-plateforme v2                                                                             | À valider au moment venu ; publication manuelle possible en repli                                                                                        |
+| 7 thèmes = catalogues Spotify/Deezer de tailles très inégales (ex: génériques dessins animés a un vivier plus restreint que variété actuelle) | Un thème s'épuise plus vite (répétitions ou plus assez de candidats après filtrage anti-repeat)                  | Vivier de secours plus large par thème en config, alerte si le nombre de candidats restants passe sous un seuil                                          |
+| Publication quotidienne dès la v1 (vs hebdo initialement prévu)                                                                               | Plus d'occasions de détecter un bug en prod, plus de volume à corriger si un run échoue plusieurs jours de suite | Visibilité `private` tant que non validé (déjà prévu) ; ajouter un contrôle simple avant bascule en public (ex: vérifier N runs consécutifs sans erreur) |
 
 ## 11. Points encore ouverts
 
