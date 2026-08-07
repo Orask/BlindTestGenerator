@@ -7,13 +7,15 @@
     "dev": "remotion studio src/index.ts",
     "lint": "eslint .",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "vitest run --passWithNoTests",
-    "test:coverage": "vitest run --coverage --passWithNoTests"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
+    "@remotion/zod-types": "4.0.506",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "remotion": "4.0.506"
+    "remotion": "4.0.506",
+    "zod": "4.4.3"
   },
   "devDependencies": {
     "@remotion/cli": "4.0.506",

@@ -19,3 +19,6 @@ packages/video-renderer/out
 **/*-oauth-token.json
 
 .DS_Store
+
+# Local dev tool config (bakes in machine-specific paths, e.g. this Node install)
+.claude/launch.json

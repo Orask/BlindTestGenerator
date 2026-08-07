@@ -1,0 +1,6 @@
+export const FPS = 30;
+export const COUNTDOWN_SECONDS = 10;
+export const REVEAL_SECONDS = 5;
+export const COUNTDOWN_FRAMES = FPS * COUNTDOWN_SECONDS;
+export const REVEAL_FRAMES = FPS * REVEAL_SECONDS;
+export const SEGMENT_FRAMES = COUNTDOWN_FRAMES + REVEAL_FRAMES;
