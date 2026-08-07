@@ -18,7 +18,7 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 - Récupération de l'extrait audio réel via l'API publique Deezer (`preview_url`, ~30s, sans authentification), matché par titre+artiste depuis les métadonnées Spotify.
 - Rendu vidéo via **Remotion** (TypeScript/React) : compte à rebours 10s, révélation animée (pochette, titre, artiste) sur 5s, habillage visuel générique/neutre pour la v1 (waveform, transitions, typographie).
 - Upload automatique sur YouTube via YouTube Data API v3 (OAuth), avec titre/description/tags générés depuis un template par chaîne.
-- Une seule chaîne pilote pour valider le pipeline de bout en bout.
+- Une seule chaîne pilote (**français**) pour valider le pipeline de bout en bout — choix motivé par la capacité à contrôler soi-même la qualité du matching audio/métadonnées et la justesse des textes générés ; l'espagnol est envisagé comme deuxième chaîne de croissance une fois le pipeline validé (bassin d'audience YouTube parmi les plus grands au monde, niche moins saturée que l'anglais sur ce format).
 - Exécution déclenchée localement sur le Mac (launchd/cron) — pas encore de vrai "hébergement cloud" en v1.
 - Base de données locale (SQLite) : configuration de chaîne, historique des morceaux utilisés, historique des runs/vidéos publiées.
 
@@ -127,7 +127,7 @@ Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — c
 
 ## 11. Points encore ouverts
 
-- Langue/genre musical de la chaîne pilote — recherche en cours sur le paysage concurrentiel par langue avant décision finale.
+- Genre musical précis de la chaîne pilote française (variété française ? toutes générations/tout genre ? un thème plus ciblé ?).
 - Style précis de la transition reveal (au-delà du timer, déjà figé sur cercle + chiffres) — à itérer visuellement une fois le pipeline technique en place.
 - Nom/identité de la chaîne pilote.
 - Titre/description/tags exacts du template YouTube pour la chaîne pilote.
