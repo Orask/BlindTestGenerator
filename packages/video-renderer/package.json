@@ -1,0 +1,23 @@
+{
+  "name": "@blindtest/video-renderer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "remotion studio src/index.ts",
+    "lint": "eslint .",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage --passWithNoTests"
+  },
+  "dependencies": {
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "remotion": "4.0.506"
+  },
+  "devDependencies": {
+    "@remotion/cli": "4.0.506",
+    "@types/react": "19.2.18",
+    "@types/react-dom": "19.2.4"
+  }
+}
