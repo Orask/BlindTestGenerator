@@ -18,7 +18,7 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 - Génération d'une vidéo longue (10-15 min) de blind test, format fixe : **40 morceaux** par épisode (~15s/morceau : 10s timer + 5s révélation), ajustable via config.
 - **Publication quotidienne** (1 vidéo/jour) avec **rotation de 7 thèmes musicaux, un par jour de la semaine** (voir section 5bis) — chaque thème a sa propre playlist YouTube et un titre de vidéo explicite sur son contenu. Ce mécanisme de rotation par config est volontairement générique : une future chaîne mono-thème spécialisée (autre langue/genre) réutilisera le même code avec une liste d'un seul thème répété tous les jours.
 - **Visibilité progressive** : tant que le pipeline n'est pas validé de bout en bout, les vidéos sont uploadées en **privé** (visibilité YouTube `private`) — bascule manuelle vers `public` une fois la qualité confirmée sur plusieurs runs. Paramètre de config, pas de logique de bascule automatique en v1.
-- Sélection des morceaux via l'API Spotify (recherche/playlist/genre selon le thème du jour, en config), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base, tous thèmes confondus).
+- Sélection des morceaux via l'API Spotify (recherche par liste d'artistes curatée par thème, voir section 3bis), avec exclusion des morceaux déjà utilisés sur la chaîne (historique en base, tous thèmes confondus).
 - Récupération de l'extrait audio réel via l'API publique Deezer (`preview_url`, ~30s, sans authentification), matché par titre+artiste depuis les métadonnées Spotify.
 - Rendu vidéo via **Remotion** (TypeScript/React) : compte à rebours 10s (cercle de progression + chiffres), révélation animée sur 5s (flash + zoom sur la pochette avec glow), habillage visuel générique/neutre pour la v1 (waveform, transitions, typographie).
 - Upload automatique sur YouTube via YouTube Data API v3 (OAuth), avec titre/description/tags générés depuis un template par thème, puis ajout de la vidéo à la playlist YouTube du thème correspondant.
@@ -41,7 +41,7 @@ Un système qui génère et publie automatiquement des vidéos de blind test mus
 - **Moteur vidéo** : [Remotion](https://www.remotion.dev/) — vidéos générées comme des compositions React, rendu via `@remotion/renderer` (headless Chromium).
 - **Base de données** : SQLite (via `better-sqlite3` ou Prisma) — suffisant en local, migrable vers Postgres si passage au cloud.
 - **Intégrations externes** :
-  - Spotify Web API (recherche, métadonnées, playlists) — OAuth Client Credentials (pas besoin d'un compte utilisateur, juste d'une app développeur Spotify).
+  - Spotify Web API (recherche par artiste, métadonnées) — OAuth Client Credentials (pas besoin d'un compte utilisateur, juste d'une app développeur Spotify). Voir section 3bis : plusieurs endpoints (recommandations, morceaux de playlist, top titres d'artiste) sont verrouillés pour les nouvelles apps, la recherche par artiste est la seule voie fiable restante.
   - Deezer API publique (extraits audio) — pas d'authentification requise.
   - YouTube Data API v3 (upload vidéo) — OAuth 2.0 avec compte Google + projet Google Cloud.
 - **Automatisation locale** : `launchd` (macOS) déclenchant un script Node à intervalle régulier.
@@ -77,63 +77,40 @@ Exemple de config de chaîne (`channels/blindtest-fr.json`, simplifié) :
       "day": "monday",
       "id": "annees-80",
       "label": "Années 80",
-      "spotifySeed": "genre:80s-fr",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "tuesday",
-      "id": "annees-90",
-      "label": "Années 90",
-      "spotifySeed": "genre:90s-fr",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "wednesday",
-      "id": "annees-2000",
-      "label": "Années 2000",
-      "spotifySeed": "genre:2000s-fr",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "thursday",
-      "id": "rap-fr",
-      "label": "Rap FR",
-      "spotifySeed": "genre:french-rap",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "friday",
-      "id": "variete-actuelle",
-      "label": "Variété actuelle",
-      "spotifySeed": "genre:french-pop",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "saturday",
-      "id": "classiques-fr",
-      "label": "Chansons françaises classiques",
-      "spotifySeed": "genre:chanson-fr",
-      "youtubePlaylistId": null
-    },
-    {
-      "day": "sunday",
-      "id": "generiques",
-      "label": "Génériques dessins animés/films",
-      "spotifySeed": "genre:cartoon-themes",
+      "seedArtists": ["Jean-Jacques Goldman", "France Gall", "Indochine"],
       "youtubePlaylistId": null
     }
   ]
 }
 ```
 
+(liste complète des 7 thèmes et de leurs artistes dans `channels/blindtest-fr.json`)
+
 `youtubePlaylistId` est `null` au départ et rempli automatiquement au premier upload de chaque thème (la playlist YouTube est créée par le pipeline si elle n'existe pas encore, puis son id est persisté).
 
 Cette séparation en packages est ce qui permet la scalabilité : ajouter une chaîne = ajouter un fichier de config, ajouter une plateforme = ajouter un module dans `integrations/` qui implémente une interface `Publisher` commune, ajouter un format = ajouter une composition Remotion qui réutilise les mêmes briques (timer, reveal, données).
 
+### 3bis. Constat empirique sur l'API Spotify (testé le 2026-08-07, app développeur réelle)
+
+Une fois l'app développeur Spotify créée, des tests en direct ont confirmé et étendu les restrictions déjà pressenties :
+
+| Endpoint                                           | Statut constaté                                                                                                                               | Conséquence                                                                    |
+| -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `preview_url` sur un morceau                       | toujours `undefined`                                                                                                                          | Confirme le choix de Deezer pour l'audio (déjà prévu)                          |
+| `/recommendations` (seed_genres...)                | `404`                                                                                                                                         | Totalement supprimé pour les nouvelles apps                                    |
+| `/playlists/{id}/tracks` (morceaux d'une playlist) | `403 Forbidden`                                                                                                                               | Impossible de piocher dans une playlist éditoriale, même publique              |
+| `/artists/{id}/top-tracks`                         | `403 Forbidden`                                                                                                                               | Impossible de demander directement les titres les plus populaires d'un artiste |
+| `/search?q=genre:"..."&type=track`                 | `200 OK` mais résultats peu qualitatifs (versions live/instrumentales, artistes obscurs)                                                      | Utilisable mais pas fiable pour des titres reconnaissables                     |
+| `/search?q=artist:"Nom"&type=track`                | `200 OK`, bon classement par pertinence (les titres les plus connus de l'artiste ressortent en premier, même sans score de popularité exposé) | **Solution retenue**                                                           |
+
+**Décision** : chaque thème est désormais défini par une **liste d'artistes curatée** (`seedArtists`) plutôt que par un genre Spotify. Le client Spotify (`@blindtest/spotify`) recherche par `artist:"Nom"`, filtre les versions non originales (remix/live/instrumental/edit...) par correspondance sur le titre, et dé-doublonne par titre normalisé. C'est une heuristique imparfaite (peut exclure à tort un titre contenant légitimement un de ces mots, ou laisser passer une version peu connue) mais c'est la voie la plus fiable disponible pour une app sans accès étendu.
+
+Limite connue : le thème "Génériques dessins animés/films" se prête moins bien à une recherche par artiste (interprètes multiples, génériques mal crédités) — la liste d'artistes de ce thème dans `channels/blindtest-fr.json` est un premier jet à affiner.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
-1. **Sélection** : tirer N candidats depuis Spotify selon le `spotifySeed` du thème du jour, exclure les `track_id` déjà présents dans l'historique de cette chaîne (tous thèmes confondus), retenir 40 morceaux.
+1. **Sélection** : pour chaque artiste de `seedArtists` du thème du jour, rechercher ses morceaux via Spotify (voir section 3bis), regrouper les candidats, exclure les `track_id` déjà présents dans l'historique de cette chaîne (tous thèmes confondus), retenir 40 morceaux.
 2. **Résolution audio** : pour chaque morceau, chercher le `preview_url` correspondant sur Deezer (match titre + artiste), échouer proprement et piocher un remplaçant si aucun match fiable.
 3. **Rendu vidéo** : appeler Remotion avec la liste des 40 morceaux (audio + métadonnées + pochette) → génère un `.mp4` avec pour chaque morceau : 10s timer + 5s reveal animé.
 4. **Génération de la miniature** (thumbnail) : image statique générée (probablement une frame Remotion dédiée), incluant le nom du thème du jour.
@@ -188,7 +165,7 @@ Proposition de template titre/description (à valider, ajustable par thème) :
 ## 6. Modèle de données (SQLite)
 
 - `channels` : id, nom, langue, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), visibilité courante (`private`/`unlisted`/`public`).
-- `channel_themes` : id, channel_id, day (lundi..dimanche), label, spotify_seed, youtube_playlist_id (nullable, rempli au premier upload).
+- `channel_themes` : id, channel_id, day (lundi..dimanche), label, seed_artists (liste), youtube_playlist_id (nullable, rempli au premier upload).
 - `tracks_used` : channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). L'anti-repeat se fait sur `(channel_id, spotify_track_id)` sans filtrer par thème — un morceau déjà utilisé n'est jamais reproposé sur la chaîne, même dans un thème différent.
 - `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short).
 
@@ -205,12 +182,12 @@ Objectif affiché : chaînes publiques sérieuses avec monétisation visée à t
 
 ## 8. Prérequis côté utilisateur (à faire par toi, hors code)
 
-- Créer une app développeur Spotify (spotify.com/dashboard) → récupérer `client_id`/`client_secret`.
-- Créer un projet Google Cloud, activer "YouTube Data API v3", configurer l'écran de consentement OAuth, créer des identifiants OAuth (Desktop app) → fichier `client_secret.json`.
-- Créer/désigner une chaîne YouTube de test (peut être une chaîne existante en non répertorié le temps des tests).
-- Aucun compte requis côté Deezer (API publique en lecture).
+- [x] App développeur Spotify (spotify.com/dashboard) → `client_id`/`client_secret` — fait le 2026-08-07.
+- [x] Projet Google Cloud, "YouTube Data API v3" activée, écran de consentement OAuth (Google Auth Platform), identifiants OAuth Desktop app — fait le 2026-08-07.
+- [x] Chaîne YouTube "BlindTest FR" créée et liée au compte autorisé — fait le 2026-08-07.
+- Aucun compte requis côté Deezer (API publique en lecture) — rien à faire.
 
-Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — ce sont des actions à faire toi-même dans ton navigateur (création de compte/projet), je ne peux pas les faire à ta place.
+Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `.env.example` pour la liste des variables attendues. Le refresh token YouTube a été obtenu via `packages/integrations/youtube/scripts/authorize.ts` (flow OAuth interactif à usage unique, serveur loopback local).
 
 ## 9. Roadmap (au-delà de la v1)
 
@@ -230,6 +207,7 @@ Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — c
 | Rendu Remotion trop lent pour 40 segments                                                                                                     | Temps de génération long                                                                                         | Mesurer dès le prototype, optimiser (rendu parallèle Remotion) si besoin                                                                                 |
 | API TikTok/Snapchat peu ouvertes pour publication auto                                                                                        | Bloquant pour le multi-plateforme v2                                                                             | À valider au moment venu ; publication manuelle possible en repli                                                                                        |
 | 7 thèmes = catalogues Spotify/Deezer de tailles très inégales (ex: génériques dessins animés a un vivier plus restreint que variété actuelle) | Un thème s'épuise plus vite (répétitions ou plus assez de candidats après filtrage anti-repeat)                  | Vivier de secours plus large par thème en config, alerte si le nombre de candidats restants passe sous un seuil                                          |
+| Filtrage heuristique des versions non originales (regex sur le titre, section 3bis) trop strict ou trop laxiste                               | Faux positifs (titre légitime exclu) ou faux négatifs (remix qui passe)                                          | Ajuster la regex au fil de l'usage réel ; pas de solution parfaite sans les endpoints désormais fermés                                                   |
 | Publication quotidienne dès la v1 (vs hebdo initialement prévu)                                                                               | Plus d'occasions de détecter un bug en prod, plus de volume à corriger si un run échoue plusieurs jours de suite | Visibilité `private` tant que non validé (déjà prévu) ; ajouter un contrôle simple avant bascule en public (ex: vérifier N runs consécutifs sans erreur) |
 
 ## 11. Points encore ouverts
@@ -238,3 +216,4 @@ Je pourrai te guider pas à pas pour chacune de ces étapes le moment venu — c
 - Habillage sonore (tic-tac, sting de révélation) — à définir.
 - Seuil exact de validation avant bascule automatique-privé → public (ex: "N jours consécutifs sans erreur" — nombre à définir).
 - Nom définitif de la chaîne pilote (le placeholder « BlindTest FR » sera utilisé jusque-là).
+- Liste d'artistes du thème "Génériques dessins animés/films" à affiner (voir section 3bis, cas le moins évident pour une recherche par artiste).
