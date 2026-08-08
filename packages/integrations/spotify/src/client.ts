@@ -22,6 +22,12 @@ const NON_ORIGINAL_VERSION_PATTERN =
 // verified empirically (see docs/CAHIER_DES_CHARGES.md section 3bis).
 const MAX_SEARCH_LIMIT = 10;
 
+const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
+
+function normalizeArtistName(name: string): string {
+  return name.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
+}
+
 export function createSpotifyClient(
   tokenProvider: TokenProvider,
   fetchImpl: typeof fetch = fetch,
@@ -45,9 +51,23 @@ export function createSpotifyClient(
       const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
       const seenTitles = new Set<string>();
       const results: SpotifyTrackMetadata[] = [];
+      const normalizedQuery = normalizeArtistName(artistName);
 
       for (const track of data.tracks.items) {
         if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
+          continue;
+        }
+        // Spotify's `artist:"X"` filter is a loose text match, not an exact
+        // one — it happily returns tracks by a completely different artist
+        // that merely shares a substring with X (e.g. searching "Dorothée"
+        // returns tracks credited only to "Dorothée Pousséo", an unrelated
+        // person). Requiring the searched name to exactly match one of the
+        // track's own credited artists (diacritic/case-insensitive) is what
+        // actually keeps the theme on-topic.
+        const isActuallyByArtist = track.artists.some(
+          (artist) => normalizeArtistName(artist.name) === normalizedQuery,
+        );
+        if (!isActuallyByArtist) {
           continue;
         }
         const normalizedTitle = track.name.trim().toLowerCase();
@@ -60,6 +80,7 @@ export function createSpotifyClient(
           id: track.id,
           title: track.name,
           artist: track.artists.map((a) => a.name).join(", "),
+          artistNames: track.artists.map((a) => a.name),
           albumCoverUrl: track.album.images[0]?.url ?? "",
           popularityRank: results.length,
         });
@@ -70,6 +91,29 @@ export function createSpotifyClient(
       }
 
       return results;
+    },
+
+    async getTrackById(id: string): Promise<SpotifyTrackMetadata> {
+      const accessToken = await tokenProvider.getAccessToken();
+      const response = await fetchImpl(`https://api.spotify.com/v1/tracks/${id}`, {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Spotify track lookup failed for id "${id}": ${response.status} ${await response.text()}`,
+        );
+      }
+
+      const track = (await response.json()) as RawSpotifyTrack;
+      return {
+        id: track.id,
+        title: track.name,
+        artist: track.artists.map((a) => a.name).join(", "),
+        artistNames: track.artists.map((a) => a.name),
+        albumCoverUrl: track.album.images[0]?.url ?? "",
+        popularityRank: 0,
+      };
     },
   };
 }

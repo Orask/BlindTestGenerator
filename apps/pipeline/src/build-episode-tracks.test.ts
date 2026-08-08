@@ -3,11 +3,12 @@ import type { ItunesClient } from "@blindtest/itunes";
 import { describe, expect, it, vi } from "vitest";
 import { buildEpisodeTracks } from "./build-episode-tracks.js";
 
-function track(id: string, popularityRank = 1): Track {
+function track(id: string, popularityRank = 1, artistNames = [`Artist ${id}`]): Track {
   return {
     id,
     title: `Title ${id}`,
-    artist: `Artist ${id}`,
+    artist: artistNames.join(", "),
+    artistNames,
     albumCoverUrl: `https://example.com/${id}.jpg`,
     popularityRank,
   };
@@ -84,7 +85,7 @@ describe("buildEpisodeTracks", () => {
   });
 
   it("never picks more than 2 tracks from the same artist, even with more candidates available", async () => {
-    const sameArtist = (id: string): Track => ({ ...track(id), artist: "Overexposed Artist" });
+    const sameArtist = (id: string): Track => track(id, 1, ["Overexposed Artist"]);
     const candidates = [sameArtist("1"), sameArtist("2"), sameArtist("3"), track("4")];
 
     const result = await buildEpisodeTracks(
@@ -96,13 +97,41 @@ describe("buildEpisodeTracks", () => {
       0,
     );
 
-    const overexposedCount = result.filter((t) => t.artist === "Overexposed Artist").length;
+    const overexposedCount = result.filter((t) =>
+      t.artistNames.includes("Overexposed Artist"),
+    ).length;
     expect(overexposedCount).toBe(2);
     expect(result).toHaveLength(3);
   });
 
+  it("never picks more than 2 tracks featuring the same artist, even under different collab credits", async () => {
+    // Reproduces the real bug: a featured artist credited alongside a
+    // different collaborator on every track never repeats as an exact
+    // joined "artist" string, so a naive string-based cap let them appear
+    // on every single track of the episode.
+    const candidates = [
+      track("1", 1, ["Mortelle Adèle", "Dorothée Pousséo"]),
+      track("2", 1, ["Dorothée Pousséo", "Aldebert"]),
+      track("3", 1, ["Petit Ours Brun", "Dorothée Pousséo"]),
+      track("4", 1, ["Chantal Goya"]),
+      track("5", 1, ["Henri Dès"]),
+    ];
+
+    const result = await buildEpisodeTracks(
+      candidates,
+      new Set(),
+      new Set(),
+      itunesThatFindsAllPreviews(),
+      3,
+      0,
+    );
+
+    const featuringDorothee = result.filter((t) => t.artistNames.includes("Dorothée Pousséo"));
+    expect(featuringDorothee).toHaveLength(2);
+  });
+
   it("never places two tracks from the same artist back-to-back", async () => {
-    const sameArtist = (id: string): Track => ({ ...track(id), artist: "Overexposed Artist" });
+    const sameArtist = (id: string): Track => track(id, 1, ["Overexposed Artist"]);
     const candidates = [sameArtist("1"), sameArtist("2"), track("3"), track("4")];
 
     const result = await buildEpisodeTracks(
@@ -114,7 +143,9 @@ describe("buildEpisodeTracks", () => {
       0,
     );
 
-    const adjacentDuplicate = result.some((t, i) => i > 0 && result[i - 1]!.artist === t.artist);
+    const adjacentDuplicate = result.some(
+      (t, i) => i > 0 && result[i - 1]!.artistNames.some((name) => t.artistNames.includes(name)),
+    );
     expect(adjacentDuplicate).toBe(false);
   });
 

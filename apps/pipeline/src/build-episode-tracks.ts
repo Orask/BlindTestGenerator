@@ -65,7 +65,14 @@ export async function buildEpisodeTracks(
     if (isReuse && !allowReuse) {
       return;
     }
-    if ((artistCounts.get(track.artist) ?? 0) >= MAX_TRACKS_PER_ARTIST) {
+    // Checked against every individual credited artist, not the joined
+    // display string — otherwise a featured artist credited under different
+    // collaboration strings (e.g. "X, Nicoletta" vs "Y, Nicoletta") slips
+    // past the cap entirely, since neither string ever repeats on its own.
+    const wouldExceedCap = track.artistNames.some(
+      (name) => (artistCounts.get(name) ?? 0) >= MAX_TRACKS_PER_ARTIST,
+    );
+    if (wouldExceedCap) {
       return;
     }
     seenIds.add(track.id);
@@ -76,7 +83,9 @@ export async function buildEpisodeTracks(
       return;
     }
 
-    artistCounts.set(track.artist, (artistCounts.get(track.artist) ?? 0) + 1);
+    for (const name of track.artistNames) {
+      artistCounts.set(name, (artistCounts.get(name) ?? 0) + 1);
+    }
     result.push({ ...track, audioUrl: preview.previewUrl });
     if (isReuse) {
       reusedCount++;

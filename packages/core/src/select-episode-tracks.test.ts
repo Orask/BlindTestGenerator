@@ -7,6 +7,7 @@ function track(id: string): Track {
     id,
     title: `Title ${id}`,
     artist: `Artist ${id}`,
+    artistNames: [`Artist ${id}`],
     albumCoverUrl: `https://example.com/${id}.jpg`,
   };
 }

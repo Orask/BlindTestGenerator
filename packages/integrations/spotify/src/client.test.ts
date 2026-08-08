@@ -40,6 +40,7 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         id: "id-1",
         title: "Dernière danse",
         artist: "Indila",
+        artistNames: ["Indila"],
         albumCoverUrl: "https://example.com/cover.jpg",
         popularityRank: 0,
       },
@@ -64,6 +65,7 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         id: "1",
         title: "Dernière danse",
         artist: "Indila",
+        artistNames: ["Indila"],
         albumCoverUrl: "https://example.com/cover.jpg",
         popularityRank: 0,
       },
@@ -110,5 +112,71 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
     await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
       "Spotify search failed",
     );
+  });
+
+  it("discards tracks that don't actually credit the searched artist (Spotify's fuzzy match)", async () => {
+    // Reproduces a real, confirmed case: searching "Dorothée" returns tracks
+    // credited only to "Dorothée Pousséo" (an unrelated modern voice
+    // actress) because Spotify's artist filter is a loose text match, not
+    // an exact one.
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([
+        rawTrack({ id: "1", name: "Bizarre bizarre", artists: [{ name: "Dorothée Pousséo" }] }),
+        rawTrack({ id: "2", name: "Do Do L'enfant Do", artists: [{ name: "Dorothée" }] }),
+        rawTrack({
+          id: "3",
+          name: "Featuring",
+          artists: [{ name: "Someone Else" }, { name: "Dorothée" }],
+        }),
+      ]),
+    );
+
+    const results = await client.searchTracksByArtist("Dorothée", 10);
+
+    expect(results.map((r) => r.id)).toEqual(["2", "3"]);
+  });
+
+  it("matches the searched artist regardless of case or diacritics", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([rawTrack({ id: "1", artists: [{ name: "Stromae" }] })]),
+    );
+
+    const results = await client.searchTracksByArtist("STROMAÉ", 10);
+
+    expect(results).toHaveLength(1);
+  });
+});
+
+describe("createSpotifyClient.getTrackById", () => {
+  it("fetches a single track by id and maps it to SpotifyTrackMetadata", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(rawTrack({ id: "abc", artists: [{ name: "Indila" }] })),
+    });
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.getTrackById("abc");
+
+    expect(result).toEqual({
+      id: "abc",
+      title: "Dernière danse",
+      artist: "Indila",
+      artistNames: ["Indila"],
+      albumCoverUrl: "https://example.com/cover.jpg",
+      popularityRank: 0,
+    });
+  });
+
+  it("throws when the lookup fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      text: () => Promise.resolve("Not Found"),
+    }) as unknown as typeof fetch;
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.getTrackById("missing")).rejects.toThrow("Spotify track lookup failed");
   });
 });
