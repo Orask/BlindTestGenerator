@@ -186,6 +186,16 @@ Effectif final par thème (`seedArtists`, tous vérifiés à retourner ≥1 rés
 
 Génériques passe ainsi d'un maximum réel de ~24 morceaux à ~64 (32 artistes × 2), au-dessus des 60 requis — le risque d'`InsufficientTracksError` documenté en 3septies est levé pour ce dimanche. Les autres thèmes gagnent une marge confortable pour absorber la réutilisation après cooldown (section 3sexies) sur plusieurs mois sans s'épuiser aussi vite.
 
+### 3nonies. Automatisation réelle via launchd (2026-08-08)
+
+Jusqu'ici chaque épisode a été généré par une invocation manuelle du CLI — l'automatisation quotidienne prévue dès la v1 (section 2) n'était pas encore branchée. Mise en place :
+
+- `scripts/run-daily-pipeline.sh` : wrapper bash qui fixe `PATH` (launchd ne charge aucun profil shell), se place dans `apps/pipeline`, et lance `node --env-file=.env dist/index.js channels/blindtest-fr.json` — le run quotidien de base (`runPipeline()`), pas le lot hebdomadaire (section 3sexies, volontairement laissé de côté pour l'instant).
+- `scripts/com.blindtestgenerator.dailypipeline.plist` : agent launchd déclenché tous les jours à 6h00 heure locale, sortie standard/erreur redirigée vers `data/logs/launchd-{stdout,stderr}.log`. Installé dans `~/Library/LaunchAgents/` et chargé via `launchctl load`.
+- Chemins absolus spécifiques à cette machine (`/Users/lucaslordon/...`) — à ajuster si le projet est un jour installé ailleurs, comme pour `channels/*.json`.
+- **Limite connue** : un agent utilisateur (`LaunchAgent`, pas `LaunchDaemon`) ne se déclenche que si une session utilisateur est ouverte. Si le Mac est endormi à l'heure prévue, launchd rattrape l'exécution manquée dès le réveil (tant que la session reste ouverte) — mais rien ne se passe si le Mac est complètement éteint. Pas de réveil automatique programmé (`pmset repeat wakeorpoweron`) — nécessiterait `sudo`, à faire par l'utilisateur si le déclenchement garanti à heure fixe devient nécessaire.
+- Pas de mécanisme de nouvelle tentative en cas d'échec (ex. `InsufficientTracksError`, hoquet iTunes) — un jour manqué n'est pas critique pour une v1 ; à revoir si le volume augmente.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
@@ -309,5 +319,5 @@ Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `
 - Seuil exact de validation avant bascule automatique-privé → public (ex: "N jours consécutifs sans erreur" — nombre à définir).
 - Nom définitif de la chaîne pilote (le placeholder « BlindTest FR » sera utilisé jusque-là).
 - Vérifier en conditions réelles si la musique Pixabay déclenche effectivement une réclamation Content ID sur la vidéo, et son impact (blocage vs monétisation partagée).
-- Mettre en place l'automatisation réelle (launchd/cron) — chaque épisode généré jusqu'ici l'a été via une invocation manuelle du CLI, pas encore un déclenchement quotidien autonome.
+- ~~Mettre en place l'automatisation réelle (launchd/cron)~~ — **fait le 2026-08-08** (section 3nonies), agent quotidien à 6h00. Reste à valider sur un vrai déclenchement automatique (pas encore observé, seul le montage a été vérifié).
 - Demander une augmentation de quota YouTube Data API (ou étaler sur 2 jours) avant d'utiliser `runWeeklyBatch()` en production — un lot de 7 dépasse le quota par défaut (section 3sexies).
