@@ -41,6 +41,7 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         title: "Dernière danse",
         artist: "Indila",
         albumCoverUrl: "https://example.com/cover.jpg",
+        popularityRank: 0,
       },
     ]);
   });
@@ -64,6 +65,7 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         title: "Dernière danse",
         artist: "Indila",
         albumCoverUrl: "https://example.com/cover.jpg",
+        popularityRank: 0,
       },
     ]);
   });

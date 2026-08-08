@@ -139,6 +139,22 @@ Suite au visionnage de la vidéo produite en 3quater, ajustements v1.1 :
 - **Style du compte à rebours** : police Baloo2 (plus ronde/engageante que la police système par défaut) + glow radial pulsé derrière l'anneau, pour un rendu jugé "trop vide" auparavant.
 - **Description YouTube** : liste numérotée "titre — artiste" de tous les morceaux ajoutée en fin de description, comme geste minimal de protection/attribution des droits (voir section 7).
 
+### 3sexies. Génération hebdomadaire par lot + publication programmée (2026-08-08)
+
+Alternative au run quotidien : `apps/pipeline/src/pipeline.ts` expose `runWeeklyBatch()` (déclenché via `node dist/index.js <config> --week`), qui génère et publie en un seul passage les 7 épisodes de la semaine à venir, chacun programmé via `publishAt` (YouTube Data API) pour sa prochaine occurrence calendaire — la vidéo reste `private` jusqu'à cette date puis bascule automatiquement en public, sans dépendre d'une exécution quotidienne sur le Mac (un seul run par semaine suffit).
+
+- **Isolation des échecs** : un thème qui échoue (upload, quota, etc.) n'interrompt pas le lot — les 6 autres sont quand même tentés, puis une erreur récapitulative liste les échecs à la fin.
+- **Coût quota concret** : chaque upload coûte 1600 unités sur les 10 000/jour par défaut (risque déjà identifié section 10) — un lot de 7 dépasse ce budget en un seul run (~11 200 unités). Non bloquant pour la v1 (chaîne encore en `private`), mais **à corriger avant bascule en public** : soit demander une augmentation de quota à Google, soit étaler le lot sur 2 jours.
+- **La programmation ne s'active que si `channel.visibility === "public"`** — tant que la chaîne pilote reste `private` (cas actuel), les épisodes du lot sont uploadés immédiatement comme avant, sans `publishAt`, pour ne pas dépendre d'un mécanisme qu'on ne peut pas encore observer en conditions réelles.
+
+**Anti-repeat inter-semaines** : la contrainte historique « un morceau n'est jamais rejoué, jamais » ne tient pas dans la durée — le vivier `seedArtists` d'un thème est fixe et un run hebdomadaire l'épuise vite (risque déjà noté section 10 pour "Génériques", mais valable pour tous les thèmes à terme). Remplacé par un modèle à cooldown :
+
+- Un morceau utilisé il y a moins de `REUSE_COOLDOWN_DAYS` (14 jours, soit 2 cycles hebdomadaires du même thème) est exclu, point final.
+- Passé ce délai, il redevient éligible mais seulement en dernier recours (si le vivier de morceaux jamais utilisés ne suffit plus) et plafonné à 2 réutilisations par épisode de 60 — la variété reste la priorité, la réutilisation n'est qu'une marge d'erreur tolérée, pas un objectif.
+- Nécessite que `tracks_used` puisse contenir plusieurs lignes pour un même `(channel_id, spotify_track_id)` — l'ancienne clé primaire composite l'interdisait. Remplacée par un id auto-incrémenté + un index sur `(channel_id, spotify_track_id)` pour garder les requêtes d'historique rapides. Migration automatique au premier `openDatabase()` sur une base existante (rebuild de la table, aucune perte de données — vérifié sur la base réelle du pilote).
+
+**Ouverture de l'épisode (`apps/pipeline/src/opening-hook.ts`)** : les 5 premiers morceaux sont ceux qui décident si le spectateur reste — Spotify ne renvoie plus le score `popularity` réel pour les nouvelles apps (section 3bis), donc à défaut on utilise le rang de chaque morceau dans les résultats de recherche _par artiste_ (`Track.popularityRank`, 0 = premier résultat) comme proxy de notoriété : c'est une heuristique, pas une vraie mesure d'écoute, mais c'est ce que l'API expose encore. Le morceau `popularityRank === 0` de chaque artiste est prioritairement placé dans les 5 premières positions (dans la limite du nombre de morceaux "signature" réellement disponibles), le reste de l'épisode suit dans son ordre habituel anti-répétition.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
@@ -209,7 +225,7 @@ Template titre/description implémenté dans `apps/pipeline/src/youtube-metadata
 
 - `channels` : id, nom, langue, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), visibilité courante (`private`/`unlisted`/`public`).
 - `channel_themes` : id, channel_id, day (lundi..dimanche), label, youtube_playlist_id (nullable, rempli au premier upload). `seedArtists` n'est pas dupliqué en base : il vit uniquement dans le JSON de config, relu à chaque run.
-- `tracks_used` : channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). L'anti-repeat se fait sur `(channel_id, spotify_track_id)` sans filtrer par thème — un morceau déjà utilisé n'est jamais reproposé sur la chaîne, même dans un thème différent.
+- `tracks_used` : id (surrogate), channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). Un même morceau peut apparaître plusieurs fois dans le temps (réutilisation contrôlée après cooldown, section 3sexies) — l'anti-repeat n'est plus une contrainte d'unicité en base mais une règle applicative (`apps/pipeline/src/build-episode-tracks.ts` : exclusion stricte sous 14 jours, réutilisation plafonnée à 2/épisode au-delà).
 - `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short).
 
 Ce modèle est ce qui garantit qu'on ne rejoue jamais deux fois le même morceau sur une même chaîne, et qu'on peut suivre l'historique par chaîne et par thème indépendamment.

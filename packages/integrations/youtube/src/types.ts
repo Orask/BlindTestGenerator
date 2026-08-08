@@ -6,6 +6,13 @@ export interface UploadVideoParams {
   readonly description: string;
   readonly tags: readonly string[];
   readonly visibility: VideoVisibility;
+  /**
+   * Schedules the video to go public at this time instead of publishing
+   * immediately. YouTube requires the video to be uploaded as "private" for
+   * this to work — the client forces that regardless of `visibility` when
+   * `publishAt` is set, and YouTube auto-flips it to public at that time.
+   */
+  readonly publishAt?: Date;
 }
 
 export interface YoutubeClient {

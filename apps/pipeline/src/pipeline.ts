@@ -1,12 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
-import { resolveThemeForDay, weekdayFromDate, type ChannelConfig } from "@blindtest/core";
+import {
+  nextPublishDateTime,
+  resolveThemeForDay,
+  weekdayFromDate,
+  type ChannelConfig,
+  type ChannelTheme,
+} from "@blindtest/core";
 import {
   countVideosForTheme,
   createVideo,
   getPlaylistId,
   getUsedTrackIds,
+  getUsedTrackIdsSince,
   markVideoFailed,
   markVideoUploaded,
   openDatabase,
@@ -14,18 +21,22 @@ import {
   setPlaylistId,
 } from "@blindtest/db";
 import type { ItunesClient } from "@blindtest/itunes";
+import type Database from "better-sqlite3";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type { YoutubeClient } from "@blindtest/youtube";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
-import { buildEpisodeTracks } from "./build-episode-tracks.js";
+import { buildEpisodeTracks, REUSE_COOLDOWN_DAYS } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 const DEFAULT_TRACKS_PER_EPISODE = 60;
 const CANDIDATES_PER_ARTIST = 10;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 export interface PipelineDeps {
   readonly spotify: SpotifyClient;
@@ -37,18 +48,23 @@ export interface PipelineDeps {
   readonly tracksPerEpisode: number | undefined;
 }
 
-export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): Promise<void> {
-  await mkdir(dirname(deps.dbPath), { recursive: true });
-  await mkdir(deps.outputDir, { recursive: true });
-
-  const db = openDatabase(deps.dbPath);
-  syncChannelToDb(db, channel);
-
-  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
-  console.log(`[${channel.name}] Thème du jour : ${theme.label}`);
+async function generateAndPublishEpisode(
+  db: Database.Database,
+  channel: ChannelConfig,
+  theme: ChannelTheme,
+  deps: PipelineDeps,
+  publishAt: Date | undefined,
+): Promise<void> {
+  console.log(
+    `[${channel.name}] Thème : ${theme.label}` +
+      (publishAt ? ` (publication prévue ${publishAt.toISOString()})` : ""),
+  );
 
   const tracksPerEpisode = deps.tracksPerEpisode ?? DEFAULT_TRACKS_PER_EPISODE;
-  const alreadyUsedTrackIds = getUsedTrackIds(db, channel.id);
+  const cooldownCutoff = new Date(Date.now() - REUSE_COOLDOWN_DAYS * MS_PER_DAY);
+  const recentlyUsedTrackIds = getUsedTrackIdsSince(db, channel.id, cooldownCutoff);
+  const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
+
   const candidates = await collectCandidateTracks(
     deps.spotify,
     theme.seedArtists,
@@ -56,17 +72,27 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
   );
   const tracks = await buildEpisodeTracks(
     candidates,
-    alreadyUsedTrackIds,
+    recentlyUsedTrackIds,
+    allTimeUsedTrackIds,
     deps.itunes,
     tracksPerEpisode,
   );
   console.log(`${tracks.length} morceaux sélectionnés avec extrait audio résolu.`);
 
+  // Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+  // public/ at bundle time, so anything downloaded afterward 404s from the
+  // bundled server (confirmed live — this order used to be backwards and
+  // broke every fresh cover in a batch run).
+  await resolvePublicCoverUrls(
+    tracks.map((track) => track.albumCoverUrl),
+    PUBLIC_COVERS_DIR,
+  );
+  const serveUrl = await bundleVideoRenderer();
+
   const runId = Date.now();
   const outputPath = `${deps.outputDir}/${channel.id}-${theme.id}-${runId}.mp4`;
   const thumbnailPath = `${deps.outputDir}/${channel.id}-${theme.id}-${runId}-thumbnail.jpg`;
 
-  const serveUrl = await bundleVideoRenderer();
   await renderEpisode({ serveUrl, themeLabel: theme.label, tracks, outputPath });
   console.log(`Vidéo rendue : ${outputPath}`);
   await renderThumbnail({ serveUrl, themeLabel: theme.label, tracks, outputPath: thumbnailPath });
@@ -87,12 +113,18 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
     const episodeNumber = countVideosForTheme(db, theme.id);
     const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumber, tracks);
 
+    // Scheduling only makes sense once the channel is actually meant to go
+    // public — for a private/unlisted test config, upload immediately as
+    // configured instead of parking it behind YouTube's publishAt gate.
+    const effectivePublishAt = channel.visibility === "public" ? publishAt : undefined;
+
     const { videoId: youtubeVideoId } = await deps.youtube.uploadVideo({
       filePath: outputPath,
       title,
       description,
       tags,
       visibility: channel.visibility,
+      ...(effectivePublishAt ? { publishAt: effectivePublishAt } : {}),
     });
 
     await deps.youtube.setThumbnail(youtubeVideoId, thumbnailPath);
@@ -118,9 +150,68 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
       });
     }
 
-    console.log(`Publiée sur YouTube : https://youtu.be/${youtubeVideoId}`);
+    console.log(
+      effectivePublishAt
+        ? `Programmée sur YouTube pour ${effectivePublishAt.toISOString()} : https://youtu.be/${youtubeVideoId}`
+        : `Publiée sur YouTube : https://youtu.be/${youtubeVideoId}`,
+    );
   } catch (error) {
     markVideoFailed(db, videoId);
     throw error;
+  }
+}
+
+export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): Promise<void> {
+  await mkdir(dirname(deps.dbPath), { recursive: true });
+  await mkdir(deps.outputDir, { recursive: true });
+
+  const db = openDatabase(deps.dbPath);
+  syncChannelToDb(db, channel);
+
+  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
+  await generateAndPublishEpisode(db, channel, theme, deps, undefined);
+}
+
+/**
+ * Generates and uploads all 7 themes' episodes in one run, each scheduled
+ * (via YouTube's publishAt) for its next calendar occurrence — so a single
+ * weekly run covers the whole week instead of depending on the Mac being
+ * awake every single day. One theme failing (e.g. a transient upload error,
+ * or hitting the YouTube API's daily upload quota — 1600 units per upload
+ * against a default 10,000/day budget, so more than ~6 uploads in a day
+ * will start failing) doesn't stop the rest from being attempted.
+ */
+export async function runWeeklyBatch(
+  channel: ChannelConfig,
+  deps: PipelineDeps,
+  from: Date = new Date(),
+): Promise<void> {
+  await mkdir(dirname(deps.dbPath), { recursive: true });
+  await mkdir(deps.outputDir, { recursive: true });
+
+  const db = openDatabase(deps.dbPath);
+  syncChannelToDb(db, channel);
+
+  const schedule = channel.themes
+    .map((theme) => ({
+      theme,
+      publishAt: nextPublishDateTime(theme.day, from, channel.publishHourLocal),
+    }))
+    .sort((a, b) => a.publishAt.getTime() - b.publishAt.getTime());
+
+  const failures: { theme: string; error: unknown }[] = [];
+  for (const { theme, publishAt } of schedule) {
+    try {
+      await generateAndPublishEpisode(db, channel, theme, deps, publishAt);
+    } catch (error) {
+      console.error(`Échec pour le thème "${theme.label}" :`, error);
+      failures.push({ theme: theme.label, error });
+    }
+  }
+
+  if (failures.length > 0) {
+    throw new Error(
+      `${failures.length}/${schedule.length} épisode(s) ont échoué : ${failures.map((f) => f.theme).join(", ")}`,
+    );
   }
 }

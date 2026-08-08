@@ -6,6 +6,7 @@ const validConfig = {
   name: "BlindTest FR",
   language: "fr",
   visibility: "private",
+  publishHourLocal: 9,
   themes: [
     {
       day: "monday",

@@ -1,7 +1,11 @@
 import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import { SCHEMA_SQL } from "./schema.js";
-import { getUsedTrackIds, recordTrackUsage } from "./tracks-used-repository.js";
+import {
+  getUsedTrackIds,
+  getUsedTrackIdsSince,
+  recordTrackUsage,
+} from "./tracks-used-repository.js";
 
 let db: Database.Database;
 
@@ -39,7 +43,7 @@ describe("tracks_used repository", () => {
     expect(getUsedTrackIds(db, "blindtest-fr")).toEqual(new Set(["track-1"]));
   });
 
-  it("rejects recording the same track twice for the same channel", () => {
+  it("allows recording the same track again later (controlled reuse after a cooldown)", () => {
     const usage = {
       channelId: "blindtest-fr",
       themeId: "annees-80",
@@ -51,7 +55,35 @@ describe("tracks_used repository", () => {
     };
 
     recordTrackUsage(db, usage);
+    expect(() =>
+      recordTrackUsage(db, { ...usage, usedAt: new Date("2026-09-01T00:00:00Z") }),
+    ).not.toThrow();
+  });
+});
 
-    expect(() => recordTrackUsage(db, usage)).toThrow();
+describe("getUsedTrackIdsSince", () => {
+  it("only returns tracks used at or after the cutoff", () => {
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "old-track",
+      title: "Old",
+      artist: "Artist",
+      videoId: null,
+      usedAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "recent-track",
+      title: "Recent",
+      artist: "Artist",
+      videoId: null,
+      usedAt: new Date("2026-08-05T00:00:00Z"),
+    });
+
+    const result = getUsedTrackIdsSince(db, "blindtest-fr", new Date("2026-08-01T00:00:00Z"));
+
+    expect(result).toEqual(new Set(["recent-track"]));
   });
 });

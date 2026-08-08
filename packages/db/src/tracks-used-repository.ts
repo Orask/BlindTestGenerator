@@ -19,6 +19,20 @@ export function getUsedTrackIds(db: Database.Database, channelId: string): Set<s
   return new Set(rows.map((row) => row.spotify_track_id));
 }
 
+/** Tracks used at or after `sinceDate` — the hard-exclude set for a reuse cooldown. */
+export function getUsedTrackIdsSince(
+  db: Database.Database,
+  channelId: string,
+  sinceDate: Date,
+): Set<string> {
+  const rows = db
+    .prepare<[string, string], { spotify_track_id: string }>(
+      "SELECT spotify_track_id FROM tracks_used WHERE channel_id = ? AND used_at >= ?",
+    )
+    .all(channelId, sinceDate.toISOString());
+  return new Set(rows.map((row) => row.spotify_track_id));
+}
+
 export function recordTrackUsage(db: Database.Database, params: RecordTrackUsageParams): void {
   db.prepare(
     `INSERT INTO tracks_used (channel_id, theme_id, spotify_track_id, title, artist, used_at, video_id)

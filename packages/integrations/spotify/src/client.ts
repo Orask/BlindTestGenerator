@@ -61,6 +61,7 @@ export function createSpotifyClient(
           title: track.name,
           artist: track.artists.map((a) => a.name).join(", "),
           albumCoverUrl: track.album.images[0]?.url ?? "",
+          popularityRank: results.length,
         });
 
         if (results.length === limit) {

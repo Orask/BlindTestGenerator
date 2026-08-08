@@ -21,3 +21,24 @@ export function resolveThemeForDay(themes: readonly ChannelTheme[], day: Weekday
   }
   return theme;
 }
+
+/**
+ * The next calendar date `day` falls on, strictly after `from` (1-7 days
+ * out) — used to schedule a week of episodes ahead without ever re-picking
+ * a day that's already happened this week.
+ */
+export function nextOccurrenceOf(day: Weekday, from: Date): Date {
+  const fromIndex = WEEKDAY_BY_JS_DAY.indexOf(weekdayFromDate(from));
+  const targetIndex = WEEKDAY_BY_JS_DAY.indexOf(day);
+  const daysUntil = ((targetIndex - fromIndex + 7 - 1) % 7) + 1;
+
+  const result = new Date(from);
+  result.setDate(result.getDate() + daysUntil);
+  return result;
+}
+
+/** Combines nextOccurrenceOf with a local hour-of-day, for scheduling a publish time. */
+export function nextPublishDateTime(day: Weekday, from: Date, hourLocal: number): Date {
+  const date = nextOccurrenceOf(day, from);
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate(), hourLocal, 0, 0, 0);
+}

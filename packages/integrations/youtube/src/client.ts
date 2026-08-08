@@ -16,9 +16,9 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
             description: params.description,
             tags: [...params.tags],
           },
-          status: {
-            privacyStatus: params.visibility,
-          },
+          status: params.publishAt
+            ? { privacyStatus: "private", publishAt: params.publishAt.toISOString() }
+            : { privacyStatus: params.visibility },
         },
         media: {
           body: createReadStream(params.filePath),

@@ -30,17 +30,23 @@ CREATE TABLE IF NOT EXISTS videos (
   format TEXT NOT NULL CHECK (format IN ('long', 'short'))
 );
 
--- The (channel_id, spotify_track_id) primary key enforces the anti-repeat
--- rule at the storage layer: a track can never be recorded twice for the
--- same channel, regardless of which theme it was used under.
+-- Anti-repeat is enforced at the application layer (see
+-- apps/pipeline/src/build-episode-tracks.ts): a track can be reused once a
+-- cooldown window has passed, capped to a small number per episode, so a
+-- track CAN legitimately show up more than once here over time — a
+-- surrogate id replaces the old (channel_id, spotify_track_id) primary key,
+-- which used to forbid any repeat, ever.
 CREATE TABLE IF NOT EXISTS tracks_used (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
   channel_id TEXT NOT NULL REFERENCES channels(id),
   theme_id TEXT NOT NULL REFERENCES channel_themes(id),
   spotify_track_id TEXT NOT NULL,
   title TEXT NOT NULL,
   artist TEXT NOT NULL,
   used_at TEXT NOT NULL,
-  video_id TEXT REFERENCES videos(id),
-  PRIMARY KEY (channel_id, spotify_track_id)
+  video_id TEXT REFERENCES videos(id)
 );
+
+CREATE INDEX IF NOT EXISTS idx_tracks_used_channel_track
+  ON tracks_used(channel_id, spotify_track_id);
 `;

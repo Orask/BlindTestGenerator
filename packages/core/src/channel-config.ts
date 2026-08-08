@@ -29,6 +29,10 @@ const channelConfigSchema = z.object({
   name: z.string().min(1),
   language: z.string().min(1),
   visibility: visibilitySchema,
+  // Local hour (0-23) at which a batch-scheduled episode should go live —
+  // only takes effect for scheduled publish (see generate-week.ts), applied
+  // in the machine's local timezone.
+  publishHourLocal: z.number().int().min(0).max(23).default(9),
   themes: z.array(channelThemeSchema).min(1),
 });
 
