@@ -22,12 +22,23 @@ export function Outro({ accentColor }: OutroProps): ReactElement {
       <Sequence durationInFrames={BEAT_FRAMES}>
         <Beat>
           <div style={{ ...textStyle, fontSize: 56, fontWeight: 800 }}>
-            🔔 Abonne-toi pour ne rater aucun épisode !
+            💬 Combien as-tu trouvé ?
+            <div style={{ fontSize: 48, color: accentColor, marginTop: 12 }}>
+              Dis ton score en commentaire !
+            </div>
           </div>
         </Beat>
       </Sequence>
 
       <Sequence from={BEAT_FRAMES} durationInFrames={BEAT_FRAMES}>
+        <Beat>
+          <div style={{ ...textStyle, fontSize: 56, fontWeight: 800 }}>
+            🔔 Abonne-toi pour ne rater aucun épisode !
+          </div>
+        </Beat>
+      </Sequence>
+
+      <Sequence from={BEAT_FRAMES * 2} durationInFrames={BEAT_FRAMES}>
         <Beat>
           <div style={{ ...textStyle, fontSize: 52, fontWeight: 700, color: accentColor }}>
             À demain pour un nouveau thème ! 🎶
