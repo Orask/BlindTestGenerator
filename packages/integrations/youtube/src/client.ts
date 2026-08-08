@@ -32,6 +32,13 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
       return { videoId };
     },
 
+    async setThumbnail(videoId: string, filePath: string): Promise<void> {
+      await api.thumbnails.set({
+        videoId,
+        media: { body: createReadStream(filePath) },
+      });
+    },
+
     async ensurePlaylist(title: string): Promise<{ playlistId: string }> {
       const existing = await api.playlists.list({
         part: ["snippet"],

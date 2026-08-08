@@ -1,7 +1,10 @@
+import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getPlaylistId, markVideoUploaded, openDatabase, setPlaylistId } from "@blindtest/db";
+import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { loadChannelConfig } from "./load-channel-config.js";
+import { renderThumbnailFromCache } from "./render-thumbnail.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 // One-off: re-uploads an already-rendered episode whose first YouTube upload
@@ -45,6 +48,16 @@ const episodeNumberRow = db
 
 const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumberRow.count, trackRows);
 
+const thumbnailPath = path.join(path.dirname(videoRow.file_path), `${videoId}-thumbnail.jpg`);
+const serveUrl = await bundleVideoRenderer();
+await renderThumbnailFromCache({
+  serveUrl,
+  themeLabel: theme.label,
+  trackCount: trackRows.length,
+  outputPath: thumbnailPath,
+});
+console.log(`Miniature rendue : ${thumbnailPath}`);
+
 const { youtube } = createClientsFromEnv();
 
 const { videoId: youtubeVideoId } = await youtube.uploadVideo({
@@ -54,6 +67,8 @@ const { videoId: youtubeVideoId } = await youtube.uploadVideo({
   tags,
   visibility: videoRow.visibility,
 });
+
+await youtube.setThumbnail(youtubeVideoId, thumbnailPath);
 
 let playlistId = getPlaylistId(db, theme.id);
 if (!playlistId) {

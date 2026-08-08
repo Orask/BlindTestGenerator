@@ -16,9 +16,11 @@ import {
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type { YoutubeClient } from "@blindtest/youtube";
+import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { buildEpisodeTracks } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
 import { renderEpisode } from "./render-episode.js";
+import { renderThumbnail } from "./render-thumbnail.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
@@ -60,9 +62,15 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
   );
   console.log(`${tracks.length} morceaux sélectionnés avec extrait audio résolu.`);
 
-  const outputPath = `${deps.outputDir}/${channel.id}-${theme.id}-${Date.now()}.mp4`;
-  await renderEpisode({ themeLabel: theme.label, tracks, outputPath });
+  const runId = Date.now();
+  const outputPath = `${deps.outputDir}/${channel.id}-${theme.id}-${runId}.mp4`;
+  const thumbnailPath = `${deps.outputDir}/${channel.id}-${theme.id}-${runId}-thumbnail.jpg`;
+
+  const serveUrl = await bundleVideoRenderer();
+  await renderEpisode({ serveUrl, themeLabel: theme.label, tracks, outputPath });
   console.log(`Vidéo rendue : ${outputPath}`);
+  await renderThumbnail({ serveUrl, themeLabel: theme.label, tracks, outputPath: thumbnailPath });
+  console.log(`Miniature rendue : ${thumbnailPath}`);
 
   const videoId = randomUUID();
   createVideo(db, {
@@ -86,6 +94,8 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
       tags,
       visibility: channel.visibility,
     });
+
+    await deps.youtube.setThumbnail(youtubeVideoId, thumbnailPath);
 
     let playlistId = getPlaylistId(db, theme.id);
     if (!playlistId) {

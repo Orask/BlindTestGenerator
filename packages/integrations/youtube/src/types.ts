@@ -10,6 +10,7 @@ export interface UploadVideoParams {
 
 export interface YoutubeClient {
   uploadVideo(params: UploadVideoParams): Promise<{ videoId: string }>;
+  setThumbnail(videoId: string, filePath: string): Promise<void>;
   ensurePlaylist(title: string): Promise<{ playlistId: string }>;
   addVideoToPlaylist(videoId: string, playlistId: string): Promise<void>;
 }

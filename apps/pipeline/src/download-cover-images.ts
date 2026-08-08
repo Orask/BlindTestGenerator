@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { access, mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -24,14 +24,40 @@ export async function downloadCoverImages(
     const fileName = `${createHash("sha1").update(url).digest("hex")}.jpg`;
     const filePath = path.join(destDir, fileName);
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Failed to download cover image ${url}: ${response.status}`);
+    // The filename is a hash of the URL, so an existing file is guaranteed
+    // to already hold that URL's content — skips a re-fetch when the
+    // episode render and thumbnail render draw from the same cover set.
+    const alreadyDownloaded = await access(filePath)
+      .then(() => true)
+      .catch(() => false);
+    if (!alreadyDownloaded) {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Failed to download cover image ${url}: ${response.status}`);
+      }
+      await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
     }
-    await writeFile(filePath, Buffer.from(await response.arrayBuffer()));
 
     mapping.set(url, pathToFileURL(filePath).href);
   }
 
   return mapping;
+}
+
+/**
+ * Same as downloadCoverImages, but returns root-relative URLs matching how
+ * Remotion serves its public/ dir under a /public prefix in the bundled
+ * server (confirmed by inspecting an actual bundle output dir — see
+ * render-episode.ts), ready to use directly as an <Img src>.
+ */
+export async function resolvePublicCoverUrls(
+  urls: readonly string[],
+  destDir: string,
+): Promise<Map<string, string>> {
+  const localCovers = await downloadCoverImages(urls, destDir);
+  const publicUrls = new Map<string, string>();
+  for (const [url, localPath] of localCovers) {
+    publicUrls.set(url, `/public/covers/${path.basename(localPath)}`);
+  }
+  return publicUrls;
 }

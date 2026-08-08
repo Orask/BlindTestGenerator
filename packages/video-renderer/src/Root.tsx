@@ -1,8 +1,10 @@
 import type { ReactElement } from "react";
-import { Composition } from "remotion";
+import { Composition, Still } from "remotion";
 import { FPS, INTRO_FRAMES, OUTRO_FRAMES, SEGMENT_FRAMES } from "./constants";
 import { Episode } from "./Episode";
 import { episodeSchema } from "./episode-schema";
+import { Thumbnail } from "./Thumbnail";
+import { thumbnailSchema } from "./thumbnail-schema";
 
 const SAMPLE_TRACKS = [
   {
@@ -28,22 +30,38 @@ function totalDurationInFrames(trackCount: number): number {
 
 export function RemotionRoot(): ReactElement {
   return (
-    <Composition
-      id="Episode"
-      component={Episode}
-      schema={episodeSchema}
-      fps={FPS}
-      width={1920}
-      height={1080}
-      durationInFrames={totalDurationInFrames(SAMPLE_TRACKS.length)}
-      defaultProps={{
-        themeLabel: "Variété actuelle",
-        tracks: SAMPLE_TRACKS,
-        accentColors: ["#ff5f6d", "#4facfe", "#f6d365"],
-      }}
-      calculateMetadata={({ props }) => ({
-        durationInFrames: totalDurationInFrames(props.tracks.length),
-      })}
-    />
+    <>
+      <Composition
+        id="Episode"
+        component={Episode}
+        schema={episodeSchema}
+        fps={FPS}
+        width={1920}
+        height={1080}
+        durationInFrames={totalDurationInFrames(SAMPLE_TRACKS.length)}
+        defaultProps={{
+          themeLabel: "Variété actuelle",
+          tracks: SAMPLE_TRACKS,
+          accentColors: ["#ff5f6d", "#4facfe", "#f6d365"],
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: totalDurationInFrames(props.tracks.length),
+        })}
+      />
+
+      <Still
+        id="Thumbnail"
+        component={Thumbnail}
+        schema={thumbnailSchema}
+        width={1280}
+        height={720}
+        defaultProps={{
+          themeLabel: "Variété actuelle",
+          trackCount: 60,
+          coverImageUrls: SAMPLE_TRACKS.map((track) => track.albumCoverUrl),
+          accentColor: "#ff5f6d",
+        }}
+      />
+    </>
   );
 }
