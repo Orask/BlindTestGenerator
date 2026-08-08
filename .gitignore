@@ -4,8 +4,9 @@ coverage
 .turbo
 *.log
 
-# Remotion render output
+# Remotion render output + dynamically downloaded cover images
 packages/video-renderer/out
+packages/video-renderer/public/covers
 
 # Local SQLite databases and rendered episodes
 *.sqlite
