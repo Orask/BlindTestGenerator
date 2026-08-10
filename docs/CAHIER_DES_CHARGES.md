@@ -196,6 +196,11 @@ Jusqu'ici chaque épisode a été généré par une invocation manuelle du CLI �
 - **Limite connue** : un agent utilisateur (`LaunchAgent`, pas `LaunchDaemon`) ne se déclenche que si une session utilisateur est ouverte. Si le Mac est endormi à l'heure prévue, launchd rattrape l'exécution manquée dès le réveil (tant que la session reste ouverte) — mais rien ne se passe si le Mac est complètement éteint. Pas de réveil automatique programmé (`pmset repeat wakeorpoweron`) — nécessiterait `sudo`, à faire par l'utilisateur si le déclenchement garanti à heure fixe devient nécessaire.
 - Pas de mécanisme de nouvelle tentative en cas d'échec (ex. `InsufficientTracksError`, hoquet iTunes) — un jour manqué n'est pas critique pour une v1 ; à revoir si le volume augmente.
 
+**Deux problèmes réels trouvés sur les deux premiers déclenchements automatiques** :
+
+1. **2026-08-09, 6h00** : échec immédiat, `/bin/bash: .../run-daily-pipeline.sh: Operation not permitted`. Cause : `~/Documents` est un dossier protégé par TCC (Transparency, Consent and Control) sur macOS — un agent lancé en arrière-plan (sans session Terminal interactive) s'y voit refuser l'accès même avec les bonnes permissions Unix sur le fichier, alors que la même commande fonctionne normalement en interactif. **Correctif** : accès complet au disque accordé à `/bin/bash` (Réglages Système → Confidentialité et sécurité → Accès complet au disque) — validé en re-déclenchant l'agent manuellement (`launchctl kickstart -k`), épisode "Génériques" généré et publié avec succès (https://youtu.be/eIjtZhQ9MPw), aucune répétition d'artiste adjacente.
+2. **2026-08-10, 6h00** : le correctif TCC tient (le script s'exécute, résout bien le thème "Années 80"), mais crash immédiat sur `TypeError: fetch failed` / `getaddrinfo ENOTFOUND accounts.spotify.com`. Cause : le Mac se réveille pile à l'heure du déclenchement et le Wi-Fi n'a pas encore eu le temps de se reconnecter. **Correctif** : `run-daily-pipeline.sh` attend maintenant que `https://accounts.spotify.com` réponde (jusqu'à 2 minutes, par tranches de 5s) avant de lancer le pipeline, plutôt que de supposer le réseau disponible immédiatement.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
@@ -319,5 +324,5 @@ Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `
 - Seuil exact de validation avant bascule automatique-privé → public (ex: "N jours consécutifs sans erreur" — nombre à définir).
 - Nom définitif de la chaîne pilote (le placeholder « BlindTest FR » sera utilisé jusque-là).
 - Vérifier en conditions réelles si la musique Pixabay déclenche effectivement une réclamation Content ID sur la vidéo, et son impact (blocage vs monétisation partagée).
-- ~~Mettre en place l'automatisation réelle (launchd/cron)~~ — **fait le 2026-08-08** (section 3nonies), agent quotidien à 6h00. Reste à valider sur un vrai déclenchement automatique (pas encore observé, seul le montage a été vérifié).
+- ~~Mettre en place l'automatisation réelle (launchd/cron)~~ — **fait le 2026-08-08**, deux vrais bugs de déclenchement trouvés et corrigés le 09 et le 10 (section 3nonies : accès TCC, réseau pas encore prêt au réveil). Reste à observer un déclenchement 6h00 entièrement autonome de bout en bout (les deux jours testés ont nécessité soit un re-déclenchement manuel, soit ont échoué avant correctif) avant de considérer l'automatisation pleinement fiable.
 - Demander une augmentation de quota YouTube Data API (ou étaler sur 2 jours) avant d'utiliser `runWeeklyBatch()` en production — un lot de 7 dépasse le quota par défaut (section 3sexies).
