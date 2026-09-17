@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Confidentialité — BlindTest FR</title>
+    <meta
+      name="description"
+      content="Politique de confidentialité de l'application BlindTest FR (chaîne YouTube)."
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #0d0d0d;
+        --bg-raised: #17171a;
+        --text: #f5f5f5;
+        --text-dim: #a3a3ab;
+        --accent: #ff5f6d;
+        --accent-2: #4facfe;
+        --border: #262629;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #faf9f7;
+          --bg-raised: #ffffff;
+          --text: #17171a;
+          --text-dim: #63636b;
+          --accent: #e8465a;
+          --accent-2: #1f7fd6;
+          --border: #e7e5e1;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          "Poppins",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        padding: 0 20px;
+        padding-block: 56px;
+        line-height: 1.7;
+      }
+      main {
+        max-width: 680px;
+        margin: 0 auto;
+      }
+      a {
+        color: var(--accent-2);
+      }
+      .eyebrow {
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 14px;
+        display: block;
+      }
+      h1 {
+        font-family: "Baloo 2", "Poppins", sans-serif;
+        font-weight: 800;
+        font-size: clamp(1.9rem, 6vw, 2.6rem);
+        line-height: 1.1;
+        margin: 0 0 8px;
+      }
+      .updated {
+        color: var(--text-dim);
+        font-size: 0.9rem;
+        margin: 0 0 40px;
+      }
+      section {
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin-bottom: 18px;
+      }
+      h2 {
+        font-family: "Baloo 2", sans-serif;
+        font-weight: 700;
+        font-size: 1.15rem;
+        margin: 0 0 10px;
+        color: var(--accent-2);
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--text);
+      }
+      p:last-child {
+        margin-bottom: 0;
+      }
+      ul {
+        margin: 0 0 12px;
+        padding-left: 20px;
+      }
+      ul:last-child {
+        margin-bottom: 0;
+      }
+      li {
+        margin-bottom: 6px;
+      }
+      footer {
+        margin-top: 32px;
+        font-size: 0.9rem;
+        color: var(--text-dim);
+        border-top: 1px solid var(--border);
+        padding-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <span class="eyebrow">BlindTest FR</span>
+      <h1>Politique de confidentialité</h1>
+      <p class="updated">Dernière mise à jour : 17 septembre 2026</p>
+
+      <section>
+        <h2>Qu'est-ce que BlindTest FR ?</h2>
+        <p>
+          BlindTest FR est un outil personnel d'automatisation qui génère et publie des vidéos de
+          blind test musical sur une seule chaîne YouTube, exploitée par un unique opérateur
+          individuel. Ce n'est pas un service public : il n'y a pas de compte utilisateur, pas
+          d'inscription, et personne d'autre que l'opérateur n'autorise l'application.
+        </p>
+      </section>
+
+      <section>
+        <h2>Données auxquelles l'application accède</h2>
+        <p>Pour fonctionner, l'application se connecte à deux services externes :</p>
+        <ul>
+          <li>
+            <strong>API YouTube Data (Google)</strong> — via une autorisation OAuth donnée une seule
+            fois par l'opérateur, pour importer des vidéos, gérer des playlists et des miniatures
+            sur sa propre chaîne YouTube. Aucune donnée d'un autre compte Google n'est consultée.
+          </li>
+          <li>
+            <strong>API Spotify Web</strong> — en lecture seule, via des identifiants d'application
+            (« Client Credentials »), pour rechercher des métadonnées publiques de morceaux (titre,
+            artiste, pochette). Aucun compte Spotify personnel n'est requis ni consulté.
+          </li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Ce que l'application ne fait pas</h2>
+        <ul>
+          <li>
+            Elle ne collecte aucune donnée personnelle des personnes qui regardent les vidéos
+            publiées.
+          </li>
+          <li>Elle ne partage, ne vend et ne transmet aucune donnée à un tiers.</li>
+          <li>Elle n'affiche ni ne gère de publicité, de traqueur ou de cookie.</li>
+          <li>Elle ne stocke aucune information sur les spectateurs des vidéos.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2>Ce qui est stocké localement</h2>
+        <p>
+          Une base de données conserve l'historique des morceaux déjà utilisés (identifiant, titre,
+          artiste, date) afin d'éviter les répétitions d'un épisode à l'autre. Ces données
+          concernent uniquement le catalogue musical public, jamais une personne identifiable.
+        </p>
+      </section>
+
+      <section>
+        <h2>Contact</h2>
+        <p>
+          Pour toute question concernant cette politique ou l'utilisation des API Google/Spotify par
+          l'application, contactez :
+          <a href="mailto:lucas.lordodoo1@gmail.com">lucas.lordodoo1@gmail.com</a>
+        </p>
+      </section>
+
+      <footer>
+        <a href="./index.html">← Retour à la page d'accueil</a>
+      </footer>
+    </main>
+  </body>
+</html>

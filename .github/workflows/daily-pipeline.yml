@@ -1,0 +1,68 @@
+name: Daily Pipeline
+
+on:
+  schedule:
+    # 6:00 UTC daily. GitHub's scheduler can lag by several minutes under
+    # load — fine for a once-a-day publish, unlike the exact-time reliability
+    # a personal Mac's sleep/wake cycle needed and never delivered.
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+concurrency:
+  group: daily-pipeline
+  cancel-in-progress: false
+
+jobs:
+  run-pipeline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Remotion's headless Chromium needs these on a bare Ubuntu runner —
+      # not all are preinstalled on ubuntu-latest.
+      - name: Install Chromium runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libasound2t64 \
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 \
+            libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2
+
+      - name: Run pipeline
+        working-directory: apps/pipeline
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node dist/index.js ../../channels/blindtest-fr.json
+
+      # Actions runners have no persistent disk between runs — the committed
+      # DB file is the anti-repeat/cooldown history across days (see
+      # .gitignore). Runs even if the pipeline step failed, since a failed
+      # run can still leave an informative draft/failed video row.
+      - name: Persist database state
+        if: always()
+        working-directory: apps/pipeline
+        run: |
+          node -e "require('better-sqlite3')('../../data/blindtest.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ../../data/blindtest.sqlite
+          git diff --cached --quiet || git commit -m "chore(data): mise à jour de la base après le run du $(date -u +%Y-%m-%d)"
+          git push

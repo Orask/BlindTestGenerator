@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>BlindTest FR</title>
+    <meta
+      name="description"
+      content="Chaîne YouTube de blind test musical, générée et publiée automatiquement chaque jour."
+    />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&family=Poppins:wght@400;500;600;700&display=swap"
+    />
+    <style>
+      :root {
+        --bg: #0d0d0d;
+        --bg-raised: #17171a;
+        --text: #f5f5f5;
+        --text-dim: #a3a3ab;
+        --accent: #ff5f6d;
+        --accent-2: #4facfe;
+        --border: #262629;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #faf9f7;
+          --bg-raised: #ffffff;
+          --text: #17171a;
+          --text-dim: #63636b;
+          --accent: #e8465a;
+          --accent-2: #1f7fd6;
+          --border: #e7e5e1;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          "Poppins",
+          -apple-system,
+          BlinkMacSystemFont,
+          sans-serif;
+        padding: 0 20px;
+        padding-block: 64px;
+        line-height: 1.6;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin-bottom: 20px;
+      }
+      .eyebrow::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--accent);
+        box-shadow: 0 0 12px var(--accent);
+      }
+      h1 {
+        font-family: "Baloo 2", "Poppins", sans-serif;
+        font-weight: 800;
+        font-size: clamp(2.4rem, 7vw, 3.4rem);
+        line-height: 1.05;
+        letter-spacing: 0.01em;
+        margin: 0 0 16px;
+      }
+      h1 span {
+        color: var(--accent);
+      }
+      .lede {
+        font-size: 1.15rem;
+        color: var(--text-dim);
+        margin: 0 0 40px;
+        max-width: 52ch;
+      }
+      .rules {
+        display: grid;
+        gap: 14px;
+        padding: 0;
+        margin: 0 0 40px;
+        list-style: none;
+      }
+      .rules li {
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        padding: 16px 18px;
+        background: var(--bg-raised);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+      }
+      .rules .num {
+        font-family: "Baloo 2", sans-serif;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--accent-2);
+        min-width: 1.6em;
+      }
+      .cta-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 56px;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 22px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        text-decoration: none;
+        border: 1px solid transparent;
+      }
+      .btn-primary {
+        background: var(--accent);
+        color: #0d0d0d;
+      }
+      .btn-secondary {
+        background: transparent;
+        color: var(--text);
+        border-color: var(--border);
+      }
+      footer {
+        border-top: 1px solid var(--border);
+        padding-top: 24px;
+        font-size: 0.9rem;
+        color: var(--text-dim);
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      footer a {
+        color: var(--text-dim);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div class="eyebrow">Nouvel épisode chaque jour</div>
+      <h1>Devine la chanson avant que le chrono <span>tombe à zéro</span>.</h1>
+      <p class="lede">
+        BlindTest FR est une chaîne YouTube de blind test musical : chaque jour, un thème différent
+        (années 80, rap FR, chansons françaises classiques…) et 60 extraits à reconnaître en 12
+        secondes chrono. Sélection, montage et publication sont entièrement automatisés.
+      </p>
+
+      <ul class="rules">
+        <li><span class="num">01</span> Un extrait de 12 secondes, un chrono visible à l'écran.</li>
+        <li>
+          <span class="num">02</span> +1 point si tu trouves le titre, +1 bonus pour l'artiste.
+        </li>
+        <li>
+          <span class="num">03</span> 60 morceaux par épisode, jamais deux fois le même artiste
+          d'affilée.
+        </li>
+      </ul>
+
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://www.youtube.com/@BlindTestFR" rel="noopener"
+          >Voir la chaîne YouTube</a
+        >
+        <a
+          class="btn btn-secondary"
+          href="https://github.com/Orask/BlindTestGenerator"
+          rel="noopener"
+          >Code source</a
+        >
+      </div>
+
+      <footer>
+        <span>BlindTest FR — projet personnel, pas d'affiliation avec YouTube ou Spotify.</span>
+        <a href="./privacy.html">Contact &amp; confidentialité</a>
+      </footer>
+    </main>
+  </body>
+</html>

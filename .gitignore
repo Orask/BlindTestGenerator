@@ -8,10 +8,15 @@ coverage
 packages/video-renderer/out
 packages/video-renderer/public/covers
 
-# Local SQLite databases and rendered episodes
-*.sqlite
+# Local SQLite databases and rendered episodes — the main DB file is the one
+# exception: GitHub Actions has no persistent disk between runs, so it's the
+# committed state store for anti-repeat/cooldown history (see
+# .github/workflows/daily-pipeline.yml).
+*.sqlite-shm
+*.sqlite-wal
 *.sqlite3
-/data/
+/data/*
+!/data/blindtest.sqlite
 
 # Secrets / credentials — never commit these
 .env
