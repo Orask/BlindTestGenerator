@@ -105,9 +105,7 @@ async function buildTracksWithDiscoveryFallback(
     if (newArtists.length === 0) {
       throw error;
     }
-    console.log(
-      `${newArtists.length} nouvel(aux) artiste(s) trouvé(s) : ${newArtists.join(", ")}`,
-    );
+    console.log(`${newArtists.length} nouvel(aux) artiste(s) trouvé(s) : ${newArtists.join(", ")}`);
 
     const extraCandidates = await collectCandidateTracks(
       deps.spotify,

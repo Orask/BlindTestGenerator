@@ -174,10 +174,7 @@ describe("createSpotifyClient.searchArtists", () => {
 
     await client.searchArtists("rap francais", 10, 10);
 
-    expect(fetchImpl).toHaveBeenCalledWith(
-      expect.stringContaining("offset=10"),
-      expect.anything(),
-    );
+    expect(fetchImpl).toHaveBeenCalledWith(expect.stringContaining("offset=10"), expect.anything());
   });
 
   it("throws when the search request fails", async () => {
