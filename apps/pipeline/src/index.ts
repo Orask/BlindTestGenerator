@@ -21,6 +21,7 @@ const deps = {
   ...clients,
   dbPath: fileURLToPath(new URL("../../../data/blindtest.sqlite", import.meta.url)),
   outputDir: fileURLToPath(new URL("../../../data/renders/", import.meta.url)),
+  channelConfigPath,
   tracksPerEpisode,
 };
 

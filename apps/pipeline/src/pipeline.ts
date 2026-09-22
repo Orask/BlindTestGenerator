@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { mkdir } from "node:fs/promises";
 import { dirname } from "node:path";
 import {
+  InsufficientTracksError,
   nextPublishDateTime,
   resolveThemeForDay,
   weekdayFromDate,
@@ -25,9 +26,15 @@ import type Database from "better-sqlite3";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type { YoutubeClient } from "@blindtest/youtube";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
-import { buildEpisodeTracks, REUSE_COOLDOWN_DAYS } from "./build-episode-tracks.js";
+import {
+  buildEpisodeTracks,
+  REUSE_COOLDOWN_DAYS,
+  type EpisodeTrack,
+} from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
+import { discoverNewArtists } from "./discover-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
+import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
@@ -37,6 +44,10 @@ import { buildYoutubeMetadata } from "./youtube-metadata.js";
 const DEFAULT_TRACKS_PER_EPISODE = 60;
 const CANDIDATES_PER_ARTIST = 10;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// Generous but bounded: covers a shortfall many times over even at a
+// modest post-filter yield per artist, without turning a thin theme into a
+// runaway number of live Spotify calls.
+const DISCOVERY_MAX_NEW_ARTISTS = 12;
 
 export interface PipelineDeps {
   readonly spotify: SpotifyClient;
@@ -44,8 +55,76 @@ export interface PipelineDeps {
   readonly youtube: YoutubeClient;
   readonly dbPath: string;
   readonly outputDir: string;
+  /** Channel config JSON path — written back to when discovery finds new artists (see appendDiscoveredArtists). */
+  readonly channelConfigPath: string;
   /** Override for quick smoke tests — a full episode is 40 by default. */
   readonly tracksPerEpisode: number | undefined;
+}
+
+/**
+ * Builds the episode's tracks from the theme's configured seedArtists, and
+ * if that falls short (InsufficientTracksError), automatically searches for
+ * new on-topic artists (see discover-artists.ts) and retries once with the
+ * expanded pool — this is what used to require a manual live-verification
+ * + config-edit cycle per thin theme (see docs/CAHIER_DES_CHARGES.md
+ * section 3octies) each time a theme's pool thinned out again.
+ */
+async function buildTracksWithDiscoveryFallback(
+  theme: ChannelTheme,
+  deps: PipelineDeps,
+  recentlyUsedTrackIds: ReadonlySet<string>,
+  allTimeUsedTrackIds: ReadonlySet<string>,
+  tracksPerEpisode: number,
+): Promise<EpisodeTrack[]> {
+  const candidates = await collectCandidateTracks(
+    deps.spotify,
+    theme.seedArtists,
+    CANDIDATES_PER_ARTIST,
+  );
+
+  try {
+    return await buildEpisodeTracks(
+      candidates,
+      recentlyUsedTrackIds,
+      allTimeUsedTrackIds,
+      deps.itunes,
+      tracksPerEpisode,
+    );
+  } catch (error) {
+    if (!(error instanceof InsufficientTracksError) || !theme.discoveryQuery) {
+      throw error;
+    }
+
+    console.log(`Vivier insuffisant pour "${theme.label}", recherche de nouveaux artistes...`);
+    const newArtists = await discoverNewArtists(
+      deps.spotify,
+      theme.discoveryQuery,
+      theme.seedArtists,
+      DISCOVERY_MAX_NEW_ARTISTS,
+    );
+    if (newArtists.length === 0) {
+      throw error;
+    }
+    console.log(
+      `${newArtists.length} nouvel(aux) artiste(s) trouvé(s) : ${newArtists.join(", ")}`,
+    );
+
+    const extraCandidates = await collectCandidateTracks(
+      deps.spotify,
+      newArtists,
+      CANDIDATES_PER_ARTIST,
+    );
+    const tracks = await buildEpisodeTracks(
+      [...candidates, ...extraCandidates],
+      recentlyUsedTrackIds,
+      allTimeUsedTrackIds,
+      deps.itunes,
+      tracksPerEpisode,
+    );
+
+    await appendDiscoveredArtists(deps.channelConfigPath, theme.id, newArtists);
+    return tracks;
+  }
 }
 
 async function generateAndPublishEpisode(
@@ -65,16 +144,11 @@ async function generateAndPublishEpisode(
   const recentlyUsedTrackIds = getUsedTrackIdsSince(db, channel.id, cooldownCutoff);
   const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
 
-  const candidates = await collectCandidateTracks(
-    deps.spotify,
-    theme.seedArtists,
-    CANDIDATES_PER_ARTIST,
-  );
-  const tracks = await buildEpisodeTracks(
-    candidates,
+  const tracks = await buildTracksWithDiscoveryFallback(
+    theme,
+    deps,
     recentlyUsedTrackIds,
     allTimeUsedTrackIds,
-    deps.itunes,
     tracksPerEpisode,
   );
   console.log(`${tracks.length} morceaux sélectionnés avec extrait audio résolu.`);

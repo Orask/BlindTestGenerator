@@ -93,6 +93,24 @@ export function createSpotifyClient(
       return results;
     },
 
+    async searchArtists(query: string, limit: number, offset = 0): Promise<string[]> {
+      const accessToken = await tokenProvider.getAccessToken();
+      const apiLimit = Math.min(limit, MAX_SEARCH_LIMIT);
+      const response = await fetchImpl(
+        `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=${apiLimit}&offset=${offset}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Spotify artist search failed for query "${query}": ${response.status} ${await response.text()}`,
+        );
+      }
+
+      const data = (await response.json()) as { artists: { items: { name: string }[] } };
+      return data.artists.items.map((artist) => artist.name);
+    },
+
     async getTrackById(id: string): Promise<SpotifyTrackMetadata> {
       const accessToken = await tokenProvider.getAccessToken();
       const response = await fetchImpl(`https://api.spotify.com/v1/tracks/${id}`, {

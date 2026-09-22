@@ -46,4 +46,12 @@ describe("parseChannelConfig", () => {
     };
     expect(() => parseChannelConfig(invalid)).toThrow();
   });
+
+  it("accepts a theme with a discoveryQuery", () => {
+    const withDiscovery = {
+      ...validConfig,
+      themes: [{ ...validConfig.themes[0], discoveryQuery: "chanson francaise annees 80" }],
+    };
+    expect(parseChannelConfig(withDiscovery)).toEqual(withDiscovery);
+  });
 });

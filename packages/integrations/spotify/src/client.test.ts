@@ -149,6 +149,51 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
   });
 });
 
+describe("createSpotifyClient.searchArtists", () => {
+  function fakeArtistFetch(names: string[]): typeof fetch {
+    return vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ artists: { items: names.map((name) => ({ name })) } }),
+    });
+  }
+
+  it("returns artist names in relevance order", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeArtistFetch(["Jul", "Ninho", "Niska"]),
+    );
+
+    const results = await client.searchArtists("rap francais", 10);
+
+    expect(results).toEqual(["Jul", "Ninho", "Niska"]);
+  });
+
+  it("passes the offset through for pagination", async () => {
+    const fetchImpl = fakeArtistFetch(["Soprano"]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await client.searchArtists("rap francais", 10, 10);
+
+    expect(fetchImpl).toHaveBeenCalledWith(
+      expect.stringContaining("offset=10"),
+      expect.anything(),
+    );
+  });
+
+  it("throws when the search request fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve("Bad Request"),
+    }) as unknown as typeof fetch;
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchArtists("rap francais", 10)).rejects.toThrow(
+      "Spotify artist search failed",
+    );
+  });
+});
+
 describe("createSpotifyClient.getTrackById", () => {
   it("fetches a single track by id and maps it to SpotifyTrackMetadata", async () => {
     const fetchImpl = vi.fn().mockResolvedValue({

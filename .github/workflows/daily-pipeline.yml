@@ -54,8 +54,11 @@ jobs:
 
       # Actions runners have no persistent disk between runs — the committed
       # DB file is the anti-repeat/cooldown history across days (see
-      # .gitignore). Runs even if the pipeline step failed, since a failed
-      # run can still leave an informative draft/failed video row.
+      # .gitignore). Also commits channels/*.json, which the pipeline
+      # itself may have appended newly-discovered artists to (see
+      # apps/pipeline/src/persist-discovered-artists.ts) when a theme's
+      # seedArtists ran short. Runs even if the pipeline step failed, since
+      # a failed run can still leave an informative draft/failed video row.
       - name: Persist database state
         if: always()
         working-directory: apps/pipeline
@@ -63,6 +66,6 @@ jobs:
           node -e "require('better-sqlite3')('../../data/blindtest.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add ../../data/blindtest.sqlite
+          git add ../../data/blindtest.sqlite ../../channels/*.json
           git diff --cached --quiet || git commit -m "chore(data): mise à jour de la base après le run du $(date -u +%Y-%m-%d)"
           git push

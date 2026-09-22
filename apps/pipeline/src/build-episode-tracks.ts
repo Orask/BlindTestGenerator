@@ -9,6 +9,15 @@ export interface EpisodeTrack extends Track {
 const MAX_TRACKS_PER_ARTIST = 2;
 const OPENING_HOOK_SIZE = 5;
 
+// Last-resort valve for when fresh + cooldown-reuse still aren't enough: a
+// small share of the episode's most mainstream artists (by how deep their
+// catalog ran in this theme's raw candidate pool — the closest proxy
+// available, since Spotify strips real popularity for new apps) may
+// contribute a 3rd track instead of the usual 2. Solo-credit tracks only,
+// and never a reused/cooldown track — this only spends otherwise-unused
+// fresh candidates that the normal cap was blocking.
+const BONUS_ARTIST_SHARE = 0.1;
+
 // A theme's seed-artist pool is finite and fixed, so a strict "never repeat,
 // ever" rule eventually starves a weekly-recurring theme once its pool is
 // exhausted. Reuse is allowed instead, but only once REUSE_COOLDOWN_DAYS has
@@ -105,6 +114,56 @@ export async function buildEpisodeTracks(
         break;
       }
       await tryAdd(track, true);
+    }
+  }
+
+  if (result.length < count) {
+    const catalogDepth = new Map<string, number>();
+    for (const track of candidates) {
+      for (const name of track.artistNames) {
+        catalogDepth.set(name, (catalogDepth.get(name) ?? 0) + 1);
+      }
+    }
+    const maxBonusArtists = Math.max(1, Math.ceil(artistCounts.size * BONUS_ARTIST_SHARE));
+    const bonusEligible = new Set(
+      [...artistCounts.keys()]
+        .sort((a, b) => (catalogDepth.get(b) ?? 0) - (catalogDepth.get(a) ?? 0))
+        .slice(0, maxBonusArtists),
+    );
+    const bonusGranted = new Set<string>();
+
+    for (const track of candidates) {
+      if (result.length === count) {
+        break;
+      }
+      if (track.artistNames.length !== 1) {
+        continue; // solo tracks only — keeps the per-artist bonus bookkeeping unambiguous for collabs
+      }
+      const [name] = track.artistNames as [string];
+      if (!bonusEligible.has(name) || (artistCounts.get(name) ?? 0) !== MAX_TRACKS_PER_ARTIST) {
+        continue;
+      }
+      if (bonusGranted.size >= maxBonusArtists && !bonusGranted.has(name)) {
+        continue;
+      }
+      if (
+        recentlyUsedTrackIds.has(track.id) ||
+        seenIds.has(track.id) ||
+        allTimeUsedTrackIds.has(track.id)
+      ) {
+        continue;
+      }
+
+      seenIds.add(track.id);
+      const preview = await itunes.findPreviewByTitleAndArtist(track.title, track.artist);
+      await sleep(lookupDelayMs);
+      if (!preview) {
+        continue;
+      }
+
+      artistCounts.set(name, MAX_TRACKS_PER_ARTIST + 1);
+      bonusGranted.add(name);
+      result.push({ ...track, audioUrl: preview.previewUrl });
     }
   }
 

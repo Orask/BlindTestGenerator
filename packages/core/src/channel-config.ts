@@ -21,6 +21,12 @@ const channelThemeSchema = z.object({
   // curated artist list is what's left that reliably surfaces well-known
   // songs.
   seedArtists: z.array(z.string().min(1)).min(1),
+  // Free-text Spotify artist-search query (e.g. "rap francais") used to
+  // discover new candidate artists when seedArtists runs short — see
+  // apps/pipeline/src/discover-artists.ts. Optional: a theme without one
+  // just fails as before on a shortfall, instead of the pipeline guessing a
+  // query that was never verified to return good results.
+  discoveryQuery: z.string().min(1).optional(),
   youtubePlaylistId: z.string().nullable(),
 });
 

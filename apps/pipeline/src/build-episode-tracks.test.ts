@@ -195,6 +195,77 @@ describe("buildEpisodeTracks", () => {
     ).rejects.toThrow(InsufficientTracksError);
   });
 
+  it("grants a mainstream artist a 3rd (bonus) track when still short after fresh + reuse passes", async () => {
+    // 9 distinct solo artists, one ("Big Artist") with a much deeper
+    // catalog in the raw candidate pool than the rest — the proxy for
+    // "mainstream" this pass uses. The 8 solo artists only supply 1 track
+    // each, so the normal 2-cap fresh pass tops out at 10 (2 + 8); needing
+    // 11 forces the bonus pass to draw a 3rd track from "Big Artist".
+    const candidates = [
+      ...Array.from({ length: 6 }, (_, i) => track(`big-${i}`, i, ["Big Artist"])),
+      ...Array.from({ length: 8 }, (_, i) => track(`solo-${i}`, 0, [`Solo Artist ${i}`])),
+    ];
+
+    const result = await buildEpisodeTracks(
+      candidates,
+      new Set(),
+      new Set(),
+      itunesThatFindsAllPreviews(),
+      11,
+      0,
+    );
+
+    expect(result).toHaveLength(11);
+    const bigArtistCount = result.filter((t) => t.artistNames.includes("Big Artist")).length;
+    expect(bigArtistCount).toBe(3);
+  });
+
+  it("never grants a bonus 3rd track to more than ~10% of the episode's artists", async () => {
+    // 10 distinct artists, each with equal catalog depth (3 tracks) — the
+    // normal 2-cap fresh pass tops out at 20, and at most ceil(10% * 10) =
+    // 1 artist may get a bonus 3rd track, so needing 22 should still fail.
+    const candidates = Array.from({ length: 10 }, (_, artistIdx) =>
+      Array.from({ length: 3 }, (_, trackIdx) =>
+        track(`a${artistIdx}-${trackIdx}`, 0, [`Artist ${artistIdx}`]),
+      ),
+    ).flat();
+
+    await expect(
+      buildEpisodeTracks(candidates, new Set(), new Set(), itunesThatFindsAllPreviews(), 22, 0),
+    ).rejects.toThrow(InsufficientTracksError);
+  });
+
+  it("never grants a bonus track to a collab (multi-artist) credit", async () => {
+    const candidates = [
+      track("1", 0, ["Big Artist"]),
+      track("2", 1, ["Big Artist"]),
+      track("3", 2, ["Big Artist", "Featured"]), // would be the 3rd Big Artist track, but is a collab
+    ];
+
+    await expect(
+      buildEpisodeTracks(candidates, new Set(), new Set(), itunesThatFindsAllPreviews(), 3, 0),
+    ).rejects.toThrow(InsufficientTracksError);
+  });
+
+  it("never uses the bonus pass to reuse a track (fresh candidates only)", async () => {
+    const candidates = [
+      track("1", 0, ["Big Artist"]),
+      track("2", 1, ["Big Artist"]),
+      track("3", 2, ["Big Artist"]),
+    ];
+
+    await expect(
+      buildEpisodeTracks(
+        candidates,
+        new Set(),
+        new Set(["3"]), // past cooldown, would otherwise be eligible for the bonus slot
+        itunesThatFindsAllPreviews(),
+        3,
+        0,
+      ),
+    ).rejects.toThrow(InsufficientTracksError);
+  });
+
   it("never reuses a track still inside the cooldown window, even as a last resort", async () => {
     const candidates = [track("1")];
 
