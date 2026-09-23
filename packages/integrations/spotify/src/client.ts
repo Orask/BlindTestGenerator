@@ -1,3 +1,4 @@
+import { fetchWithTimeout, type SpotifyFetchInit } from "./fetch-with-timeout.js";
 import type { SpotifyClient, SpotifyTrackMetadata } from "./types.js";
 
 export interface TokenProvider {
@@ -24,8 +25,69 @@ const MAX_SEARCH_LIMIT = 10;
 
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
 
-function normalizeArtistName(name: string): string {
+// Shared by artist-name and track-title comparisons - both need the same
+// diacritic/case-insensitive exact match to avoid false negatives on accents.
+function normalizeForComparison(name: string): string {
   return name.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// A sustained burst of requests (e.g. verifying an LLM-curated song list,
+// hundreds of calls in one run) can trip Spotify's rate limit even with
+// pacing between calls - confirmed live: a 429 "QUOTA_EXCEEDED" partway
+// through a ~1200-call verification run, which crashed the whole run and
+// lost every result gathered so far. Spotify's 429 response includes a
+// `Retry-After` header (seconds to wait); honoring it here means every
+// caller gets this resilience for free instead of each one reimplementing
+// it, and a transient rate limit degrades to "slower" instead of "crashed".
+const MAX_RATE_LIMIT_RETRIES = 5;
+
+// Spotify's `Retry-After` isn't necessarily a short nudge — confirmed live,
+// it can be a genuine extended cooldown (minutes+) after a heavy burst.
+// Honoring it uncapped turned "rate limited" into "the process silently
+// sleeps for however long Spotify feels like, with zero visible activity
+// the whole time" — indistinguishable from a hang without added tracing.
+// Capping it means a long cooldown surfaces as a fast, loud failure after a
+// bounded wait instead.
+const MAX_RETRY_AFTER_SECONDS = 30;
+
+async function fetchWithRetry(
+  fetchImpl: typeof fetch,
+  url: string,
+  init: SpotifyFetchInit,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const isLastAttempt = attempt === MAX_RATE_LIMIT_RETRIES;
+
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(fetchImpl, url, init);
+    } catch (error) {
+      // A timed-out/aborted or network-level failure — retried exactly
+      // like a 429, since both are transient conditions worth waiting out.
+      if (isLastAttempt) {
+        throw error;
+      }
+      await sleep(2 ** attempt * 1000);
+      continue;
+    }
+
+    if (response.status !== 429 || isLastAttempt) {
+      return response;
+    }
+
+    // `retry-after: 0` is a legitimate value that must be respected as-is,
+    // not treated as "absent" (which `Number(null) === 0` would do if
+    // compared naively) — only a genuinely missing/malformed header falls
+    // back to exponential backoff.
+    const rawRetryAfter = response.headers.get("retry-after");
+    const parsedRetryAfter = rawRetryAfter === null ? NaN : Number(rawRetryAfter);
+    const retryAfterSeconds = Number.isNaN(parsedRetryAfter) ? 2 ** attempt : parsedRetryAfter;
+    await sleep(Math.min(retryAfterSeconds, MAX_RETRY_AFTER_SECONDS) * 1000);
+  }
 }
 
 export function createSpotifyClient(
@@ -37,7 +99,8 @@ export function createSpotifyClient(
       const accessToken = await tokenProvider.getAccessToken();
       const query = encodeURIComponent(`artist:"${artistName}"`);
       const apiLimit = Math.min(limit, MAX_SEARCH_LIMIT);
-      const response = await fetchImpl(
+      const response = await fetchWithRetry(
+        fetchImpl,
         `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${apiLimit}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
@@ -51,7 +114,7 @@ export function createSpotifyClient(
       const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
       const seenTitles = new Set<string>();
       const results: SpotifyTrackMetadata[] = [];
-      const normalizedQuery = normalizeArtistName(artistName);
+      const normalizedQuery = normalizeForComparison(artistName);
 
       for (const track of data.tracks.items) {
         if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
@@ -65,7 +128,7 @@ export function createSpotifyClient(
         // track's own credited artists (diacritic/case-insensitive) is what
         // actually keeps the theme on-topic.
         const isActuallyByArtist = track.artists.some(
-          (artist) => normalizeArtistName(artist.name) === normalizedQuery,
+          (artist) => normalizeForComparison(artist.name) === normalizedQuery,
         );
         if (!isActuallyByArtist) {
           continue;
@@ -93,10 +156,63 @@ export function createSpotifyClient(
       return results;
     },
 
+    async searchTrackByTitleAndArtist(
+      title: string,
+      artistName: string,
+    ): Promise<SpotifyTrackMetadata | null> {
+      const accessToken = await tokenProvider.getAccessToken();
+      const query = encodeURIComponent(`track:"${title}" artist:"${artistName}"`);
+      const response = await fetchWithRetry(
+        fetchImpl,
+        `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${MAX_SEARCH_LIMIT}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Spotify title+artist search failed for "${title}" by "${artistName}": ${response.status} ${await response.text()}`,
+        );
+      }
+
+      const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
+      const normalizedArtist = normalizeForComparison(artistName);
+      const normalizedTitle = normalizeForComparison(title);
+
+      for (const track of data.tracks.items) {
+        if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
+          continue;
+        }
+        const isActuallyByArtist = track.artists.some(
+          (artist) => normalizeForComparison(artist.name) === normalizedArtist,
+        );
+        if (!isActuallyByArtist) {
+          continue;
+        }
+        // An LLM-supplied title must match exactly (after normalization) —
+        // this is the guard against hallucinated or misremembered titles
+        // that happen to share an artist with a real track.
+        if (normalizeForComparison(track.name) !== normalizedTitle) {
+          continue;
+        }
+
+        return {
+          id: track.id,
+          title: track.name,
+          artist: track.artists.map((a) => a.name).join(", "),
+          artistNames: track.artists.map((a) => a.name),
+          albumCoverUrl: track.album.images[0]?.url ?? "",
+          popularityRank: 0,
+        };
+      }
+
+      return null;
+    },
+
     async searchArtists(query: string, limit: number, offset = 0): Promise<string[]> {
       const accessToken = await tokenProvider.getAccessToken();
       const apiLimit = Math.min(limit, MAX_SEARCH_LIMIT);
-      const response = await fetchImpl(
+      const response = await fetchWithRetry(
+        fetchImpl,
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=${apiLimit}&offset=${offset}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
       );
@@ -113,7 +229,7 @@ export function createSpotifyClient(
 
     async getTrackById(id: string): Promise<SpotifyTrackMetadata> {
       const accessToken = await tokenProvider.getAccessToken();
-      const response = await fetchImpl(`https://api.spotify.com/v1/tracks/${id}`, {
+      const response = await fetchWithRetry(fetchImpl, `https://api.spotify.com/v1/tracks/${id}`, {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 

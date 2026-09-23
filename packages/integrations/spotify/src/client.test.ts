@@ -29,6 +29,49 @@ function fakeFetch(tracks: RawSpotifyTrackFixture[]): typeof fetch {
   });
 }
 
+function fakeRateLimitedResponse(retryAfterSeconds = "0"): {
+  ok: boolean;
+  status: number;
+  headers: { get: (name: string) => string | null };
+  text: () => Promise<string>;
+} {
+  return {
+    ok: false,
+    status: 429,
+    headers: { get: () => retryAfterSeconds },
+    text: () => Promise.resolve('{"error":{"status":429,"message":"Too many requests"}}'),
+  };
+}
+
+describe("createSpotifyClient rate-limit retry (shared by every endpoint)", () => {
+  // Exercised through searchTracksByArtist since fetchWithRetry isn't
+  // exported on its own — the retry behavior is identical for every method.
+  it("retries after a 429 and succeeds once Spotify stops rate-limiting", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(fakeRateLimitedResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ tracks: { items: [rawTrack()] } }),
+      });
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const results = await client.searchTracksByArtist("Indila", 10);
+
+    expect(results).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up and surfaces the 429 once retries are exhausted", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(fakeRateLimitedResponse());
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
+      "Spotify search failed",
+    );
+  });
+});
+
 describe("createSpotifyClient.searchTracksByArtist", () => {
   it("maps raw Spotify tracks to SpotifyTrackMetadata", async () => {
     const client = createSpotifyClient(fakeTokenProvider(), fakeFetch([rawTrack()]));
@@ -187,6 +230,88 @@ describe("createSpotifyClient.searchArtists", () => {
 
     await expect(client.searchArtists("rap francais", 10)).rejects.toThrow(
       "Spotify artist search failed",
+    );
+  });
+});
+
+describe("createSpotifyClient.searchTrackByTitleAndArtist", () => {
+  it("returns the track when title and artist both match exactly", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([rawTrack({ id: "1", name: "Dernière danse", artists: [{ name: "Indila" }] })]),
+    );
+
+    const result = await client.searchTrackByTitleAndArtist("Dernière danse", "Indila");
+
+    expect(result).toEqual({
+      id: "1",
+      title: "Dernière danse",
+      artist: "Indila",
+      artistNames: ["Indila"],
+      albumCoverUrl: "https://example.com/cover.jpg",
+      popularityRank: 0,
+    });
+  });
+
+  it("matches title and artist regardless of case or diacritics", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([rawTrack({ id: "1", name: "Dernière danse", artists: [{ name: "Indila" }] })]),
+    );
+
+    const result = await client.searchTrackByTitleAndArtist("derniere DANSE", "indila");
+
+    expect(result?.id).toBe("1");
+  });
+
+  it("returns null when the title doesn't match (a possible LLM hallucination)", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([rawTrack({ id: "1", name: "Dernière danse", artists: [{ name: "Indila" }] })]),
+    );
+
+    const result = await client.searchTrackByTitleAndArtist("Chanson Imaginaire", "Indila");
+
+    expect(result).toBeNull();
+  });
+
+  it("returns null when the artist doesn't actually match (Spotify's fuzzy filter)", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([
+        rawTrack({ id: "1", name: "Dernière danse", artists: [{ name: "Someone Else" }] }),
+      ]),
+    );
+
+    const result = await client.searchTrackByTitleAndArtist("Dernière danse", "Indila");
+
+    expect(result).toBeNull();
+  });
+
+  it("skips a non-original version and keeps looking", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeFetch([
+        rawTrack({ id: "1", name: "Dernière danse - Live", artists: [{ name: "Indila" }] }),
+        rawTrack({ id: "2", name: "Dernière danse", artists: [{ name: "Indila" }] }),
+      ]),
+    );
+
+    const result = await client.searchTrackByTitleAndArtist("Dernière danse", "Indila");
+
+    expect(result?.id).toBe("2");
+  });
+
+  it("throws when the search request fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve("Bad Request"),
+    }) as unknown as typeof fetch;
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchTrackByTitleAndArtist("Dernière danse", "Indila")).rejects.toThrow(
+      "Spotify title+artist search failed",
     );
   });
 });

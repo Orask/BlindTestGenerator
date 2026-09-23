@@ -1,3 +1,5 @@
+import { fetchWithTimeout } from "./fetch-with-timeout.js";
+
 export interface AccessToken {
   readonly accessToken: string;
   readonly expiresInSeconds: number;
@@ -9,7 +11,7 @@ export async function fetchClientCredentialsToken(
   fetchImpl: typeof fetch = fetch,
 ): Promise<AccessToken> {
   const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const response = await fetchImpl("https://accounts.spotify.com/api/token", {
+  const response = await fetchWithTimeout(fetchImpl, "https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: {
       "Content-Type": "application/x-www-form-urlencoded",

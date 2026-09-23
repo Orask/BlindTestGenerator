@@ -26,4 +26,17 @@ export interface SpotifyClient {
    * via searchTracksByArtist before trusting it.
    */
   searchArtists(query: string, limit: number, offset?: number): Promise<string[]>;
+  /**
+   * Exact-match lookup for a specific (title, artist) pair — used to verify
+   * an externally-sourced song title (e.g. LLM-curated "most famous songs"
+   * lists, see apps/pipeline/src/verify-curated-songs.ts) against Spotify's
+   * real catalog before trusting it. Returns null if no track matches both
+   * the exact title and the exact artist (diacritic/case-insensitive) —
+   * never a best-effort guess, since a wrong match here would put the wrong
+   * audio behind a curated "famous song" claim.
+   */
+  searchTrackByTitleAndArtist(
+    title: string,
+    artistName: string,
+  ): Promise<SpotifyTrackMetadata | null>;
 }
