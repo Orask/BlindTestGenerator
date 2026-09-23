@@ -33,6 +33,24 @@ export function getUsedTrackIdsSince(
   return new Set(rows.map((row) => row.spotify_track_id));
 }
 
+export interface RecentTrack {
+  readonly title: string;
+  readonly artist: string;
+}
+
+/** Title+artist of every track used for a theme since `sinceDate` — context for the AI episode review (see apps/pipeline/src/review-episode.ts) to flag artists over-repeated across recent weeks. */
+export function getRecentTracksForTheme(
+  db: Database.Database,
+  themeId: string,
+  sinceDate: Date,
+): RecentTrack[] {
+  return db
+    .prepare<[string, string], RecentTrack>(
+      "SELECT title, artist FROM tracks_used WHERE theme_id = ? AND used_at >= ? ORDER BY used_at DESC",
+    )
+    .all(themeId, sinceDate.toISOString());
+}
+
 export function recordTrackUsage(db: Database.Database, params: RecordTrackUsageParams): void {
   db.prepare(
     `INSERT INTO tracks_used (channel_id, theme_id, spotify_track_id, title, artist, used_at, video_id)

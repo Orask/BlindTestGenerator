@@ -50,6 +50,10 @@ jobs:
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+          # Optional: the AI episode review (apps/pipeline/src/review-episode.ts)
+          # only runs when this secret is set — an empty/missing value is
+          # treated the same as not configuring it at all, no other change needed.
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: node dist/index.js ../../channels/blindtest-fr.json
 
       # Actions runners have no persistent disk between runs — the committed

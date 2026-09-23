@@ -13,6 +13,7 @@
     "curate-songs": "node --env-file=../../.env dist/curate-songs-cli.js"
   },
   "dependencies": {
+    "@blindtest/anthropic": "workspace:*",
     "@blindtest/core": "workspace:*",
     "@blindtest/db": "workspace:*",
     "@blindtest/itunes": "workspace:*",

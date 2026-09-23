@@ -3,7 +3,9 @@ export { SCHEMA_SQL } from "./schema.js";
 export {
   getUsedTrackIds,
   getUsedTrackIdsSince,
+  getRecentTracksForTheme,
   recordTrackUsage,
+  type RecentTrack,
   type RecordTrackUsageParams,
 } from "./tracks-used-repository.js";
 export {

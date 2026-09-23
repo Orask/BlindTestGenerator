@@ -1,3 +1,4 @@
+import { createAnthropicClient, type AnthropicClient } from "@blindtest/anthropic";
 import type { ItunesClient } from "@blindtest/itunes";
 import { createItunesClient } from "@blindtest/itunes";
 import { SpotifyTokenProvider, createSpotifyClient, type SpotifyClient } from "@blindtest/spotify";
@@ -12,6 +13,8 @@ export interface PipelineClients {
   readonly spotify: SpotifyClient;
   readonly itunes: ItunesClient;
   readonly youtube: YoutubeClient;
+  /** Undefined when ANTHROPIC_API_KEY isn't set — the AI episode review is an optional quality upgrade, never a requirement to publish. */
+  readonly anthropic: AnthropicClient | undefined;
 }
 
 function requireEnv(name: string): string {
@@ -39,5 +42,8 @@ export function createClientsFromEnv(): PipelineClients {
   });
   const youtube = createYoutubeClient(oauth2Client);
 
-  return { spotify, itunes, youtube };
+  const anthropicApiKey = process.env["ANTHROPIC_API_KEY"];
+  const anthropic = anthropicApiKey ? createAnthropicClient(anthropicApiKey) : undefined;
+
+  return { spotify, itunes, youtube, anthropic };
 }

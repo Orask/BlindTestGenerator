@@ -9,12 +9,14 @@ import {
   type ChannelConfig,
   type ChannelTheme,
 } from "@blindtest/core";
+import type { AnthropicClient } from "@blindtest/anthropic";
 import {
   countVideosForTheme,
   createVideo,
-  getPlaylistId,
+  getRecentTracksForTheme,
   getUsedTrackIds,
   getUsedTrackIdsSince,
+  getPlaylistId,
   markVideoFailed,
   markVideoUploaded,
   openDatabase,
@@ -37,6 +39,7 @@ import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
+import { reviewEpisode } from "./review-episode.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
 import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
@@ -48,17 +51,60 @@ const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // modest post-filter yield per artist, without turning a thin theme into a
 // runaway number of live Spotify calls.
 const DISCOVERY_MAX_NEW_ARTISTS = 12;
+// How far back "recent weeks" reaches for the AI review's over-repetition
+// check (see review-episode.ts) — 5 weeks of a weekly-recurring theme.
+const REVIEW_HISTORY_DAYS = 35;
 
 export interface PipelineDeps {
   readonly spotify: SpotifyClient;
   readonly itunes: ItunesClient;
   readonly youtube: YoutubeClient;
+  /** Undefined when ANTHROPIC_API_KEY isn't configured — the review step is then skipped entirely (see reviewEpisodeIfConfigured). */
+  readonly anthropic: AnthropicClient | undefined;
   readonly dbPath: string;
   readonly outputDir: string;
   /** Channel config JSON path — written back to when discovery finds new artists (see appendDiscoveredArtists). */
   readonly channelConfigPath: string;
   /** Override for quick smoke tests — a full episode is 40 by default. */
   readonly tracksPerEpisode: number | undefined;
+}
+
+/**
+ * Runs the AI episode review (see review-episode.ts) only when an Anthropic
+ * API key is actually configured — this feature is an optional quality
+ * upgrade layered on top of an already-working pipeline, so its absence
+ * must never block a run that worked fine before it existed.
+ */
+async function reviewEpisodeIfConfigured(
+  db: Database.Database,
+  deps: PipelineDeps,
+  theme: ChannelTheme,
+  tracks: readonly EpisodeTrack[],
+): Promise<readonly EpisodeTrack[]> {
+  if (!deps.anthropic) {
+    return tracks;
+  }
+
+  const since = new Date(Date.now() - REVIEW_HISTORY_DAYS * MS_PER_DAY);
+  const recentTracks = getRecentTracksForTheme(db, theme.id, since);
+
+  const {
+    tracks: reviewed,
+    removed,
+    notes,
+  } = await reviewEpisode(deps.anthropic, {
+    themeLabel: theme.label,
+    tracks,
+    recentTracks,
+  });
+
+  if (removed.length > 0) {
+    console.log(
+      `Revue IA : ${removed.length} morceau(x) retiré(s) — ${removed.map((t) => `"${t.title}" (${t.artist})`).join(", ")}${notes ? ` (${notes})` : ""}`,
+    );
+  }
+
+  return reviewed;
 }
 
 /**
@@ -142,14 +188,21 @@ async function generateAndPublishEpisode(
   const recentlyUsedTrackIds = getUsedTrackIdsSince(db, channel.id, cooldownCutoff);
   const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
 
-  const tracks = await buildTracksWithDiscoveryFallback(
+  const selectedTracks = await buildTracksWithDiscoveryFallback(
     theme,
     deps,
     recentlyUsedTrackIds,
     allTimeUsedTrackIds,
     tracksPerEpisode,
   );
-  console.log(`${tracks.length} morceaux sélectionnés avec extrait audio résolu.`);
+  console.log(`${selectedTracks.length} morceaux sélectionnés avec extrait audio résolu.`);
+
+  // A track the AI review removes isn't backfilled — see review-episode.ts's
+  // MAX_REMOVE_RATIO cap — so an episode can occasionally come out a couple
+  // tracks short of tracksPerEpisode. Accepted tradeoff for v1: catching a
+  // genuine anachronism (see the ROSÉ/"APT." incident this was built for)
+  // matters more than an exact, unreviewed track count.
+  const tracks = await reviewEpisodeIfConfigured(db, deps, theme, selectedTracks);
 
   // Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
   // public/ at bundle time, so anything downloaded afterward 404s from the

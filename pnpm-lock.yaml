@@ -47,6 +47,9 @@ importers:
 
   apps/pipeline:
     dependencies:
+      '@blindtest/anthropic':
+        specifier: workspace:*
+        version: link:../../packages/integrations/anthropic
       '@blindtest/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -94,6 +97,12 @@ importers:
       '@types/better-sqlite3':
         specifier: 9.6.0
         version: 9.6.0
+
+  packages/integrations/anthropic:
+    devDependencies:
+      '@types/node':
+        specifier: 24.13.3
+        version: 24.13.3
 
   packages/integrations/itunes: {}
 

@@ -2,6 +2,7 @@ import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import { SCHEMA_SQL } from "./schema.js";
 import {
+  getRecentTracksForTheme,
   getUsedTrackIds,
   getUsedTrackIdsSince,
   recordTrackUsage,
@@ -85,5 +86,51 @@ describe("getUsedTrackIdsSince", () => {
     const result = getUsedTrackIdsSince(db, "blindtest-fr", new Date("2026-08-01T00:00:00Z"));
 
     expect(result).toEqual(new Set(["recent-track"]));
+  });
+});
+
+describe("getRecentTracksForTheme", () => {
+  it("returns title+artist for tracks used since the cutoff, newest first", () => {
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "old-track",
+      title: "Old Song",
+      artist: "Old Artist",
+      videoId: null,
+      usedAt: new Date("2026-07-01T00:00:00Z"),
+    });
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "recent-track",
+      title: "Recent Song",
+      artist: "Recent Artist",
+      videoId: null,
+      usedAt: new Date("2026-08-05T00:00:00Z"),
+    });
+
+    const result = getRecentTracksForTheme(db, "annees-80", new Date("2026-08-01T00:00:00Z"));
+
+    expect(result).toEqual([{ title: "Recent Song", artist: "Recent Artist" }]);
+  });
+
+  it("only returns tracks for the requested theme", () => {
+    db.prepare(
+      "INSERT INTO channel_themes (id, channel_id, day, label, youtube_playlist_id) VALUES (?, ?, ?, ?, ?)",
+    ).run("rap-fr", "blindtest-fr", "thursday", "Rap FR", null);
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "rap-fr",
+      spotifyTrackId: "other-theme-track",
+      title: "Other Theme Song",
+      artist: "Other Artist",
+      videoId: null,
+      usedAt: new Date("2026-08-05T00:00:00Z"),
+    });
+
+    const result = getRecentTracksForTheme(db, "annees-80", new Date("2026-07-01T00:00:00Z"));
+
+    expect(result).toEqual([]);
   });
 });
