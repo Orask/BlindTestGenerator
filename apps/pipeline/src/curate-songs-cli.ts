@@ -27,9 +27,10 @@ const tokenProvider = new SpotifyTokenProvider({
   clientId: requireEnv("SPOTIFY_CLIENT_ID"),
   clientSecret: requireEnv("SPOTIFY_CLIENT_SECRET"),
 });
-const spotify = createSpotifyClient(tokenProvider);
-
 const totalSongs = Object.values(input).reduce((sum, titles) => sum + titles.length, 0);
+// One search per song, doubled to leave room for retries, plus a small margin
+// — well above the default daily-run budget, but still a hard ceiling.
+const spotify = createSpotifyClient(tokenProvider, fetch, { maxRequests: totalSongs * 2 + 50 });
 console.log(
   `Vérification de ${totalSongs} morceaux pour ${Object.keys(input).length} artiste(s)...`,
 );

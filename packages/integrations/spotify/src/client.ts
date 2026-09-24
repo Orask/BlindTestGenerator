@@ -54,13 +54,48 @@ const MAX_RATE_LIMIT_RETRIES = 5;
 // bounded wait instead.
 const MAX_RETRY_AFTER_SECONDS = 30;
 
+// Retries and the pacing above only react *after* Spotify pushes back. A hard
+// per-client cap on total HTTP attempts is the proactive half: a run that
+// starts looping (bad seed list, discovery fallback spiralling, a retry storm)
+// stops itself before it burns the shared quota, instead of finding out from
+// a 429 cooldown that then blocks the next scheduled run too. Every attempt
+// counts, including retries, since those are exactly what hammers the API.
+// Sized for one daily episode (~45 seed artists + discovery fallback) with
+// generous headroom; bulk callers (curate-songs-cli) pass their own budget.
+export const DEFAULT_MAX_REQUESTS = 300;
+
+export class SpotifyRequestBudgetExceededError extends Error {
+  constructor(readonly maxRequests: number) {
+    super(
+      `Spotify request budget exhausted (${maxRequests} requests) — aborting to protect the API quota`,
+    );
+    this.name = "SpotifyRequestBudgetExceededError";
+  }
+}
+
+export interface SpotifyClientOptions {
+  /** Max HTTP attempts (retries included) this client may make before refusing further calls. */
+  readonly maxRequests?: number;
+}
+
+interface RequestBudget {
+  readonly max: number;
+  used: number;
+}
+
 async function fetchWithRetry(
   fetchImpl: typeof fetch,
   url: string,
   init: SpotifyFetchInit,
+  budget: RequestBudget,
 ): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
     const isLastAttempt = attempt === MAX_RATE_LIMIT_RETRIES;
+
+    if (budget.used >= budget.max) {
+      throw new SpotifyRequestBudgetExceededError(budget.max);
+    }
+    budget.used++;
 
     let response: Response;
     try {
@@ -93,7 +128,9 @@ async function fetchWithRetry(
 export function createSpotifyClient(
   tokenProvider: TokenProvider,
   fetchImpl: typeof fetch = fetch,
+  options: SpotifyClientOptions = {},
 ): SpotifyClient {
+  const budget: RequestBudget = { max: options.maxRequests ?? DEFAULT_MAX_REQUESTS, used: 0 };
   return {
     async searchTracksByArtist(artistName: string, limit: number): Promise<SpotifyTrackMetadata[]> {
       const accessToken = await tokenProvider.getAccessToken();
@@ -103,6 +140,7 @@ export function createSpotifyClient(
         fetchImpl,
         `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${apiLimit}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
+        budget,
       );
 
       if (!response.ok) {
@@ -166,6 +204,7 @@ export function createSpotifyClient(
         fetchImpl,
         `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${MAX_SEARCH_LIMIT}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
+        budget,
       );
 
       if (!response.ok) {
@@ -215,6 +254,7 @@ export function createSpotifyClient(
         fetchImpl,
         `https://api.spotify.com/v1/search?q=${encodeURIComponent(query)}&type=artist&limit=${apiLimit}&offset=${offset}`,
         { headers: { Authorization: `Bearer ${accessToken}` } },
+        budget,
       );
 
       if (!response.ok) {
@@ -229,9 +269,12 @@ export function createSpotifyClient(
 
     async getTrackById(id: string): Promise<SpotifyTrackMetadata> {
       const accessToken = await tokenProvider.getAccessToken();
-      const response = await fetchWithRetry(fetchImpl, `https://api.spotify.com/v1/tracks/${id}`, {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await fetchWithRetry(
+        fetchImpl,
+        `https://api.spotify.com/v1/tracks/${id}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+        budget,
+      );
 
       if (!response.ok) {
         throw new Error(

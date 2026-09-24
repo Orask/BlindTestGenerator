@@ -1,5 +1,11 @@
 export type { SpotifyTrackMetadata, SpotifyClient } from "./types.js";
-export { createSpotifyClient, type TokenProvider } from "./client.js";
+export {
+  createSpotifyClient,
+  DEFAULT_MAX_REQUESTS,
+  SpotifyRequestBudgetExceededError,
+  type SpotifyClientOptions,
+  type TokenProvider,
+} from "./client.js";
 export {
   fetchClientCredentialsToken,
   SpotifyTokenProvider,

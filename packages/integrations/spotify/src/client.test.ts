@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { createSpotifyClient, type TokenProvider } from "./client.js";
+import {
+  createSpotifyClient,
+  SpotifyRequestBudgetExceededError,
+  type TokenProvider,
+} from "./client.js";
 
 interface RawSpotifyTrackFixture {
   id: string;
@@ -68,6 +72,42 @@ describe("createSpotifyClient rate-limit retry (shared by every endpoint)", () =
 
     await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
       "Spotify search failed",
+    );
+  });
+});
+
+describe("createSpotifyClient request budget", () => {
+  it("refuses further calls once maxRequests is reached, without hitting the API again", async () => {
+    const fetchImpl = fakeFetch([rawTrack()]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl, { maxRequests: 2 });
+
+    await client.searchTracksByArtist("Indila", 10);
+    await client.searchTracksByArtist("Indila", 10);
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toBeInstanceOf(
+      SpotifyRequestBudgetExceededError,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("counts retries against the budget, so a 429 storm can't exceed it", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(fakeRateLimitedResponse());
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl, { maxRequests: 3 });
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toBeInstanceOf(
+      SpotifyRequestBudgetExceededError,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
+
+  it("shares one budget across every endpoint", async () => {
+    const fetchImpl = fakeFetch([rawTrack()]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl, { maxRequests: 1 });
+
+    await client.searchTracksByArtist("Indila", 10);
+
+    await expect(client.searchArtists("rap francais", 5)).rejects.toBeInstanceOf(
+      SpotifyRequestBudgetExceededError,
     );
   });
 });
