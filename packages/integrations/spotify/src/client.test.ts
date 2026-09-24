@@ -100,6 +100,41 @@ describe("createSpotifyClient long-cooldown circuit breaker", () => {
     expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 
+  it("reports a detected cooldown so the caller can persist it", async () => {
+    const onCooldown = vi.fn();
+    const before = Date.now();
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      vi.fn().mockResolvedValue(fakeRateLimitedResponse("3600")),
+      { onCooldown },
+    );
+
+    await client.searchTracksByArtist("Indila", 10).catch(() => undefined);
+
+    expect(onCooldown).toHaveBeenCalledTimes(1);
+    expect(onCooldown.mock.calls[0]?.[0]).toBeGreaterThanOrEqual(before + 3_600_000);
+  });
+
+  it("starts already blocked when handed a cooldown from a previous run", async () => {
+    const fetchImpl = fakeFetch([rawTrack()]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl, {
+      blockedUntil: Date.now() + 60_000,
+    });
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toBeInstanceOf(
+      SpotifyRateLimitedError,
+    );
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("ignores a cooldown that has already expired", async () => {
+    const client = createSpotifyClient(fakeTokenProvider(), fakeFetch([rawTrack()]), {
+      blockedUntil: Date.now() - 1,
+    });
+
+    await expect(client.searchTracksByArtist("Indila", 10)).resolves.toHaveLength(1);
+  });
+
   it("still retries a Retry-After within the cap", async () => {
     const fetchImpl = vi
       .fn()

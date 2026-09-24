@@ -25,12 +25,24 @@ function requireEnv(name: string): string {
   return value;
 }
 
-export function createClientsFromEnv(): PipelineClients {
+export interface CreateClientsOptions {
+  /** Spotify cooldown left over from a previous run (epoch ms) — see spotify-cooldown.ts. */
+  readonly spotifyBlockedUntil?: number | undefined;
+  /** Persists a newly detected Spotify cooldown for the next run. */
+  readonly onSpotifyCooldown?: ((blockedUntil: number) => void) | undefined;
+}
+
+export function createClientsFromEnv(options: CreateClientsOptions = {}): PipelineClients {
   const tokenProvider = new SpotifyTokenProvider({
     clientId: requireEnv("SPOTIFY_CLIENT_ID"),
     clientSecret: requireEnv("SPOTIFY_CLIENT_SECRET"),
   });
-  const spotify = createSpotifyClient(tokenProvider);
+  const spotify = createSpotifyClient(tokenProvider, fetch, {
+    ...(options.spotifyBlockedUntil !== undefined
+      ? { blockedUntil: options.spotifyBlockedUntil }
+      : {}),
+    ...(options.onSpotifyCooldown ? { onCooldown: options.onSpotifyCooldown } : {}),
+  });
 
   const itunes = createItunesClient();
 

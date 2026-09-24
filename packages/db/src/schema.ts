@@ -47,6 +47,15 @@ CREATE TABLE IF NOT EXISTS tracks_used (
   video_id TEXT REFERENCES videos(id)
 );
 
+-- Persists an external API's rate-limit cooldown (e.g. Spotify's 429
+-- Retry-After) across runs: the DB is committed back after every scheduled
+-- run, so the next run can refuse to hit a still-cooling-down API instead of
+-- rediscovering the block (and possibly extending it) with fresh requests.
+CREATE TABLE IF NOT EXISTS service_cooldowns (
+  service TEXT PRIMARY KEY,
+  blocked_until TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_tracks_used_channel_track
   ON tracks_used(channel_id, spotify_track_id);
 `;
