@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import {
   createSpotifyClient,
+  SpotifyRateLimitedError,
   SpotifyRequestBudgetExceededError,
   type TokenProvider,
 } from "./client.js";
@@ -73,6 +74,43 @@ describe("createSpotifyClient rate-limit retry (shared by every endpoint)", () =
     await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
       "Spotify search failed",
     );
+  });
+});
+
+describe("createSpotifyClient long-cooldown circuit breaker", () => {
+  it("fails immediately on a Retry-After beyond the cap, without retrying", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(fakeRateLimitedResponse("3600"));
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toBeInstanceOf(
+      SpotifyRateLimitedError,
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses every later call, on any endpoint, without touching the network", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue(fakeRateLimitedResponse("3600"));
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+    await client.searchTracksByArtist("Indila", 10).catch(() => undefined);
+
+    await expect(client.searchArtists("rap francais", 5)).rejects.toBeInstanceOf(
+      SpotifyRateLimitedError,
+    );
+    await expect(client.getTrackById("abc")).rejects.toBeInstanceOf(SpotifyRateLimitedError);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("still retries a Retry-After within the cap", async () => {
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(fakeRateLimitedResponse("0"))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ tracks: { items: [rawTrack()] } }),
+      });
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchTracksByArtist("Indila", 10)).resolves.toHaveLength(1);
   });
 });
 

@@ -50,8 +50,9 @@ const MAX_RATE_LIMIT_RETRIES = 5;
 // Honoring it uncapped turned "rate limited" into "the process silently
 // sleeps for however long Spotify feels like, with zero visible activity
 // the whole time" — indistinguishable from a hang without added tracing.
-// Capping it means a long cooldown surfaces as a fast, loud failure after a
-// bounded wait instead.
+// Capping the wait bounds how long a *short* rate limit can stall a run;
+// anything longer than the cap is treated as a real cooldown (see
+// SpotifyRateLimitedError) and fails immediately instead of retrying.
 const MAX_RETRY_AFTER_SECONDS = 30;
 
 // Retries and the pacing above only react *after* Spotify pushes back. A hard
@@ -73,6 +74,22 @@ export class SpotifyRequestBudgetExceededError extends Error {
   }
 }
 
+// A `Retry-After` beyond MAX_RETRY_AFTER_SECONDS means Spotify is in a genuine
+// cooldown (confirmed live: QUOTA_EXCEEDED on the very first artist of a
+// scheduled run). Sleeping 30s x 5 retries just to fail anyway wastes ~2.5
+// minutes and keeps poking the API during the cooldown, which risks
+// extending it. Instead the client fails fast and stays "open" (refuses
+// every further call without touching the network) until the cooldown
+// expires, so one rate-limited call ends the whole run cleanly.
+export class SpotifyRateLimitedError extends Error {
+  constructor(readonly retryAfterSeconds: number) {
+    super(
+      `Spotify is rate-limited for ~${Math.ceil(retryAfterSeconds)}s — aborting instead of retrying`,
+    );
+    this.name = "SpotifyRateLimitedError";
+  }
+}
+
 export interface SpotifyClientOptions {
   /** Max HTTP attempts (retries included) this client may make before refusing further calls. */
   readonly maxRequests?: number;
@@ -81,6 +98,8 @@ export interface SpotifyClientOptions {
 interface RequestBudget {
   readonly max: number;
   used: number;
+  /** Epoch ms until which the client refuses all calls after a long cooldown; 0 = not blocked. */
+  blockedUntil: number;
 }
 
 async function fetchWithRetry(
@@ -92,6 +111,10 @@ async function fetchWithRetry(
   for (let attempt = 0; ; attempt++) {
     const isLastAttempt = attempt === MAX_RATE_LIMIT_RETRIES;
 
+    const blockedForMs = budget.blockedUntil - Date.now();
+    if (blockedForMs > 0) {
+      throw new SpotifyRateLimitedError(blockedForMs / 1000);
+    }
     if (budget.used >= budget.max) {
       throw new SpotifyRequestBudgetExceededError(budget.max);
     }
@@ -121,7 +144,11 @@ async function fetchWithRetry(
     const rawRetryAfter = response.headers.get("retry-after");
     const parsedRetryAfter = rawRetryAfter === null ? NaN : Number(rawRetryAfter);
     const retryAfterSeconds = Number.isNaN(parsedRetryAfter) ? 2 ** attempt : parsedRetryAfter;
-    await sleep(Math.min(retryAfterSeconds, MAX_RETRY_AFTER_SECONDS) * 1000);
+    if (retryAfterSeconds > MAX_RETRY_AFTER_SECONDS) {
+      budget.blockedUntil = Date.now() + retryAfterSeconds * 1000;
+      throw new SpotifyRateLimitedError(retryAfterSeconds);
+    }
+    await sleep(retryAfterSeconds * 1000);
   }
 }
 
@@ -130,7 +157,11 @@ export function createSpotifyClient(
   fetchImpl: typeof fetch = fetch,
   options: SpotifyClientOptions = {},
 ): SpotifyClient {
-  const budget: RequestBudget = { max: options.maxRequests ?? DEFAULT_MAX_REQUESTS, used: 0 };
+  const budget: RequestBudget = {
+    max: options.maxRequests ?? DEFAULT_MAX_REQUESTS,
+    used: 0,
+    blockedUntil: 0,
+  };
   return {
     async searchTracksByArtist(artistName: string, limit: number): Promise<SpotifyTrackMetadata[]> {
       const accessToken = await tokenProvider.getAccessToken();
