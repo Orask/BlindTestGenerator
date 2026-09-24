@@ -42,7 +42,7 @@ Morceaux utilisés dans les épisodes de ce thème ces dernières semaines (pour
 ${recentLines}
 
 Ta tâche :
-1. Identifie les morceaux qui NE correspondent PAS vraiment au thème (mauvaise époque, mauvais genre, erreur d'attribution d'artiste — ex : un morceau récent glissé par erreur dans un thème d'une décennie passée, ou un homonyme d'un artiste différent).
+1. Identifie les morceaux qui NE correspondent PAS vraiment au thème (mauvaise époque, erreur d'attribution d'artiste — ex : un morceau récent glissé par erreur dans un thème d'une décennie passée, ou un homonyme d'un artiste différent). Pour un thème de genre (ex : "Rap FR"), les sous-genres proches (trap, RnB urbain, afro-trap, cloud rap, etc.) font partie du thème tant qu'il n'existe pas de catégorie dédiée à ce sous-genre dans la chaîne — ne retire un morceau pour raison de genre que s'il est clairement d'un genre différent (pop pure sans lien avec le rap, musique du monde, électro/funk, dancehall, etc.), jamais simplement parce qu'il est "un peu" trap ou RnB.
 2. Identifie les morceaux d'artistes trop peu connus du grand public français pour ouvrir l'épisode.
 3. Suggère un ordre où les morceaux les plus reconnaissables/populaires arrivent en premier, pour capter l'attention dès le début.
 4. Si un artiste revient déjà beaucoup dans l'historique récent ci-dessus, tu peux le signaler dans tes notes, mais ne retire pas systématiquement pour autant — la diversité est un plus, pas une règle stricte.
