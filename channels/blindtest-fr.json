@@ -2,7 +2,7 @@
   "id": "blindtest-fr",
   "name": "BlindTest FR",
   "language": "fr",
-  "visibility": "private",
+  "visibility": "public",
   "publishHourLocal": 9,
   "themes": [
     {
