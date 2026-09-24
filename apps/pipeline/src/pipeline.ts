@@ -153,21 +153,25 @@ async function buildTracksWithDiscoveryFallback(
     }
     console.log(`${newArtists.length} nouvel(aux) artiste(s) trouvé(s) : ${newArtists.join(", ")}`);
 
+    // Persist immediately, before attempting the retry build below: these
+    // artists are already live-verified, so even if this run's episode
+    // still falls short (the cooldown squeeze can be deeper than one
+    // discovery batch can fill), the pool permanently grows for next time
+    // instead of being rediscovered — or silently lost — on every thin run.
+    await appendDiscoveredArtists(deps.channelConfigPath, theme.id, newArtists);
+
     const extraCandidates = await collectCandidateTracks(
       deps.spotify,
       newArtists,
       CANDIDATES_PER_ARTIST,
     );
-    const tracks = await buildEpisodeTracks(
+    return await buildEpisodeTracks(
       [...candidates, ...extraCandidates],
       recentlyUsedTrackIds,
       allTimeUsedTrackIds,
       deps.itunes,
       tracksPerEpisode,
     );
-
-    await appendDiscoveredArtists(deps.channelConfigPath, theme.id, newArtists);
-    return tracks;
   }
 }
 
