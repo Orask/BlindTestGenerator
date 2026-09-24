@@ -45,7 +45,14 @@ import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 const DEFAULT_TRACKS_PER_EPISODE = 60;
-const CANDIDATES_PER_ARTIST = 10;
+// Above Spotify's 10-per-call cap, searchTracksByArtist pages internally to
+// reach it (see MAX_ARTIST_SEARCH_PAGES in the spotify client) — worth
+// paying for since a weekly-recurring theme's top-10-per-artist candidates
+// are exactly what the reuse cooldown depletes fastest week over week
+// (confirmed live: Rap FR's 74-artist pool still fell short, 37/60, even
+// after auto-discovery, because most artists' top 10 was mostly
+// cooldown-locked from the previous week's episode).
+const CANDIDATES_PER_ARTIST = 20;
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 // Generous but bounded: covers a shortfall many times over even at a
 // modest post-filter yield per artist, without turning a thin theme into a

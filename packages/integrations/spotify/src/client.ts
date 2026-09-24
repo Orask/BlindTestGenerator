@@ -23,6 +23,15 @@ const NON_ORIGINAL_VERSION_PATTERN =
 // verified empirically (see docs/CAHIER_DES_CHARGES.md section 3bis).
 const MAX_SEARCH_LIMIT = 10;
 
+// searchTracksByArtist pages past MAX_SEARCH_LIMIT via offset when the
+// caller wants more than one page's worth — a thin weekly-reuse-cooldown
+// squeeze (confirmed live: a theme's whole seed pool falling short even
+// after auto-discovery added new artists) is often just an artist's top 10
+// being mostly cooldown-locked, not the artist itself being exhausted.
+// Bounded like discover-artists.ts's own pagination, for the same reason:
+// relevance drops off fast past a few pages, so digging deeper stops paying off.
+const MAX_ARTIST_SEARCH_PAGES = 3;
+
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
 
 // Shared by artist-name and track-title comparisons - both need the same
@@ -186,60 +195,70 @@ export function createSpotifyClient(
   };
   return {
     async searchTracksByArtist(artistName: string, limit: number): Promise<SpotifyTrackMetadata[]> {
-      const accessToken = await tokenProvider.getAccessToken();
       const query = encodeURIComponent(`artist:"${artistName}"`);
-      const apiLimit = Math.min(limit, MAX_SEARCH_LIMIT);
-      const response = await fetchWithRetry(
-        fetchImpl,
-        `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${apiLimit}`,
-        { headers: { Authorization: `Bearer ${accessToken}` } },
-        budget,
-      );
-
-      if (!response.ok) {
-        throw new Error(
-          `Spotify search failed for artist "${artistName}": ${response.status} ${await response.text()}`,
-        );
-      }
-
-      const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
+      const normalizedQuery = normalizeForComparison(artistName);
       const seenTitles = new Set<string>();
       const results: SpotifyTrackMetadata[] = [];
-      const normalizedQuery = normalizeForComparison(artistName);
 
-      for (const track of data.tracks.items) {
-        if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
-          continue;
-        }
-        // Spotify's `artist:"X"` filter is a loose text match, not an exact
-        // one — it happily returns tracks by a completely different artist
-        // that merely shares a substring with X (e.g. searching "Dorothée"
-        // returns tracks credited only to "Dorothée Pousséo", an unrelated
-        // person). Requiring the searched name to exactly match one of the
-        // track's own credited artists (diacritic/case-insensitive) is what
-        // actually keeps the theme on-topic.
-        const isActuallyByArtist = track.artists.some(
-          (artist) => normalizeForComparison(artist.name) === normalizedQuery,
+      for (let page = 0; page < MAX_ARTIST_SEARCH_PAGES && results.length < limit; page++) {
+        const accessToken = await tokenProvider.getAccessToken();
+        const apiLimit = Math.min(limit - results.length, MAX_SEARCH_LIMIT);
+        const offset = page * MAX_SEARCH_LIMIT;
+        const response = await fetchWithRetry(
+          fetchImpl,
+          `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${apiLimit}&offset=${offset}`,
+          { headers: { Authorization: `Bearer ${accessToken}` } },
+          budget,
         );
-        if (!isActuallyByArtist) {
-          continue;
-        }
-        const normalizedTitle = track.name.trim().toLowerCase();
-        if (seenTitles.has(normalizedTitle)) {
-          continue;
-        }
-        seenTitles.add(normalizedTitle);
 
-        results.push({
-          id: track.id,
-          title: track.name,
-          artist: track.artists.map((a) => a.name).join(", "),
-          artistNames: track.artists.map((a) => a.name),
-          albumCoverUrl: track.album.images[0]?.url ?? "",
-          popularityRank: results.length,
-        });
+        if (!response.ok) {
+          throw new Error(
+            `Spotify search failed for artist "${artistName}": ${response.status} ${await response.text()}`,
+          );
+        }
 
-        if (results.length === limit) {
+        const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
+
+        for (const track of data.tracks.items) {
+          if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
+            continue;
+          }
+          // Spotify's `artist:"X"` filter is a loose text match, not an exact
+          // one — it happily returns tracks by a completely different artist
+          // that merely shares a substring with X (e.g. searching "Dorothée"
+          // returns tracks credited only to "Dorothée Pousséo", an unrelated
+          // person). Requiring the searched name to exactly match one of the
+          // track's own credited artists (diacritic/case-insensitive) is what
+          // actually keeps the theme on-topic.
+          const isActuallyByArtist = track.artists.some(
+            (artist) => normalizeForComparison(artist.name) === normalizedQuery,
+          );
+          if (!isActuallyByArtist) {
+            continue;
+          }
+          const normalizedTitle = track.name.trim().toLowerCase();
+          if (seenTitles.has(normalizedTitle)) {
+            continue;
+          }
+          seenTitles.add(normalizedTitle);
+
+          results.push({
+            id: track.id,
+            title: track.name,
+            artist: track.artists.map((a) => a.name).join(", "),
+            artistNames: track.artists.map((a) => a.name),
+            albumCoverUrl: track.album.images[0]?.url ?? "",
+            popularityRank: results.length,
+          });
+
+          if (results.length === limit) {
+            break;
+          }
+        }
+
+        // A partial page means Spotify's index for this query is exhausted —
+        // further pages would just repeat or return nothing.
+        if (data.tracks.items.length < apiLimit) {
           break;
         }
       }

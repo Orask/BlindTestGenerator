@@ -365,6 +365,57 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
 
     expect(results).toHaveLength(1);
   });
+
+  function fakePagedFetch(pages: RawSpotifyTrackFixture[][]): typeof fetch {
+    return vi.fn().mockImplementation((url: string) => {
+      const offset = Number(new URL(url).searchParams.get("offset") ?? "0");
+      const page = pages[offset / 10] ?? [];
+      return Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ tracks: { items: page } }),
+      });
+    });
+  }
+
+  it("fetches a second page when a full first page isn't enough to reach the limit", async () => {
+    const fullPage = Array.from({ length: 10 }, (_, i) =>
+      rawTrack({ id: `p1-${i}`, name: `Track ${i}` }),
+    );
+    const secondPage = [rawTrack({ id: "p2-0", name: "Extra track" })];
+    const fetchImpl = fakePagedFetch([fullPage, secondPage]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const results = await client.searchTracksByArtist("Indila", 11);
+
+    expect(results).toHaveLength(11);
+    expect(results.at(-1)?.id).toBe("p2-0");
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("stops paging once a page returns fewer items than requested", async () => {
+    const partialPage = [rawTrack({ id: "1", name: "Only track" })];
+    const fetchImpl = fakePagedFetch([partialPage]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const results = await client.searchTracksByArtist("Indila", 20);
+
+    expect(results).toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("never pages beyond MAX_ARTIST_SEARCH_PAGES even if every page is full", async () => {
+    const fullPage = (prefix: string) =>
+      Array.from({ length: 10 }, (_, i) =>
+        rawTrack({ id: `${prefix}-${i}`, name: `${prefix} ${i}` }),
+      );
+    const fetchImpl = fakePagedFetch([fullPage("a"), fullPage("b"), fullPage("c"), fullPage("d")]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const results = await client.searchTracksByArtist("Indila", 100);
+
+    expect(results).toHaveLength(30);
+    expect(fetchImpl).toHaveBeenCalledTimes(3);
+  });
 });
 
 describe("createSpotifyClient.searchArtists", () => {
