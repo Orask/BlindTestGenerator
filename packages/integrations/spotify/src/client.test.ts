@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createSpotifyClient,
   SpotifyRateLimitedError,
@@ -74,6 +74,68 @@ describe("createSpotifyClient rate-limit retry (shared by every endpoint)", () =
     await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
       "Spotify search failed",
     );
+  });
+});
+
+describe("createSpotifyClient 5xx retry", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function fakeServerErrorResponse(status = 502) {
+    return {
+      ok: false,
+      status,
+      headers: { get: () => null },
+      text: () => Promise.resolve('{"error":{"status":502,"message":"An unexpected error"}}'),
+    };
+  }
+
+  it("retries after a transient 502 and succeeds, same as a 429", async () => {
+    // Confirmed live: a bare 502 from Spotify's own infrastructure on the
+    // first artist of an otherwise-healthy scheduled run — unrelated to
+    // rate-limiting, but just as transient and worth retrying.
+    vi.useFakeTimers();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(fakeServerErrorResponse())
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ tracks: { items: [rawTrack()] } }),
+      });
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const promise = client.searchTracksByArtist("Indila", 10);
+    await vi.advanceTimersByTimeAsync(2_000);
+
+    await expect(promise).resolves.toHaveLength(1);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("gives up and surfaces the error once retries are exhausted on a persistent 5xx", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn().mockResolvedValue(fakeServerErrorResponse(503));
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const promise = client.searchTracksByArtist("Indila", 10);
+    const expectation = expect(promise).rejects.toThrow("Spotify search failed");
+    await vi.advanceTimersByTimeAsync(60_000);
+
+    await expectation;
+  });
+
+  it("never treats a 4xx client error as retryable", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 403,
+      text: () => Promise.resolve("Forbidden"),
+    });
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.searchTracksByArtist("Indila", 10)).rejects.toThrow(
+      "Spotify search failed",
+    );
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
   });
 });
 

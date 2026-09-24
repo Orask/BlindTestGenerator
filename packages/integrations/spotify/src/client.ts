@@ -142,8 +142,19 @@ async function fetchWithRetry(
       continue;
     }
 
-    if (response.status !== 429 || isLastAttempt) {
+    // 5xx is Spotify's own infrastructure having a bad moment (confirmed
+    // live: a bare 502 "An unexpected error occurred" on the very first
+    // artist of an otherwise-healthy run, no rate-limiting involved) — worth
+    // a backoff retry same as a network error, just without 429's
+    // Retry-After/circuit-breaker semantics, which don't apply here.
+    const isRetryableStatus = response.status === 429 || response.status >= 500;
+    if (!isRetryableStatus || isLastAttempt) {
       return response;
+    }
+
+    if (response.status !== 429) {
+      await sleep(2 ** attempt * 1000);
+      continue;
     }
 
     // `retry-after: 0` is a legitimate value that must be respected as-is,
