@@ -2,10 +2,14 @@ name: Daily Pipeline
 
 on:
   schedule:
-    # 6:00 UTC daily. GitHub's scheduler can lag by several minutes under
-    # load — fine for a once-a-day publish, unlike the exact-time reliability
-    # a personal Mac's sleep/wake cycle needed and never delivered.
-    - cron: "0 6 * * *"
+    # 3:00 UTC — deliberately earlier than the ~8h Swiss target (5:00 UTC in
+    # summer / 7:00 in winter). GitHub's scheduler doesn't guarantee the
+    # nominal time: a 6:00 UTC cron (= 8:00 CEST on paper) was observed
+    # actually firing around 13:00 Swiss time, a ~5h delay, likely from this
+    # repo having little scheduled-workflow history yet. Firing earlier is a
+    # compensating guess, not a guarantee — revisit if the delay pattern
+    # changes once GitHub treats this job as "established".
+    - cron: "0 3 * * *"
   workflow_dispatch: {}
 
 concurrency:
