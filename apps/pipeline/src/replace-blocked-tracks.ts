@@ -15,9 +15,11 @@ import { REUSE_COOLDOWN_DAYS } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { spreadOutArtists } from "./diversify-artists.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 // One-off: a track that got a YouTube Content ID claim serious enough to
@@ -205,13 +207,32 @@ console.log(
 
 const finalTracks = spreadOutArtists([...keptTracks, ...replacements]);
 
+// Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+// public/ at bundle time, so anything downloaded afterward 404s from the
+// bundled server (same gotcha as pipeline.ts — this script starts from a
+// clean checkout, so even the *kept* tracks' covers aren't on disk yet).
+await resolvePublicCoverUrls(
+  finalTracks.map((track) => track.albumCoverUrl),
+  PUBLIC_COVERS_DIR,
+);
+
 const runId = Date.now();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
 const outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-fixed.mp4`;
 const thumbnailPath = `${outputDir}${channel.id}-${theme.id}-${runId}-fixed-thumbnail.jpg`;
 
 const serveUrl = await bundleVideoRenderer();
-await renderEpisode({ serveUrl, themeLabel: theme.label, tracks: finalTracks, outputPath });
+// Lower than Remotion's CPU-based default — this one-off run competes with
+// everything else already open on a dev machine, and reliability matters
+// more than speed here (confirmed live: repeated mid-render browser crashes
+// at the default concurrency).
+await renderEpisode({
+  serveUrl,
+  themeLabel: theme.label,
+  tracks: finalTracks,
+  outputPath,
+  concurrency: 2,
+});
 console.log(`Vidéo rendue : ${outputPath}`);
 await renderThumbnail({
   serveUrl,

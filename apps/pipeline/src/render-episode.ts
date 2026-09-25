@@ -8,6 +8,15 @@ export interface RenderEpisodeParams {
   readonly themeLabel: string;
   readonly tracks: readonly EpisodeTrack[];
   readonly outputPath: string;
+  /**
+   * Number of parallel Chromium tabs Remotion renders with — defaults to
+   * Remotion's own CPU-based heuristic when omitted. Lower this on a
+   * memory-constrained machine already running other heavy apps (confirmed
+   * live: repeated "browser crashed" mid-render at the default concurrency
+   * on a loaded dev laptop); the daily CI run has a dedicated runner and
+   * doesn't need this.
+   */
+  readonly concurrency?: number;
 }
 
 export async function renderEpisode(params: RenderEpisodeParams): Promise<void> {
@@ -49,6 +58,7 @@ export async function renderEpisode(params: RenderEpisodeParams): Promise<void> 
     inputProps,
     chromiumOptions,
     timeoutInMilliseconds,
+    ...(params.concurrency !== undefined ? { concurrency: params.concurrency } : {}),
     onProgress: ({ renderedFrames }) => {
       const bucket = Math.floor(renderedFrames / 60) * 60;
       if (bucket !== lastLoggedFrame) {
