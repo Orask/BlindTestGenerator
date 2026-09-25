@@ -62,6 +62,30 @@ const DISCOVERY_MAX_NEW_ARTISTS = 12;
 // check (see review-episode.ts) — 5 weeks of a weekly-recurring theme.
 const REVIEW_HISTORY_DAYS = 35;
 
+// Thumbnail/playlist calls happen after the video is already live — a
+// transient YouTube-side error there (confirmed live: a bare 409 "ABORTED"
+// on playlistItems.insert, unrelated to anything we sent) shouldn't be
+// allowed to look like the whole publish failed. gaxios's own retry only
+// covers 5xx/408/429, not this case, so this covers it directly.
+const YOUTUBE_METADATA_RETRIES = 3;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function withYoutubeRetry<T>(fn: () => Promise<T>): Promise<T> {
+  for (let attempt = 0; ; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (attempt >= YOUTUBE_METADATA_RETRIES - 1) {
+        throw error;
+      }
+      await sleep(2 ** attempt * 1000);
+    }
+  }
+}
+
 export interface PipelineDeps {
   readonly spotify: SpotifyClient;
   readonly itunes: ItunesClient;
@@ -245,6 +269,7 @@ async function generateAndPublishEpisode(
     format: "long",
   });
 
+  let youtubeVideoId: string;
   try {
     const episodeNumber = countVideosForTheme(db, theme.id);
     const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumber, tracks);
@@ -254,37 +279,14 @@ async function generateAndPublishEpisode(
     // configured instead of parking it behind YouTube's publishAt gate.
     const effectivePublishAt = channel.visibility === "public" ? publishAt : undefined;
 
-    const { videoId: youtubeVideoId } = await deps.youtube.uploadVideo({
+    ({ videoId: youtubeVideoId } = await deps.youtube.uploadVideo({
       filePath: outputPath,
       title,
       description,
       tags,
       visibility: channel.visibility,
       ...(effectivePublishAt ? { publishAt: effectivePublishAt } : {}),
-    });
-
-    await deps.youtube.setThumbnail(youtubeVideoId, thumbnailPath);
-
-    let playlistId = getPlaylistId(db, theme.id);
-    if (!playlistId) {
-      playlistId = (await deps.youtube.ensurePlaylist(theme.label)).playlistId;
-      setPlaylistId(db, theme.id, playlistId);
-    }
-    await deps.youtube.addVideoToPlaylist(youtubeVideoId, playlistId);
-
-    markVideoUploaded(db, videoId, youtubeVideoId);
-
-    for (const track of tracks) {
-      recordTrackUsage(db, {
-        channelId: channel.id,
-        themeId: theme.id,
-        spotifyTrackId: track.id,
-        title: track.title,
-        artist: track.artist,
-        videoId,
-        usedAt: new Date(),
-      });
-    }
+    }));
 
     console.log(
       effectivePublishAt
@@ -294,6 +296,50 @@ async function generateAndPublishEpisode(
   } catch (error) {
     markVideoFailed(db, videoId);
     throw error;
+  }
+
+  // The video is live on YouTube from this point on — record it and its
+  // tracks immediately, before the thumbnail/playlist calls below. Those two
+  // are cosmetic/discoverability extras, not the publish itself: confirmed
+  // live, a transient YouTube-side error on the playlist call (409 ABORTED)
+  // used to bubble up to the catch above and mark an already-published video
+  // as "failed", which would have made a retry re-render and re-upload a
+  // duplicate, and never mark these tracks as used.
+  markVideoUploaded(db, videoId, youtubeVideoId);
+  for (const track of tracks) {
+    recordTrackUsage(db, {
+      channelId: channel.id,
+      themeId: theme.id,
+      spotifyTrackId: track.id,
+      title: track.title,
+      artist: track.artist,
+      videoId,
+      usedAt: new Date(),
+    });
+  }
+
+  try {
+    await withYoutubeRetry(() => deps.youtube.setThumbnail(youtubeVideoId, thumbnailPath));
+  } catch (error) {
+    console.warn(
+      `Échec de l'envoi de la miniature (épisode déjà publié, on continue) : ${(error as Error).message}`,
+    );
+  }
+
+  try {
+    let playlistId = getPlaylistId(db, theme.id);
+    if (!playlistId) {
+      playlistId = (await deps.youtube.ensurePlaylist(theme.label)).playlistId;
+      setPlaylistId(db, theme.id, playlistId);
+    }
+    const resolvedPlaylistId = playlistId;
+    await withYoutubeRetry(() =>
+      deps.youtube.addVideoToPlaylist(youtubeVideoId, resolvedPlaylistId),
+    );
+  } catch (error) {
+    console.warn(
+      `Échec de l'ajout à la playlist (épisode déjà publié, on continue) : ${(error as Error).message}`,
+    );
   }
 }
 
