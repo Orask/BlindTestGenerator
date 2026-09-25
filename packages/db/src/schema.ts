@@ -56,6 +56,23 @@ CREATE TABLE IF NOT EXISTS service_cooldowns (
   blocked_until TEXT NOT NULL
 );
 
+-- A track that got a YouTube Content ID claim serious enough to block a
+-- published video (confirmed live: two tracks made a whole episode
+-- unwatchable worldwide) is excluded from every future selection, across
+-- every theme — the claim is on the recording itself, not the theme or
+-- channel, so there is no reason to ever risk it again. YouTube doesn't
+-- expose Content ID claim details via the public Data API (that requires
+-- CMS/partner access this project doesn't have), so a human still has to
+-- read the claim off YouTube Studio and report which track it was — this
+-- table is just the permanent memory of that manual finding.
+CREATE TABLE IF NOT EXISTS blocked_tracks (
+  spotify_track_id TEXT PRIMARY KEY,
+  title TEXT NOT NULL,
+  artist TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  blocked_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_tracks_used_channel_track
   ON tracks_used(channel_id, spotify_track_id);
 `;

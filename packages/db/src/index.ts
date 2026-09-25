@@ -26,3 +26,8 @@ export {
   type VideoFormat,
 } from "./videos-repository.js";
 export { getCooldownUntil, setCooldownUntil } from "./service-cooldowns-repository.js";
+export {
+  blockTrack,
+  getBlockedTrackIds,
+  type BlockTrackParams,
+} from "./blocked-tracks-repository.js";

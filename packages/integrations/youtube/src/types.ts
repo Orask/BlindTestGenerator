@@ -20,4 +20,6 @@ export interface YoutubeClient {
   setThumbnail(videoId: string, filePath: string): Promise<void>;
   ensurePlaylist(title: string): Promise<{ playlistId: string }>;
   addVideoToPlaylist(videoId: string, playlistId: string): Promise<void>;
+  /** Permanent — used only for a video already confirmed unwatchable (e.g. blocked worldwide by Content ID), never as a routine cleanup step. */
+  deleteVideo(videoId: string): Promise<void>;
 }

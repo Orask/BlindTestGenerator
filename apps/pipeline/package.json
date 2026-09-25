@@ -10,7 +10,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "run": "node --env-file=../../.env dist/index.js",
-    "curate-songs": "node --env-file=../../.env dist/curate-songs-cli.js"
+    "curate-songs": "node --env-file=../../.env dist/curate-songs-cli.js",
+    "replace-blocked-tracks": "node --env-file=../../.env dist/replace-blocked-tracks.js"
   },
   "dependencies": {
     "@blindtest/anthropic": "workspace:*",

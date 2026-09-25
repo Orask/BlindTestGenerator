@@ -13,6 +13,7 @@ import type { AnthropicClient } from "@blindtest/anthropic";
 import {
   countVideosForTheme,
   createVideo,
+  getBlockedTrackIds,
   getRecentTracksForTheme,
   getUsedTrackIds,
   getUsedTrackIdsSince,
@@ -220,7 +221,16 @@ async function generateAndPublishEpisode(
 
   const tracksPerEpisode = deps.tracksPerEpisode ?? DEFAULT_TRACKS_PER_EPISODE;
   const cooldownCutoff = new Date(Date.now() - REUSE_COOLDOWN_DAYS * MS_PER_DAY);
-  const recentlyUsedTrackIds = getUsedTrackIdsSince(db, channel.id, cooldownCutoff);
+  // Permanently-blocked tracks (YouTube Content ID took a published episode
+  // down worldwide — see blocked-tracks-repository.ts) must never be picked
+  // again, under any circumstance, so they're folded into the same
+  // hard-exclude set as the reuse cooldown rather than the softer
+  // all-time-used one, which the reuse/bonus fallback passes are still
+  // allowed to draw from.
+  const recentlyUsedTrackIds = new Set([
+    ...getUsedTrackIdsSince(db, channel.id, cooldownCutoff),
+    ...getBlockedTrackIds(db),
+  ]);
   const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
 
   const selectedTracks = await buildTracksWithDiscoveryFallback(

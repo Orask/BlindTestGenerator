@@ -75,5 +75,9 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
         },
       });
     },
+
+    async deleteVideo(videoId: string): Promise<void> {
+      await api.videos.delete({ id: videoId });
+    },
   };
 }
