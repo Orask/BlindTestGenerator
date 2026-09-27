@@ -107,3 +107,52 @@ cloud avec `.env`/secrets configurés), lancer une passe de vérification (ex. u
 script one-off appelant `collectCuratedTracks` sur ces deux thèmes et loguant les
 paires non trouvées) pour repérer les éventuels titres inexacts et les corriger ou
 compléter les artistes laissés de côté.
+
+---
+
+## [2026-09-27] Tâche 2 — ~10 morceaux non confirmés (Rap FR/2000/80) — BLOQUÉ, outillage préparé
+
+**Constat** : la liste précise des ~10 morceaux signalés comme "variantes de titre à
+tester" par la session précédente **n'existe nulle part dans ce repo** — elle vivait
+dans le scratchpad éphémère de cette session-là (voir blocage noté en tête de journal),
+et je n'ai trouvé aucune trace (commit, fichier, TODO) permettant de la reconstituer
+avec certitude. Je n'invente pas cette liste : deviner à quels morceaux exacts
+l'utilisateur faisait référence serait plus dangereux qu'utile.
+
+**Ce que j'ai fait à la place** :
+
+1. Relecture manuelle de `curatedTracks` des 3 thèmes visés. Par prudence, je note ici
+   4 entrées dont je ne suis PAS sûr à 100 % (`rap-fr`) — à vérifier en priorité :
+   - `"Wesh alors"` — Jul (confiance moyenne)
+   - `"Tchoin"` — Kaaris (confiance faible — pourrait être attribué au mauvais artiste)
+   - `"Macarena"` — Damso (confiance faible)
+   - `"Cosmo"` — Soprano (confiance faible)
+     Le reste (annees-80, annees-2000, et le reste de rap-fr) me semble correct avec une
+     bonne confiance, mais n'a **jamais été vérifié par le code contre Spotify** — ces
+     thèmes tournent en prod depuis plusieurs semaines sans erreur `collectCuratedTracks`
+     rapportée, ce qui est un signal indirect (une paire qui ne matche rien logue un
+     warning mais ne fait pas échouer le run), pas une preuve.
+2. Écrit `scripts/export-curated-songs-ndjson.mjs` (nouveau, lecture seule) : extrait
+   TOUTES les paires `curatedTracks` de `channels/blindtest-fr.json` (226 artistes,
+   tous thèmes confondus, pas seulement les 3 visés) au format NDJSON attendu par
+   `apps/pipeline/src/curate-songs-cli.ts` (outil déjà existant, jamais utilisé pour
+   auditer les données déjà en prod — seulement pensé jusqu'ici pour de la curation
+   neuve). Testé (parsing, 226 lignes générées, format valide).
+
+**Prochain pas concret (dès que des credentials Spotify sont disponibles)** :
+
+```bash
+pnpm build   # ou node déjà buildé dans apps/pipeline/dist
+node scripts/export-curated-songs-ndjson.mjs channels/blindtest-fr.json > /tmp/curated-audit.ndjson
+SPOTIFY_CLIENT_ID=... SPOTIFY_CLIENT_SECRET=... \
+  node apps/pipeline/dist/curate-songs-cli.js /tmp/curated-audit.ndjson /tmp/curated-verified.json
+```
+
+La sortie console liste chaque paire rejetée ("introuvable sur Spotify avec ce titre
+exact") — c'est la vraie liste "à revérifier/corriger", pour ces 3 thèmes et pour tous
+les autres (audit complet plutôt que partiel, autant en profiter). Corriger ensuite
+chaque entrée rejetée dans `channels/blindtest-fr.json` à la main (titre exact trouvé
+sur Spotify, ou suppression si le morceau n'existe pas sur la plateforme).
+
+**Statut** : outillage prêt et committé, mais la vérification elle-même reste à faire
+— nécessite des credentials Spotify absents de ce sandbox cloud.
