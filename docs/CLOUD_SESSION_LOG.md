@@ -1592,3 +1592,68 @@ cron/scheduling des deux workflows GitHub Actions existants, et
   musicale** — spécifique au concept "blind test", n'a pas vocation à être
   généralisée pour d'autres plateformes ; c'est la partie CONTENU, indépendante de
   la partie DISTRIBUTION discutée ici.
+
+## [2026-09-27] FIN DE SESSION — résumé pour la reprise
+
+**Session purement investigation/documentation/recherche, comme demandé — aucun
+code de production modifié.** Le seul changement de code de cette session vient de
+l'utilisateur lui-même (commit `54f5208`, pull effectué et revérifié vert en
+premier). Résumé express :
+
+| #   | Tâche                                | État                                                                                                                                                                                                                                                                      |
+| --- | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 20  | Cause de `popularity: undefined`     | **Identifiée** : champ supprimé du changelog Spotify février 2026, pour tout le monde — pas une restriction de tier. `releaseDate` non affecté. Impact documenté sur pepite-meconnue.ts/top-artiste.ts (tri devenu no-op silencieux), aucune correction codée             |
+| 21  | Cas Claude Lombard                   | **Élucidé** : épisode testé généré ~3h avant le commit qui a corrigé la qualité du thème — pas un bug de discoveryQuery. Risque réel de discoveryQuery pour l'avenir quantifié séparément (cooldown 14j vs cadence hebdo, marge fine), 3 pistes proposées                 |
+| 22  | Recherche business multi-plateformes | Fait — contraintes réelles par plateforme, Snapchat sans API organique officielle, review au niveau app pas par chaîne mais délai externe incompressible (2-6 semaines) = vrai goulot d'étranglement si non démarré maintenant                                            |
+| 23  | Modèle de données stats centralisées | Esquissé — socle commun (followers/vues/engagement, ~90% automatisable via API), strikes/blocages jamais exposés par aucune API trouvée (champ manuel uniquement)                                                                                                         |
+| 24  | Réutilisabilité du code existant     | Analysé — structure `packages/integrations/*` et pattern des workflows directement réutilisables ; `rotating-client.ts` généralise dans son principe (connexion avec le problème de quota YouTube identifié) ; `channel-config.ts`/table `videos` restent mono-plateforme |
+| 25  | Ce récapitulatif                     | Cette entrée                                                                                                                                                                                                                                                              |
+
+**Ce qui a le plus de valeur immédiate pour l'utilisateur dans cette session** :
+
+1. Les deux causes racines élucidées (`popularity`, Claude Lombard) débloquent la
+   suite du test local en cours, avec des pistes concrètes non encore implémentées
+   — décision à prendre par l'utilisateur avant que je code quoi que ce soit dessus.
+2. La réponse claire à la question "goulot d'étranglement ?" : **oui pour
+   Instagram/Facebook/TikTok**, démarrer les démarches administratives
+   (comptes développeur, vérification d'entreprise Meta, audit TikTok) **maintenant**
+   plutôt que d'attendre que la qualité vidéo soit jugée suffisante — ces démarches
+   sont gratuites, réversibles, et leur délai externe ne se raccourcit pas en
+   attendant. **Snapchat n'a pas d'API organique officielle** — décision à prendre
+   sur son inclusion dans le plan.
+3. Un problème de quota YouTube (10 000 unités/jour par PROJET Google Cloud, pas
+   par chaîne) déjà pertinent pour l'objectif 20 chaînes, indépendamment des autres
+   plateformes — à anticiper avant de créer les chaînes YouTube supplémentaires.
+
+**Ordre suggéré pour la suite (local ou prochaine session)** :
+
+1. **D'abord** : une fois le rate-limit Spotify levé, vérifier en live que
+   `release_date` est bien toujours présent sur `/v1/tracks/{id}` (l'hypothèse de
+   cette session, jamais confirmée en direct) et confirmer que `popularity` est
+   bien absent partout où il est utilisé (pas seulement `getTrackById`).
+2. Décider quelle piste suivre pour pepite-meconnue.ts/top-artiste.ts (abandon du
+   tri par popularité réelle, autre source, ou reformulation marketing sans
+   promesse d'ordre) — implémentation à faire dans une prochaine session une fois
+   la décision prise.
+3. Décider du sort de `discoveryQuery` pour le thème "Génériques" (affiner la
+   requête, grossir `curatedTracks`, ou désactiver) — voir les 3 pistes chiffrées
+   ci-dessus.
+4. Continuer la validation manuelle des 6 types de Shorts commencée localement
+   (voir l'ordre déjà suggéré dans l'entrée FIN DE SESSION précédente).
+5. Si la décision est de lancer les démarches multi-plateformes maintenant :
+   créer les comptes développeur Meta/TikTok, démarrer la vérification
+   d'entreprise Meta, soumettre les app reviews avec un cas d'usage minimal (pas
+   besoin d'attendre du contenu publiable) — travail 100% administratif, aucun
+   code à écrire pour cette étape.
+6. Trancher l'architecture quota YouTube (1 projet GCP par chaîne vs demande
+   d'extension) avant de créer les chaînes YouTube supplémentaires au-delà de la
+   première.
+7. Le site de centralisation des stats et le code de publication multi-plateforme
+   restent explicitement HORS PÉRIMÈTRE tant que 5 n'a pas avancé — rien à faire
+   dessus avant plusieurs semaines au mieux.
+
+Tout le travail de cette session est committé et poussé sur `main-hpf4qz` au fur
+et à mesure (6 commits, uniquement de la documentation dans `CLOUD_SESSION_LOG.md`
+— aucun fichier de code modifié par cette session elle-même), `pnpm build/test/
+lint/typecheck` revérifiés verts après chaque pull/commit (129 tests
+`@blindtest/pipeline`, 38 tests `@blindtest/db`, 0 régression).
