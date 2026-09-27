@@ -22,6 +22,7 @@ curatedTracks brouillons) ne sont **pas accessibles** dans ce nouveau conteneur 
 (éphémère, recréé à chaque session) — je repars de zéro pour la tâche 1.
 
 Liste de tâches de cette session (ordre de priorité imposé par l'utilisateur) :
+
 1. curatedTracks pour variete-actuelle + classiques-fr (actuellement 0 chacun)
 2. Revérifier ~10 morceaux incertains (Rap FR, Années 2000, Années 80)
 3. Vérifier le run quotidien de ce matin (Années 80, 3h UTC)
@@ -54,6 +55,7 @@ avec credentials configurées dans les settings de l'environnement).
 `sunday` → `generiques` (Génériques dessins animés/films). Années 80 est `monday`.
 
 **Ce qui s'est passé** (vérifié via GitHub Actions API + `data/blindtest.sqlite`) :
+
 - Run programmé (`schedule`) déclenché à **09:06 UTC** (pas 03:00 UTC — confirme le
   problème de ponctualité du cron natif, cf. tâche 5), run id 36308305422 → **échec**.
 - Cause racine : `itunes.findPreviewByTitleAndArtist("Timecrash", "Éric Serra")`
@@ -76,3 +78,32 @@ retry-sur-tout-statut) est robuste contre une répétition de ce scénario préc
 **Reste un point structurel non résolu** : la ponctualité du cron (09:06 au lieu de
 03:00 UTC, un délai de ~6h) — traité dans la tâche 5.
 
+---
+
+## [2026-09-27] Tâche 1 — curatedTracks variete-actuelle + classiques-fr — TERMINÉ (à re-vérifier)
+
+Ajouté `curatedTracks` (37 paires titre/artiste pour `variete-actuelle`, 44 pour
+`classiques-fr`) dans `channels/blindtest-fr.json`, une par artiste de `seedArtists`
+(hit le plus reconnaissable de chacun), sur le modèle des autres thèmes.
+
+**Décision arbitraire et pourquoi** : ces paires viennent de connaissance générale, pas
+d'une recherche Spotify vérifiée (pas de credentials dans ce conteneur, cf. blocage
+noté en tête de journal). C'est **sans risque de casse** : `collectCuratedTracks` (déjà
+en place) ignore silencieusement toute paire qui ne matche rien sur Spotify (log
+warning, pas d'exception) — au pire certaines entrées ne rapportent rien et le thème
+retombe sur la recherche par `seedArtists` comme avant. J'ai volontairement laissé de
+côté les artistes pour lesquels je n'étais pas sûr à 100% du titre exact (Régine pour
+classiques-fr ; Gims, Patrick Fiori, Julien Granel, Pierre Garnier, Santa, Roméo Elvis,
+Aloise Sauvage pour variete-actuelle) plutôt que de risquer une paire fausse.
+**Vérifié explicitement contre `blocked_tracks`** : n'ai pas repris "Avant toi"
+(Vitaa, Slimane) ni "Reine" (Dadju), tous deux bannis définitivement (Content ID) —
+pris "À fleur de toi" et "Compliqué" à la place pour ces deux artistes.
+
+**Validation faite** : JSON valide, `pnpm build` OK, `pnpm --filter @blindtest/pipeline
+test` → 74/74 tests passent, `prettier --check` OK.
+
+**Prochain pas concret** : à la prochaine session avec credentials Spotify (locale ou
+cloud avec `.env`/secrets configurés), lancer une passe de vérification (ex. un petit
+script one-off appelant `collectCuratedTracks` sur ces deux thèmes et loguant les
+paires non trouvées) pour repérer les éventuels titres inexacts et les corriger ou
+compléter les artistes laissés de côté.
