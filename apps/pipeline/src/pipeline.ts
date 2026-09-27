@@ -18,6 +18,7 @@ import {
   getUsedTrackIds,
   getUsedTrackIdsSince,
   getPlaylistId,
+  hasUploadedVideoForThemeToday,
   markVideoFailed,
   markVideoUploaded,
   openDatabase,
@@ -369,7 +370,24 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
   const db = openDatabase(deps.dbPath);
   syncChannelToDb(db, channel);
 
-  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
+  const now = new Date();
+  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(now));
+
+  // Makes a day's run idempotent when it can fire more than once for the
+  // same calendar day — the native GitHub Actions `schedule` trigger is
+  // deliberately kept as a fallback alongside an external, on-time trigger
+  // (see docs/CAHIER_DES_CHARGES.md), so both firing the same day is
+  // expected, not a bug. Only an already-*uploaded* episode short-circuits
+  // — a `draft`/`failed` row from an earlier attempt today must still be
+  // retried, same as the manual workflow_dispatch retries this already
+  // relied on before either trigger existed.
+  if (hasUploadedVideoForThemeToday(db, channel.id, theme.id, now)) {
+    console.log(
+      `Épisode "${theme.label}" déjà publié aujourd'hui pour "${channel.id}", run ignoré (déclenché deux fois le même jour).`,
+    );
+    return;
+  }
+
   await generateAndPublishEpisode(db, channel, theme, deps, undefined);
 }
 

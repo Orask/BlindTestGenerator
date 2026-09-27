@@ -50,3 +50,30 @@ export function countVideosForTheme(db: Database.Database, themeId: string): num
     .get(themeId);
   return row?.count ?? 0;
 }
+
+/**
+ * Whether this theme already has a successfully published video for the
+ * same UTC calendar day as `referenceDate` — used to make a daily run
+ * idempotent when it can be triggered more than once for the same day (the
+ * native GitHub Actions `schedule` trigger plus an external trigger set up
+ * to work around its imprecise firing time, or a manual re-run after an
+ * already-successful one). Only `status = 'uploaded'` counts: a `draft` or
+ * `failed` row means the previous attempt never actually published, so a
+ * retry must still be allowed to go through.
+ */
+export function hasUploadedVideoForThemeToday(
+  db: Database.Database,
+  channelId: string,
+  themeId: string,
+  referenceDate: Date,
+): boolean {
+  const row = db
+    .prepare<[string, string, string], { found: number }>(
+      `SELECT 1 AS found FROM videos
+       WHERE channel_id = ? AND theme_id = ? AND status = 'uploaded'
+         AND date(created_at) = date(?)
+       LIMIT 1`,
+    )
+    .get(channelId, themeId, referenceDate.toISOString());
+  return row !== undefined;
+}

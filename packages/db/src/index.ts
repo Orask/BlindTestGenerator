@@ -21,6 +21,7 @@ export {
   markVideoUploaded,
   markVideoFailed,
   countVideosForTheme,
+  hasUploadedVideoForThemeToday,
   type CreateVideoParams,
   type VideoStatus,
   type VideoFormat,

@@ -214,3 +214,44 @@ AND recording:"Y"&fmt=json` comme pré-filtre gratuit et sans limite stricte de 
   avant de le committer — depuis un environnement qui a accès réseau à musicbrainz.org
   (local, ou un environnement cloud dont la politique réseau autorise ce host — voir
   paramètres réseau de l'environnement).
+
+---
+
+## [2026-09-27] Tâche 5 — Fiabiliser l'heure du run quotidien — TERMINÉ (code) + reste une étape manuelle
+
+**Ce qui a été fait** :
+
+1. `.github/workflows/daily-pipeline.yml` accepte maintenant un trigger
+   `repository_dispatch` (`event_type: daily-pipeline-trigger`) en plus de `schedule`
+   (conservé comme filet de sécurité) et `workflow_dispatch`. Un `repository_dispatch`
+   s'exécute immédiatement à l'appel API, contrairement à `schedule` qui est mis en
+   file d'attente par GitHub sans garantie de ponctualité (confirmé deux fois sur ce
+   repo : ~5h puis ~6h de retard, voir tâche 3 et section 3decies du cahier des
+   charges).
+2. **Idempotence ajoutée** pour que `schedule` + `repository_dispatch` puissent
+   désormais se déclencher le même jour sans casse : nouvelle fonction
+   `hasUploadedVideoForThemeToday` (`packages/db/src/videos-repository.ts`, 5 tests),
+   appelée en tête de `runPipeline` (`apps/pipeline/src/pipeline.ts`) — si un épisode
+   du thème du jour est déjà `status='uploaded'` pour aujourd'hui (UTC), le run
+   s'arrête immédiatement sans rien regénérer. Un `draft`/`failed` ne bloque jamais un
+   nouvel essai (sinon ça aurait cassé les relances manuelles déjà utilisées deux fois
+   dans l'historique du projet, dont celle de ce matin même — voir tâche 3).
+3. Documenté en détail dans `docs/CAHIER_DES_CHARGES.md` (nouvelle section 3decies) :
+   la marche à suivre complète pour finir la mise en place (créer un PAT GitHub à
+   portée restreinte à ce repo, configurer un job sur cron-job.org ou équivalent qui
+   POST vers `repos/{owner}/{repo}/dispatches`).
+
+**Pourquoi ce n'est pas allé plus loin** : je ne peux pas créer moi-même de compte sur
+un service tiers (cron-job.org) ni générer/stocker un Personal Access Token GitHub au
+nom de l'utilisateur — ce sont des actions qui engagent son compte et ses accès, donc
+hors de portée d'une session autonome, même avec permission générale d'agir. Le code
+est prêt à recevoir le déclenchement dès que ces ~10 minutes de configuration externe
+seront faites ; en attendant, le `schedule` natif (imprécis mais fonctionnel) continue
+de tourner exactement comme avant, donc aucune régression si cette dernière étape
+n'est jamais complétée.
+
+**Validation faite** : `pnpm build`/`test`/`lint`/`typecheck` tous verts (27 tests db,
+5 nouveaux), YAML validé (`python3 -c "import yaml; yaml.safe_load(...)"`).
+
+**Prochain pas concret** : suivre la section 3decies de `docs/CAHIER_DES_CHARGES.md`
+pour configurer le déclencheur externe.

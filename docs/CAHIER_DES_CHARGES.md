@@ -201,6 +201,30 @@ Jusqu'ici chaque épisode a été généré par une invocation manuelle du CLI �
 1. **2026-08-09, 6h00** : échec immédiat, `/bin/bash: .../run-daily-pipeline.sh: Operation not permitted`. Cause : `~/Documents` est un dossier protégé par TCC (Transparency, Consent and Control) sur macOS — un agent lancé en arrière-plan (sans session Terminal interactive) s'y voit refuser l'accès même avec les bonnes permissions Unix sur le fichier, alors que la même commande fonctionne normalement en interactif. **Correctif** : accès complet au disque accordé à `/bin/bash` (Réglages Système → Confidentialité et sécurité → Accès complet au disque) — validé en re-déclenchant l'agent manuellement (`launchctl kickstart -k`), épisode "Génériques" généré et publié avec succès (https://youtu.be/eIjtZhQ9MPw), aucune répétition d'artiste adjacente.
 2. **2026-08-10, 6h00** : le correctif TCC tient (le script s'exécute, résout bien le thème "Années 80"), mais crash immédiat sur `TypeError: fetch failed` / `getaddrinfo ENOTFOUND accounts.spotify.com`. Cause : le Mac se réveille pile à l'heure du déclenchement et le Wi-Fi n'a pas encore eu le temps de se reconnecter. **Correctif** : `run-daily-pipeline.sh` attend maintenant que `https://accounts.spotify.com` réponde (jusqu'à 2 minutes, par tranches de 5s) avant de lancer le pipeline, plutôt que de supposer le réseau disponible immédiatement.
 
+### 3decies. Déclenchement fiable du run quotidien GitHub Actions (2026-09-27)
+
+Le `schedule` natif de `.github/workflows/daily-pipeline.yml` (cron `0 3 * * *`) n'est **jamais ponctuel** sur ce repo à faible trafic : observé une fois avec ~5h de retard (6h→13h heure suisse), une autre fois déclenché à 09:06 UTC au lieu de 03:00 UTC (~6h de retard). GitHub documente explicitement que `schedule` est "best-effort" et peut être retardé ou même sauté en cas de forte charge sur l'infrastructure partagée — ça n'est pas un bug de ce repo, c'est une limite connue et jamais garantie de la fonctionnalité.
+
+**Solution mise en place** : le workflow accepte maintenant aussi un déclenchement `repository_dispatch` (`event_type: daily-pipeline-trigger`), qui s'exécute immédiatement dès que l'API GitHub le reçoit — contrairement à `schedule`, ce n'est pas un créneau cron mis en file d'attente, c'est un appel API direct. Le `schedule` est conservé en secours (si le déclencheur externe tombe en panne, le run finit quand même par se faire, juste en retard).
+
+Le run est maintenant idempotent (`hasUploadedVideoForThemeToday` dans `packages/db/src/videos-repository.ts`, appelé en tout début de `runPipeline`) : si `schedule` et `repository_dispatch` se déclenchent tous les deux le même jour, le second passage détecte qu'un épisode a déjà été publié pour ce thème aujourd'hui et s'arrête immédiatement sans rien regénérer — un `draft`/`failed` d'une tentative précédente n'est en revanche jamais bloqué, pour ne pas casser les relances manuelles existantes (voir tâche du 2026-09-27 dans `docs/CLOUD_SESSION_LOG.md`).
+
+**Mise en place du déclencheur externe (à faire côté utilisateur, hors code)** :
+
+1. Créer un [Personal Access Token (fine-grained)](https://github.com/settings/personal-access-tokens/new) limité à ce repo, avec la permission "Contents: Read and write" ou a minima "Actions: Read and write" (nécessaire pour déclencher `dispatches`). Ne jamais coller ce token dans le code ou dans un fichier committé.
+2. Sur un service de cron externe (ex. [cron-job.org](https://cron-job.org), gratuit) : créer une tâche qui envoie, à l'heure réelle voulue (ex. 07:00 UTC = 9h en Suisse l'été), une requête :
+   ```
+   POST https://api.github.com/repos/Orask/BlindTestGenerator/dispatches
+   Headers:
+     Authorization: Bearer <le PAT créé ci-dessus>
+     Accept: application/vnd.github+json
+   Body:
+     {"event_type": "daily-pipeline-trigger"}
+   ```
+3. Vérifier dans l'onglet Actions du repo que le run apparaît bien avec l'événement "repository_dispatch" à l'heure attendue.
+
+Le `schedule` cron à 03:00 UTC peut rester tel quel indéfiniment (filet de sécurité) — inutile de le retirer une fois le déclencheur externe en place.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
