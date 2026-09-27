@@ -1657,3 +1657,124 @@ et à mesure (6 commits, uniquement de la documentation dans `CLOUD_SESSION_LOG.
 — aucun fichier de code modifié par cette session elle-même), `pnpm build/test/
 lint/typecheck` revérifiés verts après chaque pull/commit (129 tests
 `@blindtest/pipeline`, 38 tests `@blindtest/db`, 0 régression).
+
+---
+
+# Nouvelle session cloud — 2026-09-27 (suite 3)
+
+Reprise pour trouver un signal de remplacement à `popularity` (supprimé par Spotify
+en février 2026, déjà documenté) — objectif explicite de l'utilisateur : un signal
+de "morceau connu/reconnaissable", pas un classement exact.
+
+## [2026-09-27] Étape 1 — recherche de sources alternatives de notoriété (TESTÉ en réseau, pas supposé)
+
+**Vérification réseau réelle d'abord, comme demandé explicitement** (`curl` direct
+depuis ce sandbox, pas une supposition) :
+
+- **`api.deezer.com`** : **BLOQUÉ** — tunnel CONNECT refusé (403, "policy denial"),
+  confirmé via `curl` direct ET via le statut du proxy (`recentRelayFailures`).
+  Même politique réseau que `api.spotify.com`/`musicbrainz.org` déjà rencontrée dans
+  ce projet — pas une question d'authentification (Deezer n'en demande pas), c'est
+  bloqué au niveau organisation, avant même d'atteindre Deezer.
+- **`rss.applemarketingtools.com`** (host donné dans la demande) — **BLOQUÉ**,
+  même mécanisme. **`rss.marketingtools.apple.com`** (le host réellement documenté
+  aujourd'hui — l'ancien a changé de domaine) — **testé aussi, également BLOQUÉ**.
+- **`raw.githubusercontent.com`** — **JOIGNABLE** (200 OK) — contrairement aux
+  hosts d'API musicales, GitHub (contenu brut) passe le proxy de ce sandbox. Utilisé
+  ci-dessous pour récupérer un exemple RÉEL (pas juste théorique) du format JSON
+  d'Apple Marketing Tools, archivé sur GitHub.
+
+**Conséquence assumée honnêtement** : comme pour Spotify durant les sessions
+précédentes, aucune vérification "en conditions réelles" (un vrai appel HTTP réussi
+depuis CE sandbox) n'est possible pour Deezer ni pour Apple. Ce qui suit est basé sur
+la meilleure preuve disponible sans accès réseau direct : **du vrai code source de
+bibliothèques npm existantes qui appellent ces APIs en production** (téléchargées et
+inspectées via `npm pack`, pas de la documentation marketing) — une preuve nettement
+plus forte qu'un simple article de blog, mais qui reste, comme toujours dans ce
+sandbox, à confirmer par un vrai appel HTTP en local avant mise en prod.
+
+### 1. Deezer (`api.deezer.com`) — le candidat le plus solide
+
+Inspecté via le vrai code source de `deezer-js` (package npm, wrapper complet des
+APIs Deezer, `npm pack deezer-js` puis lecture directe de `deezer/api.js`) :
+
+- **Aucune authentification requise** pour les endpoints de catalogue public
+  (recherche, morceau, chart) — confirmé par le code lui-même (aucun header
+  d'auth envoyé pour ces appels).
+- **`GET /search/track?q=artist:"X" track:"Y"&order=RANKING`** — syntaxe de
+  recherche avancée par champs exacte (`_generate_search_advanced_query` dans le
+  code source), tri par défaut déjà par popularité (`SearchOrder.RANKING`).
+  Directement analogue à `searchTrackByTitleAndArtist` déjà existant dans
+  `SpotifyClient`.
+- **Champ `rank`** : confirmé présent sur l'objet Track retourné par la recherche —
+  un entier de 1 à 1 000 000, plus haut = plus populaire. **C'est un remplacement
+  direct et fonctionnellement équivalent au `popularity` que Spotify a supprimé** :
+  un score continu, comparable entre artistes différents, disponible pour N'IMPORTE
+  QUEL morceau du catalogue (pas seulement les hits du moment) — exactement ce
+  dont `pepite-meconnue.ts`/`top-artiste.ts`/`devine-la-chanson.ts` ont besoin.
+- **`/chart/{genre_id}/tracks`** (et `/artists`, `/playlists`, `/albums`) — existe
+  bien, `genre_id=0` donne le classement global toutes catégories. Utile pour un
+  signal "tendance actuelle", complémentaire à `rank` (qui lui fonctionne sur tout
+  le catalogue, y compris les morceaux plus anciens qui ne sont jamais dans un top
+  chart actuel).
+- **Rate limit** : ~50 requêtes/5 secondes (~10/s) documenté — largement plus
+  généreux que le rythme de 3,5s/appel déjà utilisé pour iTunes dans ce projet.
+  Une pause de sécurité de quelques centaines de ms entre appels reste largement
+  suffisante, pas besoin de la lenteur imposée par iTunes.
+
+### 2. Apple — deux options bien distinctes, comme demandé
+
+- **(a) Apple Music API / MusicKit — PAYANT** : nécessite un compte Apple
+  Developer Program (99$/an) + un jeton JWT signé par clé privée (configuration
+  lourde : génération de clé, Team ID, Key ID, renouvellement du jeton). **Écarté
+  pour cet usage** — un coût et une complexité disproportionnés pour un simple
+  signal de notoriété, alors que des alternatives gratuites existent (Deezer, et
+  l'iTunes Search API déjà utilisée dans ce projet pour les extraits audio reste,
+  elle, gratuite et sans compte — juste sans champ de popularité).
+- **(b) Flux RSS Apple Marketing Tools (`rss.marketingtools.apple.com`) — GRATUIT,
+  sans compte** : confirmé par récupération d'un exemple RÉEL du format (fichier
+  JSON archivé sur GitHub, `raw.githubusercontent.com/prasertcbs/basic-dataset/
+master/apple_music_th.json`, une vraie réponse Apple de 2019 conservée telle
+  quelle) — structure `feed.results[]` avec `artistName`, `name` (titre),
+  `releaseDate`, `genres[]`, `artworkUrl100`, `url` — **le rang est la POSITION
+  dans le tableau, pas un champ numérique séparé** (position 0 = #1 du
+  classement). **Limite importante à noter** : ce flux ne couvre QUE le top N
+  (ex. top 50/100) du moment par pays — il dit "ce morceau est un hit ACTUEL",
+  jamais "ce morceau ancien mais connu a un score de popularité X" comme le
+  `rank` Deezer. Moins adapté au besoin principal (curatedTracks couvre des
+  décennies de morceaux, la plupart hors du top 50 du moment), plus adapté comme
+  signal complémentaire pour la famille B (nouveauté/tendance) déjà existante.
+
+### 3. Playlists éditoriales Spotify (Top 50 Global) — **écarté, prémisse invalidée par la recherche**
+
+**Contrairement à l'hypothèse de départ**, la recherche documentaire (forums
+officiels Spotify for Developers + doc actuelle) est claire : **l'endpoint "Get
+Playlist Items" en flow Client Credentials n'est PLUS accessible pour les
+playlists éditoriales appartenant à Spotify** (Top 50 Global inclus) — restreint
+aux seules playlists appartenant à l'utilisateur authentifié ou dont il est
+collaborateur. L'endpoint "featured playlists" qui aurait permis de les découvrir
+a lui-même été retiré. Ce n'est donc PAS, contrairement à ce qui semblait être le
+cas, un endpoint "ouvert comme `playlist`/`searchTracksByArtist`" — **écarté**,
+cohérent avec le pattern déjà documenté (Spotify verrouille progressivement tout
+ce qui n'est pas la recherche/lookup de base pour les apps Client Credentials).
+
+### 4. Classements indépendants (Billboard, etc.) — écarté, pas d'API officielle gratuite
+
+Confirmé : **Billboard ne publie aucune API développeur officielle.** Tout ce qui
+existe (wrappers GitHub, RapidAPI) est soit du scraping direct de billboard.com,
+soit des miroirs JSON eux-mêmes produits par scraping tiers, mis à jour par
+quelqu'un d'autre sans garantie de continuité. **Écarté explicitement** — s'appuyer
+sur un miroir "déjà scrapé par quelqu'un d'autre" reste un contournement du même
+risque ToS que scraper soi-même, juste délégué ; cohérent avec le principe déjà
+établi de ce projet d'éviter tout scraping, y compris indirect.
+
+### Décision — source retenue pour l'implémentation
+
+**Deezer (`rank` via `/search/track`) retenu comme remplacement principal de
+`popularity`** — gratuit, sans compte, score continu comparable sur tout le
+catalogue (pas seulement les hits actuels), rate limit confortable, tri par défaut
+déjà par pertinence/popularité. **Le flux RSS Apple Marketing Tools est documenté
+comme option secondaire viable** (gratuite aussi) mais pas implémenté cette
+session — signal différent (top N actuel par pays, pas un score par morceau),
+pertinent plutôt pour une future itération de la famille B (nouveauté/tendance),
+pas pour remplacer `popularity` dans son usage actuel.
