@@ -45,7 +45,7 @@ describe("createDeezerClient.getTrackPopularityRank", () => {
     expect(result).toBeNull();
   });
 
-  it("skips an implausible match returned despite the field-scoped query", async () => {
+  it("skips an implausible match returned by the plain-text query", async () => {
     const client = createDeezerClient(
       fakeFetch({
         data: [{ title: "Something Unrelated", rank: 500000, artist: { name: "Someone Else" } }],
@@ -60,7 +60,7 @@ describe("createDeezerClient.getTrackPopularityRank", () => {
     expect(result).toBeNull();
   });
 
-  it("builds a field-scoped query with quoted artist and track", async () => {
+  it("builds a plain-text query, not the field-scoped syntax (confirmed dead on Deezer's live API)", async () => {
     const fetchImpl = fakeFetch({ data: [] });
     const client = createDeezerClient(fetchImpl);
 
@@ -68,19 +68,9 @@ describe("createDeezerClient.getTrackPopularityRank", () => {
 
     const calledUrl = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
     const params = new URL(calledUrl).searchParams;
-    expect(params.get("q")).toBe('artist:"Indila" track:"Dernière danse"');
+    expect(params.get("q")).toBe("Dernière danse Indila");
     expect(params.get("order")).toBe("RANKING");
-  });
-
-  it("strips literal quotes from title/artist before building the query", async () => {
-    const fetchImpl = fakeFetch({ data: [] });
-    const client = createDeezerClient(fetchImpl);
-
-    await client.getTrackPopularityRank('The "Real" Song', 'The "Real" Artist');
-
-    const calledUrl = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
-    const params = new URL(calledUrl).searchParams;
-    expect(params.get("q")).toBe('artist:"The Real Artist" track:"The Real Song"');
+    expect(params.get("limit")).toBe("5");
   });
 
   it("throws on an HTTP-level failure", async () => {
