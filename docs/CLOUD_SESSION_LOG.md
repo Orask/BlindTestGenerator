@@ -1980,3 +1980,77 @@ envisagé puis écarté de cette liste de propositions : il changerait l'identit
 100% francophone actuelle de la chaîne, une décision de positionnement plus
 lourde qu'un simple ajout de thème — mentionné ici seulement pour mémoire, pas
 recommandé sans discussion explicite avec l'utilisateur.
+
+## [2026-09-27] Étape 3 — score de notoriété pour la sélection générale de candidats (proposition documentée, non implémentée)
+
+**Objectif rappelé** : l'utilisateur veut "toujours une bonne quantité de sons
+connus dans le blind test", pas seulement dans les Shorts — donc réfléchir à
+`collectCandidateTracks`/`buildEpisodeTracks` (la sélection de l'épisode LONG),
+pas seulement `curatedTracks`.
+
+**Trouvaille concrète en creusant `build-episode-tracks.ts`** : ce fichier a
+DÉJÀ un mécanisme conçu pour ce problème exact, avec un commentaire qui le dit
+explicitement : le "bonus artist" (une 3ème place accordée aux ~10% d'artistes
+jugés les plus "mainstream" quand l'épisode manque encore de morceaux après les
+deux premières passes) utilise `catalogDepth` — le nombre de morceaux qu'un
+artiste a dans le vivier brut de candidats — **comme proxy de notoriété "le plus
+proche disponible, puisque Spotify a supprimé la vraie popularité pour les
+nouvelles apps"** (commentaire déjà présent dans le code, ligne ~11-16). C'est
+exactement le même problème que celui résolu cette session pour les Shorts —
+juste jamais reconnecté à une vraie source de notoriété.
+
+### Option A — reclasser TOUS les candidats par rang Deezer avant sélection
+
+Trier `candidates` (le vivier brut passé à `buildEpisodeTracks`, potentiellement
+40-80 morceaux par artiste racine × jusqu'à 78 `seedArtists` pour rap-fr, soit
+jusqu'à ~1500 candidats bruts) par `popularitySignal` avant la première passe de
+sélection, pour que les morceaux les plus reconnaissables soient favorisés dès que
+le vivier est plus large que les 60 nécessaires.
+
+**Coût estimé : disproportionné, écarté comme demandé explicitement.** Scorer
+~1500 candidats à raison de 250ms/appel (le pacing Deezer déjà choisi pour les
+Shorts) ajouterait **~6 minutes** au pipeline quotidien, pour un thème comme
+rap-fr — sans compter que la plupart de ces candidats seront de toute façon
+exclus par le cooldown avant même d'être nécessaires. Non recommandé sans un
+mécanisme de cache (voir plus bas).
+
+### Option B — reconnecter uniquement le mécanisme "bonus artist" existant (recommandée)
+
+Remplacer `catalogDepth` (le proxy actuel, profondeur dans le vivier brut) par un
+vrai score Deezer, mais **seulement pour départager les artistes déjà présents
+dans l'épisode à ce stade** (`artistCounts.size`, typiquement ~30 artistes pour un
+épisode de 60 morceaux avec un max de 2/artiste) — pas tous les candidats bruts.
+Coût : un appel Deezer par artiste DISTINCT déjà retenu, pas par morceau candidat
+— de l'ordre de 30 appels, ~8 secondes de pacing, négligeable comparé au reste du
+pipeline (le seul scénario où ce chemin s'exécute est déjà un cas de pénurie, donc
+peu fréquent). Remplacerait un proxy imparfait par un signal réel, pour un coût
+mesuré et borné.
+
+**Pourquoi documenté plutôt qu'implémenté maintenant** :
+
+1. **Aucune vérification live possible** — exactement la même limite que le reste
+   de cette session (`api.deezer.com` bloqué depuis ce sandbox) ; modifier la
+   logique de sélection de l'épisode LONG (pas juste les Shorts, expérimentaux)
+   sans avoir pu tester un seul appel réel serait plus risqué qu'ajouter un signal
+   à un module Shorts encore jeune.
+2. **Décision produit implicite** : ce changement modifierait le comportement du
+   pipeline principal qui tourne déjà quotidiennement en production — même limité
+   à ~30 appels, ça reste un changement de comportement sur le composant le plus
+   critique de ce projet, qui mérite un accord explicite avant d'être codé,
+   contrairement à une nouvelle fonctionnalité Shorts additive.
+3. **Question ouverte à trancher** : Deezer expose-t-il un signal de notoriété au
+   niveau ARTISTE (pas seulement par morceau via `/search/track`) ? Pas vérifié
+   cette session — `searchArtists`/l'objet Artist de Deezer pourraient exposer un
+   champ `nb_fan` (nombre de fans), à confirmer avant de coder l'option B, plutôt
+   que de scorer le morceau le plus consulté de chaque artiste comme proxy indirect.
+
+**Piste complémentaire pour une future session (pas creusée en détail ici)** :
+mettre en cache le score de notoriété directement dans `tracks_used` (nouvelle
+colonne) au moment où un morceau est effectivement utilisé, pour que les
+sélections futures n'aient jamais à re-interroger Deezer pour un morceau déjà
+scoré une fois — réduirait le coût de l'option A à presque zéro après quelques
+semaines de fonctionnement (l'essentiel du vivier récurrent d'un thème
+hebdomadaire serait déjà en cache). Nécessiterait une migration de schéma DB,
+pas "triviale et sans risque" au sens où l'utilisateur l'a autorisé cette
+session (contrairement à `channel_id` sur `blocked_tracks` la session
+précédente) — laissé en proposition, pas codé.
