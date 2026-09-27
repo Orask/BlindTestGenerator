@@ -1778,3 +1778,55 @@ comme option secondaire viable** (gratuite aussi) mais pas implémenté cette
 session — signal différent (top N actuel par pays, pas un score par morceau),
 pertinent plutôt pour une future itération de la famille B (nouveauté/tendance),
 pas pour remplacer `popularity` dans son usage actuel.
+
+## [2026-09-27] Implémentation — remplacement de popularity par le rank Deezer
+
+Suite directe de la recherche ci-dessus. Créé `@blindtest/deezer` (nouveau package,
+même structure que `@blindtest/itunes`/`@blindtest/spotify`) : `getTrackPopularityRank
+(title, artist)`, recherche par champs `artist:"..." track:"..."`, triée par défaut
+par popularité, retourne le `rank` (0 à ~1M) ou `null` si aucune correspondance
+confiante. 8 tests unitaires (match, absence de match, correspondance non plausible
+malgré la recherche par champs, échappement des guillemets littéraux dans la
+requête, erreur HTTP, erreur Deezer renvoyée en HTTP 200).
+
+**`shorts/popularity-signal.ts`** — point d'entrée partagé par les 3 sélecteurs
+famille A concernés : appelle Deezer, transforme `null` (pas de correspondance) en
+`0` — le score le PLUS BAS, jamais neutre ni un skip, cohérent avec l'objectif
+explicite de l'utilisateur ("un signal de morceau connu, pas un classement exact").
+
+**`pepite-meconnue.ts`/`top-artiste.ts`** : `metadata.popularity` (Spotify, toujours
+`undefined` depuis février 2026) remplacé par `popularitySignal(deezer, ...)`.
+**`devine-la-chanson.ts`** : ne se contente plus d'emprunter l'ordre de
+`buildOpeningHook` (qui ne compare jamais deux artistes différents entre eux) — trie
+maintenant lui aussi tous les morceaux de l'épisode par le même signal Deezer et
+prend les `count` plus reconnaissables. Coût : les trois sélecteurs scorent
+désormais TOUS les morceaux de l'épisode (comme `pepite-meconnue.ts` le faisait déjà),
+pas seulement les `count` sélectionnés — accepté, cohérent avec le tradeoff déjà
+documenté pour `pepite-meconnue.ts`.
+
+**`create-clients.ts`** expose un `DeezerClient` — pas de variable d'environnement
+requise, Deezer n'a jamais demandé d'authentification pour ces endpoints. Tous les
+scripts CLI (`generate-short.ts`, `-pepite-meconnue.ts`, `-top-artiste.ts`) et
+l'orchestrateur `generate-shorts-daily.ts` mis à jour pour le faire transiter.
+
+**Bug trouvé et corrigé en cours de route** : les 3 sélecteurs n'avaient d'abord
+pas branché leur propre `lookupDelayMs` (déjà utilisé pour paciencer iTunes) sur
+`popularitySignal` — chaque appel dormait donc pour de vrai 250ms même dans les
+tests (des tests passés de quelques ms à ~1.8s chacun, sans casser le résultat mais
+ralentissant inutilement la suite). Corrigé : `lookupDelayMs` pace maintenant aussi
+Deezer, comportement de production inchangé (`undefined` retombe sur le défaut de
+`popularitySignal`).
+
+**Limite assumée, comme pour tout le reste de ce projet développé en cloud** :
+`api.deezer.com` est bloqué par la politique réseau de ce sandbox (testé
+directement, comme `api.spotify.com`) — aucun appel réel n'a pu être vérifié ici.
+L'implémentation est basée sur le vrai code source du package npm `deezer-js`
+(endpoints, syntaxe de requête, forme des réponses), pas sur de la documentation
+marketing — mais reste à confirmer par un vrai appel HTTP en local avant toute
+mise en prod, exactement la même réserve que pour `discoverArtists`/`nouveaute-
+genre.ts` la session précédente.
+
+**Validation** : `pnpm build/test/lint/typecheck` verts pour tout le workspace
+(`@blindtest/deezer` : 8 tests ; `@blindtest/pipeline` : 131 tests, 0 régression) ;
+`pnpm format:check` vert (seul `.claude/settings.local.json`, fichier local
+gitignored non lié à cette session, reste signalé).
