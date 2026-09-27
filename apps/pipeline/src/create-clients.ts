@@ -1,7 +1,12 @@
 import { createAnthropicClient, type AnthropicClient } from "@blindtest/anthropic";
 import type { ItunesClient } from "@blindtest/itunes";
 import { createItunesClient } from "@blindtest/itunes";
-import { SpotifyTokenProvider, createSpotifyClient, type SpotifyClient } from "@blindtest/spotify";
+import {
+  SpotifyTokenProvider,
+  createRotatingSpotifyClient,
+  createSpotifyClient,
+  type SpotifyClient,
+} from "@blindtest/spotify";
 import {
   createOAuth2Client,
   createYoutubeClient,
@@ -32,17 +37,46 @@ export interface CreateClientsOptions {
   readonly onSpotifyCooldown?: ((blockedUntil: number) => void) | undefined;
 }
 
+// Optional extra Spotify developer apps (SPOTIFY_CLIENT_ID_2/_SECRET_2,
+// _3, ...) let a run fail over to a fresh, independent quota instead of
+// stalling once the primary app is rate-limited — see
+// packages/integrations/spotify/src/rotating-client.ts. Only the primary
+// app's cooldown carries over across runs (via spotify-cooldown.ts's DB
+// row); an extra app that gets rate-limited simply starts fresh next run,
+// which is an acceptable simplification since it only ever kicks in after
+// the primary app already ran out.
+const MAX_EXTRA_SPOTIFY_APPS = 8;
+
+function extraSpotifyClients(fetchImpl: typeof fetch): SpotifyClient[] {
+  const extras: SpotifyClient[] = [];
+  for (let n = 2; n <= MAX_EXTRA_SPOTIFY_APPS + 1; n++) {
+    const clientId = process.env[`SPOTIFY_CLIENT_ID_${n}`];
+    const clientSecret = process.env[`SPOTIFY_CLIENT_SECRET_${n}`];
+    if (!clientId || !clientSecret) {
+      break;
+    }
+    const tokenProvider = new SpotifyTokenProvider({ clientId, clientSecret });
+    extras.push(createSpotifyClient(tokenProvider, fetchImpl));
+  }
+  return extras;
+}
+
 export function createClientsFromEnv(options: CreateClientsOptions = {}): PipelineClients {
   const tokenProvider = new SpotifyTokenProvider({
     clientId: requireEnv("SPOTIFY_CLIENT_ID"),
     clientSecret: requireEnv("SPOTIFY_CLIENT_SECRET"),
   });
-  const spotify = createSpotifyClient(tokenProvider, fetch, {
+  const primarySpotify = createSpotifyClient(tokenProvider, fetch, {
     ...(options.spotifyBlockedUntil !== undefined
       ? { blockedUntil: options.spotifyBlockedUntil }
       : {}),
     ...(options.onSpotifyCooldown ? { onCooldown: options.onSpotifyCooldown } : {}),
   });
+  const extraSpotify = extraSpotifyClients(fetch);
+  const spotify =
+    extraSpotify.length > 0
+      ? createRotatingSpotifyClient([primarySpotify, ...extraSpotify])
+      : primarySpotify;
 
   const itunes = createItunesClient();
 

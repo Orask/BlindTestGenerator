@@ -51,6 +51,15 @@ jobs:
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          # Optional extra Spotify apps for rate-limit failover (see
+          # .env.example and packages/integrations/spotify/src/rotating-client.ts).
+          # An unset repo secret resolves to an empty string, which the
+          # pipeline treats the same as not configuring it — safe to leave
+          # these two lines in place even before any extra app exists.
+          SPOTIFY_CLIENT_ID_2: ${{ secrets.SPOTIFY_CLIENT_ID_2 }}
+          SPOTIFY_CLIENT_SECRET_2: ${{ secrets.SPOTIFY_CLIENT_SECRET_2 }}
+          SPOTIFY_CLIENT_ID_3: ${{ secrets.SPOTIFY_CLIENT_ID_3 }}
+          SPOTIFY_CLIENT_SECRET_3: ${{ secrets.SPOTIFY_CLIENT_SECRET_3 }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}

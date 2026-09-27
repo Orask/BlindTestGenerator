@@ -156,3 +156,61 @@ sur Spotify, ou suppression si le morceau n'existe pas sur la plateforme).
 
 **Statut** : outillage prêt et committé, mais la vérification elle-même reste à faire
 — nécessite des credentials Spotify absents de ce sandbox cloud.
+
+---
+
+## [2026-09-27] Tâche 4 — Diversifier la vérification Spotify — PARTIEL (multi-app fait, MusicBrainz non)
+
+**Volet multi-app Spotify — TERMINÉ** : ajouté `createRotatingSpotifyClient` dans
+`packages/integrations/spotify/src/rotating-client.ts` (+ test, 8 cas, tous passent).
+Enveloppe plusieurs `SpotifyClient` (un par app développeur Spotify) et bascule sur le
+suivant dès que l'app active lève `SpotifyRateLimitedError` ou
+`SpotifyRequestBudgetExceededError` — sticky (reste sur la nouvelle app pour tous les
+appels suivants, ne retente jamais celle en cooldown). Câblé de façon 100%
+rétrocompatible dans `apps/pipeline/src/create-clients.ts` : lit des variables d'env
+optionnelles `SPOTIFY_CLIENT_ID_2`/`SPOTIFY_CLIENT_SECRET_2` (puis `_3`, `_4`, …,
+jusqu'à 8), et n'active la rotation que si au moins une app supplémentaire est
+configurée — sans elles, comportement exactement identique à avant. Ajouté aussi les
+lignes correspondantes (vides par défaut, sans effet) dans `.env.example` et
+`.github/workflows/daily-pipeline.yml` (secrets optionnels).
+
+**Décision arbitraire et pourquoi** : le cooldown persistant en base (`spotify-cooldown.ts`,
+utilisé pour survivre entre les runs CI qui n'ont pas de disque persistant) reste câblé
+uniquement à l'app primaire — les apps supplémentaires repartent avec un budget frais à
+chaque run. Simplification volontaire : une migration DB pour stocker un cooldown par
+app aurait été disproportionnée pour un mécanisme qui, par construction, ne sert
+qu'une fois l'app primaire déjà épuisée — donc rarement actif.
+
+**Prochain pas concret pour activer réellement ce mécanisme** : créer 2-3 apps sur le
+[Spotify Developer Dashboard](https://developer.spotify.com/dashboard) (nécessite le
+compte Spotify de l'utilisateur, je ne peux pas le faire moi-même), et renseigner
+`SPOTIFY_CLIENT_ID_2`/`SPOTIFY_CLIENT_SECRET_2` (etc.) soit dans `.env` en local, soit
+comme secrets du repo GitHub pour le workflow quotidien.
+
+**Volet MusicBrainz — NON FAIT, bloqué par la politique réseau de ce sandbox** :
+`musicbrainz.org` est refusé par le proxy de cet environnement cloud (`gateway
+answered 403 to CONNECT`, confirmé via `$HTTPS_PROXY/__agentproxy/status`) — donc
+impossible de tester un vrai appel à son API MusicBrainz depuis cette session, même
+sans credentials Spotify (MusicBrainz est public, sans clé). Plutôt que d'écrire un
+client à l'aveugle sans jamais avoir pu vérifier la forme réelle des réponses (risque
+réel de livrer du code qui a l'air correct mais ne l'est pas), je documente la
+proposition sans l'implémenter :
+
+- **Objectif** : utiliser `GET https://musicbrainz.org/ws/2/recording?query=artist:"X"
+AND recording:"Y"&fmt=json` comme pré-filtre gratuit et sans limite stricte de quota
+  avant d'interroger Spotify — surtout utile pour `verifyCuratedSongs`
+  (`apps/pipeline/src/verify-curated-songs.ts`), qui fait déjà une recherche exacte
+  titre+artiste par morceau : si MusicBrainz ne trouve rien pour la paire, c'est un
+  signal fort (pas une certitude) que la recherche Spotify ne trouvera rien non plus,
+  ce qui permettrait de rejeter/flaguer sans consommer de quota Spotify.
+  MusicBrainz impose 1 req/s sans clé — largement praticable en pré-filtre séquentiel.
+- **Pourquoi un pré-filtre, pas un remplacement** : MusicBrainz n'a pas les URLs de
+  prévisualisation audio ni les pochettes utilisées ailleurs dans le pipeline — Spotify
+  reste nécessaire pour la donnée finale, MusicBrainz ne fait qu'économiser des appels
+  Spotify sur les paires manifestement fausses.
+- **Prochain pas concret** : implémenter un module `packages/integrations/musicbrainz`
+  calqué sur `packages/integrations/itunes` (même structure : client + normalisation +
+  retry), MAIS en le testant réellement contre l'API (au moins quelques appels manuels)
+  avant de le committer — depuis un environnement qui a accès réseau à musicbrainz.org
+  (local, ou un environnement cloud dont la politique réseau autorise ce host — voir
+  paramètres réseau de l'environnement).
