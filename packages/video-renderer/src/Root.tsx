@@ -59,6 +59,12 @@ export function RemotionRoot(): ReactElement {
           themeLabel: "Variété actuelle",
           trackCount: 60,
           coverImageUrls: SAMPLE_TRACKS.map((track) => track.albumCoverUrl),
+          artistImageUrls: [
+            "https://picsum.photos/seed/artist1/600",
+            "https://picsum.photos/seed/artist2/600",
+            "https://picsum.photos/seed/artist3/600",
+            "https://picsum.photos/seed/artist4/600",
+          ],
           accentColor: "#ff5f6d",
         }}
       />

@@ -48,16 +48,20 @@ export async function downloadCoverImages(
  * Same as downloadCoverImages, but returns root-relative URLs matching how
  * Remotion serves its public/ dir under a /public prefix in the bundled
  * server (confirmed by inspecting an actual bundle output dir — see
- * render-episode.ts), ready to use directly as an <Img src>.
+ * render-episode.ts), ready to use directly as an <Img src>. `publicSubdir`
+ * must match destDir's own last path segment (e.g. "covers" for
+ * PUBLIC_COVERS_DIR, "artists" for PUBLIC_ARTISTS_DIR) — despite the name,
+ * downloadCoverImages itself is generic over any image kind.
  */
 export async function resolvePublicCoverUrls(
   urls: readonly string[],
   destDir: string,
+  publicSubdir = "covers",
 ): Promise<Map<string, string>> {
   const localCovers = await downloadCoverImages(urls, destDir);
   const publicUrls = new Map<string, string>();
   for (const [url, localPath] of localCovers) {
-    publicUrls.set(url, `/public/covers/${path.basename(localPath)}`);
+    publicUrls.set(url, `/public/${publicSubdir}/${path.basename(localPath)}`);
   }
   return publicUrls;
 }

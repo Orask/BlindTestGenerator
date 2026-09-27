@@ -460,6 +460,78 @@ describe("createSpotifyClient.searchArtists", () => {
   });
 });
 
+describe("createSpotifyClient.getArtistImage", () => {
+  function fakeArtistImageFetch(
+    artists: { name: string; images: { url: string }[] }[],
+  ): typeof fetch {
+    return vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ artists: { items: artists } }),
+    });
+  }
+
+  it("returns the matching artist's first image", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeArtistImageFetch([
+        { name: "Indila", images: [{ url: "https://example.com/indila.jpg" }] },
+      ]),
+    );
+
+    const url = await client.getArtistImage("Indila");
+
+    expect(url).toBe("https://example.com/indila.jpg");
+  });
+
+  it("matches regardless of case or diacritics", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeArtistImageFetch([{ name: "Stromae", images: [{ url: "https://example.com/s.jpg" }] }]),
+    );
+
+    const url = await client.getArtistImage("STROMAÉ");
+
+    expect(url).toBe("https://example.com/s.jpg");
+  });
+
+  it("returns null when no result matches the artist exactly", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeArtistImageFetch([
+        { name: "Dorothée Pousséo", images: [{ url: "https://example.com/wrong.jpg" }] },
+      ]),
+    );
+
+    const url = await client.getArtistImage("Dorothée");
+
+    expect(url).toBeNull();
+  });
+
+  it("returns null when the matching artist has no image", async () => {
+    const client = createSpotifyClient(
+      fakeTokenProvider(),
+      fakeArtistImageFetch([{ name: "Indila", images: [] }]),
+    );
+
+    const url = await client.getArtistImage("Indila");
+
+    expect(url).toBeNull();
+  });
+
+  it("throws when the search request fails", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 400,
+      text: () => Promise.resolve("Bad Request"),
+    }) as unknown as typeof fetch;
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await expect(client.getArtistImage("Indila")).rejects.toThrow(
+      "Spotify artist image lookup failed",
+    );
+  });
+});
+
 describe("createSpotifyClient.searchTrackByTitleAndArtist", () => {
   it("returns the track when title and artist both match exactly", async () => {
     const client = createSpotifyClient(

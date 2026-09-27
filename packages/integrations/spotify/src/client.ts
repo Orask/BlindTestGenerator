@@ -339,6 +339,32 @@ export function createSpotifyClient(
       return data.artists.items.map((artist) => artist.name);
     },
 
+    async getArtistImage(artistName: string): Promise<string | null> {
+      const accessToken = await tokenProvider.getAccessToken();
+      const query = encodeURIComponent(`artist:"${artistName}"`);
+      const response = await fetchWithRetry(
+        fetchImpl,
+        `https://api.spotify.com/v1/search?q=${query}&type=artist&limit=${MAX_SEARCH_LIMIT}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } },
+        budget,
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Spotify artist image lookup failed for "${artistName}": ${response.status} ${await response.text()}`,
+        );
+      }
+
+      const data = (await response.json()) as {
+        artists: { items: { name: string; images: readonly { url: string }[] }[] };
+      };
+      const normalizedQuery = normalizeForComparison(artistName);
+      const match = data.artists.items.find(
+        (artist) => normalizeForComparison(artist.name) === normalizedQuery,
+      );
+      return match?.images[0]?.url ?? null;
+    },
+
     async getTrackById(id: string): Promise<SpotifyTrackMetadata> {
       const accessToken = await tokenProvider.getAccessToken();
       const response = await fetchWithRetry(

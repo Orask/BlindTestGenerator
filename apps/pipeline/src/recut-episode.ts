@@ -123,6 +123,7 @@ if (existingRenderPath && existingThumbnailPath) {
     themeLabel: theme.label,
     tracks: correctedTracks,
     outputPath: thumbnailPath,
+    spotify,
   });
   console.log(`Miniature rendue : ${thumbnailPath}`);
 }

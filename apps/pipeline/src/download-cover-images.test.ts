@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { downloadCoverImages } from "./download-cover-images.js";
+import { downloadCoverImages, resolvePublicCoverUrls } from "./download-cover-images.js";
 
 let dir: string;
 
@@ -51,6 +51,36 @@ describe("downloadCoverImages", () => {
       "Failed to download cover image",
     );
 
+    vi.unstubAllGlobals();
+  });
+});
+
+describe("resolvePublicCoverUrls", () => {
+  it("defaults to the /public/covers/ prefix", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) }),
+    );
+
+    const mapping = await resolvePublicCoverUrls(["https://example.com/a.jpg"], dir);
+
+    expect(mapping.get("https://example.com/a.jpg")).toMatch(/^\/public\/covers\//);
+    vi.unstubAllGlobals();
+  });
+
+  it("uses a custom public subdir when given (e.g. artist photos)", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue({ ok: true, arrayBuffer: () => Promise.resolve(new ArrayBuffer(0)) }),
+    );
+
+    const mapping = await resolvePublicCoverUrls(["https://example.com/a.jpg"], dir, "artists");
+
+    expect(mapping.get("https://example.com/a.jpg")).toMatch(/^\/public\/artists\//);
     vi.unstubAllGlobals();
   });
 });

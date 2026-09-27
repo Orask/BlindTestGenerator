@@ -13,3 +13,11 @@ export const VIDEO_RENDERER_ENTRY = fileURLToPath(
 export const PUBLIC_COVERS_DIR = fileURLToPath(
   new URL("../../../packages/video-renderer/public/covers", import.meta.url),
 );
+
+// Same reasoning as PUBLIC_COVERS_DIR, for artist profile photos used on
+// the thumbnail (see render-thumbnail.ts) — a separate directory so the two
+// image kinds don't collide despite both being sha1-hashed filenames of
+// different URL spaces.
+export const PUBLIC_ARTISTS_DIR = fileURLToPath(
+  new URL("../../../packages/video-renderer/public/artists", import.meta.url),
+);

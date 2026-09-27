@@ -39,4 +39,11 @@ export interface SpotifyClient {
     title: string,
     artistName: string,
   ): Promise<SpotifyTrackMetadata | null>;
+  /**
+   * The artist's own profile photo (not an album cover) — for a thumbnail
+   * design that shows recognizable faces instead of tiny cover art. Returns
+   * null if the artist isn't found or has no photo (some deep-catalog
+   * artists, especially orchestras/composer credits, have none).
+   */
+  getArtistImage(artistName: string): Promise<string | null>;
 }

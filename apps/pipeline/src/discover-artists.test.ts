@@ -21,6 +21,7 @@ function fakeSpotify(overrides: Partial<SpotifyClient> = {}): SpotifyClient {
     getTrackById: vi.fn(),
     searchArtists: vi.fn().mockResolvedValue([]),
     searchTrackByTitleAndArtist: vi.fn().mockResolvedValue(null),
+    getArtistImage: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
 }
