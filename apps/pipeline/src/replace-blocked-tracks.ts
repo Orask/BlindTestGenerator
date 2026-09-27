@@ -13,6 +13,7 @@ import {
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { REUSE_COOLDOWN_DAYS } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
+import { collectCuratedTracks } from "./collect-curated-tracks.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { spreadOutArtists } from "./diversify-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
@@ -170,7 +171,10 @@ for (const track of keptTracks) {
   }
 }
 
-const candidates = await collectCandidateTracks(spotify, theme.seedArtists, 20);
+const candidates = [
+  ...(theme.curatedTracks ? await collectCuratedTracks(spotify, theme.curatedTracks) : []),
+  ...(await collectCandidateTracks(spotify, theme.seedArtists, 20)),
+];
 const replacements = [];
 for (const candidate of candidates) {
   if (replacements.length === replacementsNeeded) {
@@ -239,6 +243,7 @@ await renderThumbnail({
   themeLabel: theme.label,
   tracks: finalTracks,
   outputPath: thumbnailPath,
+  spotify,
 });
 console.log(`Miniature rendue : ${thumbnailPath}`);
 

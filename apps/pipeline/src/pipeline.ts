@@ -35,6 +35,7 @@ import {
   type EpisodeTrack,
 } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
+import { collectCuratedTracks } from "./collect-curated-tracks.js";
 import { discoverNewArtists } from "./discover-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
@@ -154,11 +155,13 @@ async function buildTracksWithDiscoveryFallback(
   allTimeUsedTrackIds: ReadonlySet<string>,
   tracksPerEpisode: number,
 ): Promise<EpisodeTrack[]> {
-  const candidates = await collectCandidateTracks(
-    deps.spotify,
-    theme.seedArtists,
-    CANDIDATES_PER_ARTIST,
-  );
+  const curatedTracks = theme.curatedTracks
+    ? await collectCuratedTracks(deps.spotify, theme.curatedTracks)
+    : [];
+  const candidates = [
+    ...curatedTracks,
+    ...(await collectCandidateTracks(deps.spotify, theme.seedArtists, CANDIDATES_PER_ARTIST)),
+  ];
 
   try {
     return await buildEpisodeTracks(
@@ -265,7 +268,13 @@ async function generateAndPublishEpisode(
 
   await renderEpisode({ serveUrl, themeLabel: theme.label, tracks, outputPath });
   console.log(`Vidéo rendue : ${outputPath}`);
-  await renderThumbnail({ serveUrl, themeLabel: theme.label, tracks, outputPath: thumbnailPath });
+  await renderThumbnail({
+    serveUrl,
+    themeLabel: theme.label,
+    tracks,
+    outputPath: thumbnailPath,
+    spotify: deps.spotify,
+  });
   console.log(`Miniature rendue : ${thumbnailPath}`);
 
   const videoId = randomUUID();

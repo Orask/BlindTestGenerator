@@ -27,6 +27,16 @@ const channelThemeSchema = z.object({
   // just fails as before on a shortfall, instead of the pipeline guessing a
   // query that was never verified to return good results.
   discoveryQuery: z.string().min(1).optional(),
+  // Specific (title, artist) pairs pulled in via exact-match search
+  // (SpotifyClient.searchTrackByTitleAndArtist) instead of a loose
+  // artist-name search — for themes where "this artist's top tracks" misses
+  // the mark entirely (confirmed live: a movie/TV/anime-theme theme mostly
+  // surfaced deep-cut soundtrack tracks nobody recognizes, because the
+  // recognizable unit is one specific famous piece, not a composer's broader
+  // catalog). Optional: most themes don't need this, seedArtists alone works.
+  curatedTracks: z
+    .array(z.object({ title: z.string().min(1), artist: z.string().min(1) }))
+    .optional(),
   youtubePlaylistId: z.string().nullable(),
 });
 
