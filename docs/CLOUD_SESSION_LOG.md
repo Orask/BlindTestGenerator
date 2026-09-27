@@ -2054,3 +2054,44 @@ hebdomadaire serait déjà en cache). Nécessiterait une migration de schéma DB
 pas "triviale et sans risque" au sens où l'utilisateur l'a autorisé cette
 session (contrairement à `channel_id` sur `blocked_tracks` la session
 précédente) — laissé en proposition, pas codé.
+
+## [2026-09-27] FIN DE SESSION (session 4, "suite 3")
+
+**Budget** : session menée jusqu'à épuisement des 4 étapes demandées. 8 commits,
+tous poussés sur `main-hpf4qz`, arbre de travail propre à la clôture.
+
+| #   | Tâche                                                                                               | État                                                                                                                                                                                                                                                                                                                    |
+| --- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 26  | Test réseau réel (pas supposé) des sources alternatives à `popularity`                              | ✅ Fait — `api.deezer.com`, `rss.applemarketingtools.com`/`rss.marketingtools.apple.com` confirmés bloqués par la même politique sandbox qu'`api.spotify.com` (403 policy denial), testé via `curl` direct                                                                                                              |
+| 27  | Recherche Deezer (`rank`)                                                                           | ✅ Retenu comme remplaçant — gratuit, sans clé, catalogue entier (pas seulement les hits du moment), comparable entre artistes/époques                                                                                                                                                                                  |
+| 28  | Recherche Apple (API payante vs RSS gratuit)                                                        | ✅ Documenté et écarté — API MusicKit payante (99$/an) disproportionnée ; RSS gratuit mais ne donne qu'un statut "dans le Top N actuel", pas un score par morceau arbitraire du catalogue                                                                                                                               |
+| 29  | Recherche playlists éditoriales Spotify (Top 50 Global etc.)                                        | ✅ Confirmé non exploitable — le verrouillage Spotify de février 2026 a aussi fermé l'accès Client Credentials aux playlists éditoriales et supprimé la découverte "featured playlists" ; prémisse initiale de l'utilisateur corrigée explicitement, pas supposée                                                       |
+| 30  | Recherche charts indépendants (Billboard etc.)                                                      | ✅ Écarté — pas d'API officielle gratuite, scraping exclu par principe du projet                                                                                                                                                                                                                                        |
+| 31  | Implémentation du signal Deezer dans `pepite-meconnue.ts`/`top-artiste.ts`/`devine-la-chanson.ts`   | ✅ Fait, testé unitairement (mocks) — **non vérifié en conditions réelles** faute d'accès réseau à `api.deezer.com` depuis ce sandbox ; construit à partir du code source de vraies libs npm publiées (`deezer-js`, `@distube/deezer`) comme preuve la plus solide disponible, limite documentée dans le code et ce log |
+| 32  | Grossir `curatedTracks` de tous les thèmes (objectif : doubler)                                     | ✅ Fait, +106 entrées (+42% en moyenne, de +17% à +60% selon la confiance par thème) — pas un doublement littéral partout, priorité donnée à l'exactitude de la curation plutôt qu'à un chiffre cible ; 6 tests de `load-channel-config.test.ts` toujours verts (pas de doublon exact introduit)                        |
+| 33  | Proposer 2-3 nouveaux thèmes                                                                        | ✅ Documenté seul (3 propositions : Toutes générations, Comédies musicales françaises, Duos & Reprises) — **pas ajouté au calendrier**, décision produit laissée à l'utilisateur                                                                                                                                        |
+| 34  | Réflexion/proposition sur un signal de notoriété pour la sélection LONG (`build-episode-tracks.ts`) | ✅ Documenté seul, non implémenté — option B (reconnecter le mécanisme "bonus artist" existant à un vrai score Deezer par artiste, ~30 appels) recommandée mais nécessite une vérification live préalable + décision produit explicite avant de toucher au pipeline principal                                           |
+| 35  | Entrée FIN DE SESSION récapitulative                                                                | ✅ Cette entrée                                                                                                                                                                                                                                                                                                         |
+
+### Ce qui a changé concrètement
+
+- Nouveau package `@blindtest/deezer` (client HTTP sans clé, `getTrackPopularityRank`).
+- Nouveau module partagé `apps/pipeline/src/shorts/popularity-signal.ts` (null → 0, jamais neutre).
+- `devine-la-chanson.ts`/`pepite-meconnue.ts`/`top-artiste.ts` : `popularity` Spotify (supprimé) remplacé par le `rank` Deezer, y compris `devine-la-chanson.ts` qui score maintenant tout l'épisode au lieu de réutiliser l'ordre de `buildOpeningHook`.
+- `create-clients.ts`, `generate-short*.ts`, `generate-shorts-daily.ts` : câblage du nouveau client `deezer` partout où c'est nécessaire.
+- `channels/blindtest-fr.json` : +106 `curatedTracks` sur les 7 thèmes existants.
+- `docs/CLOUD_SESSION_LOG.md` : recherche, décisions et propositions documentées au fil de l'eau (règle respectée).
+
+### Limites explicites à garder en tête
+
+1. **Rien n'a pu être vérifié en conditions réseau réelles** pour Deezer — implémentation construite sur preuve indirecte (code source de libs npm), pas sur un appel HTTP réel abouti. À confirmer en priorité en local/production avant de faire confiance aveuglément aux Shorts qui en dépendent.
+2. Les 3 nouveaux thèmes et l'option B (notoriété pour la sélection LONG) sont des propositions non actionnées — elles ne changent rien tant que l'utilisateur ne tranche pas.
+3. La question "Deezer expose-t-il un signal de notoriété par ARTISTE (pas seulement par morceau) ?" reste ouverte — bloquante pour l'option B.
+
+### Ordre suggéré pour la suite
+
+1. **Vérifier en local/production** que `@blindtest/deezer` fonctionne réellement contre `api.deezer.com` (un simple `getTrackPopularityRank("Dernière danse", "Indila")` suffit) — priorité absolue avant de laisser les Shorts s'appuyer dessus sans filet.
+2. Si l'implémentation Deezer est confirmée : envisager un script `verify-curated-tracks.ts` (mentionné mais pas créé) qui repasse les 106 nouvelles entrées de `curatedTracks` par Spotify + Deezer pour confirmer qu'elles matchent bien et sont réellement connues, plutôt que de se fier uniquement à la relecture manuelle de cette session.
+3. Décider du sort des 3 propositions de thèmes (remplacer un thème existant ? rotation ? les écarter ?).
+4. Si l'option B est retenue : vérifier d'abord si Deezer expose un signal par artiste (`nb_fan` sur l'objet Artist ou équivalent), puis implémenter le remplacement ciblé de `catalogDepth` dans `build-episode-tracks.ts` (~30 appels, pas un reclassement complet du vivier).
+5. Envisager (si l'option B avance) la piste de cache dans `tracks_used` pour amortir le coût Deezer dans le temps — nécessite une migration de schéma, à ne pas faire à la légère.
