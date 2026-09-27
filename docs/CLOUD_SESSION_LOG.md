@@ -533,3 +533,28 @@ conditions réelles" ci-dessus.
 Tout le code de cette session est committé et poussé sur `main-hpf4qz` au fur et à
 mesure (jamais de travail non poussé laissé dans ce sandbox), avec `pnpm build/test/
 lint/typecheck` verts à chaque étape.
+
+---
+
+# Nouvelle session cloud — 2026-09-27 (suite)
+
+Reprise par l'utilisateur après lecture du journal ci-dessus. Objectif : étendre le
+prototype Shorts existant (ne pas le dupliquer) — corriger le défaut visuel connu,
+ajouter 6 types de Shorts (2 familles), automatiser en quotidien avec dry-run.
+
+## [2026-09-27] Vérification credentials/réseau — BLOQUÉ, identique à la session précédente
+
+- `.env` absent, aucune variable `SPOTIFY_*`/`YOUTUBE_*`/`ANTHROPIC_API_KEY` dans
+  l'environnement.
+- `curl` vers `accounts.spotify.com`, `api.spotify.com`, `musicbrainz.org` : tunnel
+  CONNECT refusé (403) par le proxy de cet environnement — mêmes hosts bloqués que la
+  session précédente.
+- `googleapis.com` répond (404 sur la racine, normal), mais sans credentials YouTube
+  ça ne débloque rien.
+
+**Conséquence** : comme la session précédente, aucune validation réseau réelle
+possible (tâche "validation end-to-end" ci-dessous restera documentée comme prochain
+pas, pas exécutée). Tout ce qui suit est soit vérifiable localement sans réseau
+(rendu Remotion, tests unitaires, logique pure), soit écrit avec le même soin que la
+session précédente pour du code jamais exécuté en conditions réelles — clairement
+signalé à chaque fois.
