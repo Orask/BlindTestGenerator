@@ -49,3 +49,33 @@ export function buildYoutubeMetadata(
 
   return { title, description, tags };
 }
+
+// Same template family as buildYoutubeMetadata, tuned for a short teaser cut
+// from an already-published episode (see generate-short.ts) rather than the
+// full episode itself: the title/description point at the full episode
+// instead of listing every track (there are only a handful here, not the
+// full 40-60), and #shorts is included since that hashtag still helps
+// discovery even though classification itself is purely aspect-ratio/
+// duration-based.
+export function buildShortMetadata(
+  theme: ChannelTheme,
+  episodeNumber: number,
+  shortTrackCount: number,
+  fullEpisodeTrackCount: number,
+): YoutubeMetadata {
+  const themeHashtag = theme.id.replace(/-/g, "");
+
+  const title = `${shortTrackCount} extraits ${theme.label} en ${SECONDS_PER_TRACK}s chrono 🎧 #Shorts`;
+
+  const description = [
+    `Un avant-goût de l'épisode "${theme.label}" (Ép. ${episodeNumber}) — ${fullEpisodeTrackCount} morceaux à deviner en entier sur la chaîne !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #blindtest #quizmusical #${themeHashtag}`,
+  ].join("\n");
+
+  const tags = ["blind test", "quiz musical", theme.label, "shorts"];
+
+  return { title, description, tags };
+}

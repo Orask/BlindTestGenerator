@@ -1,6 +1,10 @@
 import type { ChannelTheme } from "@blindtest/core";
 import { describe, expect, it } from "vitest";
-import { buildYoutubeMetadata, type YoutubeMetadataTrack } from "./youtube-metadata.js";
+import {
+  buildShortMetadata,
+  buildYoutubeMetadata,
+  type YoutubeMetadataTrack,
+} from "./youtube-metadata.js";
 
 const theme: ChannelTheme = {
   day: "monday",
@@ -41,5 +45,27 @@ describe("buildYoutubeMetadata", () => {
 
     expect(metadata.description).toContain("1. Dernière danse — Indila");
     expect(metadata.description).toContain("2. Papaoutai — Stromae");
+  });
+});
+
+describe("buildShortMetadata", () => {
+  it("includes the theme label, short track count and #Shorts in the title", () => {
+    const metadata = buildShortMetadata(theme, 12, 5, 40);
+
+    expect(metadata.title).toBe("5 extraits Années 80 en 12s chrono 🎧 #Shorts");
+  });
+
+  it("points the description at the full episode, not the short's own track count", () => {
+    const metadata = buildShortMetadata(theme, 12, 5, 40);
+
+    expect(metadata.description).toContain('épisode "Années 80" (Ép. 12)');
+    expect(metadata.description).toContain("40 morceaux à deviner en entier");
+  });
+
+  it("includes the #shorts hashtag alongside the theme hashtag", () => {
+    const metadata = buildShortMetadata(theme, 1, 5, 40);
+
+    expect(metadata.description).toContain("#shorts");
+    expect(metadata.description).toContain("#annees80");
   });
 });

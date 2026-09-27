@@ -381,3 +381,85 @@ typecheck` verts pour `@blindtest/video-renderer`. Pas de test unitaire ajouté 
 méthode déjà établie dans ce projet pour ce type de composant (voir historique des
 compositions bannière/photo de profil de chaîne, "rendues une fois et livrées
 directement à l'utilisateur").
+
+---
+
+## [2026-09-27] Tâche 6 — Croissance abonnés + prototype YouTube Shorts — TERMINÉ
+
+**Recherche (via web search, infos 2026)** : les Shorts sont désormais le principal
+levier de découverte pour une petite chaîne — l'algorithme juge chaque Short sur ses
+propres performances (pas l'ancienneté de la chaîne), donc une chaîne neuve peut
+rivaliser. Repères retenus :
+
+- Volume : les chaînes en croissance rapide postent 3 à 5 Shorts/semaine minimum.
+- Les 2-3 premières secondes décident si le viewer reste ou swipe — pas de place pour
+  une explication de règles longue.
+- Cohérence de niche : rester sur un seul format/sujet améliore nettement les
+  performances algorithmiques.
+- Rôle des Shorts : couche de découverte, pas moteur de fidélisation — le format long
+  reste ce qui construit la vraie audience ; le rôle d'un Short est d'amener vers la
+  chaîne, pas de la remplacer.
+- Spécs techniques 2026 : 9:16, jusqu'à 1080×1920, durée max relevée à 180s (plus la
+  limite de 60s d'avant octobre 2024) — largement assez pour une "mini partie" à 5-6
+  morceaux plutôt qu'un simple teaser à 1 morceau.
+  Sources : vidpros.com, metricool.com, vidseeds.ai, vidiq.com, hopperhq.com (liens
+  complets dans la réponse de recherche de cette session).
+
+**Décision de conception** : plutôt qu'un teaser abstrait, le Short reprend le
+**même gameplay countdown+reveal** que le format long (`TrackSegment`, déjà conçu de
+façon centrée/`AbsoluteFill`, donc réutilisable tel quel en vertical sans aucune
+modification) sur les 5-6 premiers morceaux d'un épisode déjà publié — ces morceaux
+sont déjà les plus forts/reconnaissables grâce à `buildOpeningHook`, qui réordonne
+l'épisode pour ouvrir sur ses meilleurs morceaux. Le Short se termine par un renvoi
+explicite vers l'épisode complet + abonnement.
+
+**Implémenté** :
+
+- `packages/video-renderer/src/Short.tsx` (+ `short-schema.ts`, `ShortIntro.tsx`,
+  `ShortOutro.tsx`) : composition Remotion verticale 1080×1920, enregistrée dans
+  `Root.tsx` sous l'id `"Short"`. Réutilise `TrackSegment`/`CountdownRing`/`RevealCard`
+  sans aucune modification.
+- `apps/pipeline/src/render-short.ts` (`renderShort`) : calque exact de
+  `render-episode.ts` pour la composition `"Short"`.
+- `apps/pipeline/src/generate-short.ts` : script CLI (`generate-short
+<channel-config.json> <long-video-row-id> [--track-count=5] [--upload]`) — relit les
+  N premiers `tracks_used` d'un épisode déjà publié, ré-hydrate cover+extrait audio
+  (même schéma que `recut-episode.ts`), rend le Short, et avec `--upload` le publie sur
+  YouTube (`format: 'short'`, le champ existait déjà dans le schéma DB, jamais utilisé
+  jusqu'ici). **Décision explicite** : n'enregistre PAS ces morceaux une 2e fois dans
+  `tracks_used` (pas de double-comptage du cooldown anti-répétition — voir commentaire
+  dans le fichier) et ne l'ajoute pas au pipeline quotidien automatique (script manuel,
+  comme `recut-episode.ts`/`reupload-video.ts` — publier des Shorts en routine est une
+  décision de cadence éditoriale qui revient à l'utilisateur, pas quelque chose à
+  activer silencieusement).
+- `apps/pipeline/src/youtube-metadata.ts` : nouvelle `buildShortMetadata` (titre avec
+  `#Shorts`, description qui renvoie vers l'épisode complet plutôt que de lister les
+  morceaux du Short) — 3 tests.
+
+**Vérifié par un vrai rendu local** (même méthode que la tâche 9 : chromium
+headless_shell + `ignoreCertificateErrors`, images de test en couleurs unies) : intro,
+countdown, reveal et outro rendus en PNG et envoyés à l'utilisateur. Fonctionne de bout
+en bout visuellement. **Limite assumée et notée pour plus tard** : le countdown/reveal,
+dimensionné pour le format long (anneau à 340px), laisse un vide visuel important en
+haut et en bas du cadre vertical 1080×1920 — pas retouché ici pour ne pas modifier
+`CountdownRing`/`RevealCard`/`TrackSegment` (composants partagés avec le format long,
+déjà en prod, jamais revus visuellement dans cette session) sans pouvoir vérifier
+l'absence de régression sur le format long en conditions réelles. Amélioration de
+suivi possible : soit un fond dynamique propre au Short (dégradé/glow animé derrière
+`TrackSegment`), soit un anneau agrandi via une prop de taille optionnelle sur
+`CountdownRing`/`RevealCard` (rétrocompatible, valeur par défaut = comportement actuel
+pour le format long).
+
+**Ce qui reste non testé** : la partie réseau de `generate-short.ts` (Spotify/iTunes/
+YouTube) — même limite que les 4 scripts CLI de la tâche 7, cohérent avec comment ce
+projet teste déjà ce genre de code (mock au niveau client HTTP dans les packages
+`integrations/*`, jamais au niveau script CLI entier). Jamais exécuté en conditions
+réelles (pas de credentials dans ce sandbox) — **prochain pas concret** : lancer
+`node apps/pipeline/dist/generate-short.js channels/blindtest-fr.json <id-épisode>`
+sur un épisode déjà publié (ex. celui de "Génériques" du 2026-09-27,
+`e81a9fc8-dcde-4224-b9e5-abe1e69c157f`) sans `--upload` d'abord pour valider le rendu
+sur une vraie vidéo, puis avec `--upload` en `visibility` privée pour valider la
+publication avant d'en faire une habitude.
+
+**Validation faite** : rendu visuel réel + `pnpm build/test/lint/typecheck` tous
+verts (85 tests pipeline, 3 nouveaux pour `buildShortMetadata`).

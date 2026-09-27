@@ -5,6 +5,8 @@ import { CHANNEL_PROFILE_SIZE, ChannelProfilePicture } from "./ChannelProfilePic
 import { FPS, INTRO_FRAMES, OUTRO_FRAMES, SEGMENT_FRAMES } from "./constants";
 import { Episode } from "./Episode";
 import { episodeSchema } from "./episode-schema";
+import { Short, totalShortDurationInFrames } from "./Short";
+import { shortSchema } from "./short-schema";
 import { Thumbnail } from "./Thumbnail";
 import { thumbnailSchema } from "./thumbnail-schema";
 
@@ -48,6 +50,25 @@ export function RemotionRoot(): ReactElement {
         }}
         calculateMetadata={({ props }) => ({
           durationInFrames: totalDurationInFrames(props.tracks.length),
+        })}
+      />
+
+      <Composition
+        id="Short"
+        component={Short}
+        schema={shortSchema}
+        fps={FPS}
+        width={1080}
+        height={1920}
+        durationInFrames={totalShortDurationInFrames(SAMPLE_TRACKS.length)}
+        defaultProps={{
+          themeLabel: "Variété actuelle",
+          tracks: SAMPLE_TRACKS,
+          fullEpisodeTrackCount: 40,
+          accentColors: ["#ff5f6d", "#4facfe", "#f6d365"],
+        }}
+        calculateMetadata={({ props }) => ({
+          durationInFrames: totalShortDurationInFrames(props.tracks.length),
         })}
       />
 
