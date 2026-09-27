@@ -1,4 +1,5 @@
 import { createAnthropicClient, type AnthropicClient } from "@blindtest/anthropic";
+import { createDeezerClient, type DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import { createItunesClient } from "@blindtest/itunes";
 import {
@@ -17,6 +18,8 @@ import {
 export interface PipelineClients {
   readonly spotify: SpotifyClient;
   readonly itunes: ItunesClient;
+  /** No env var to check — Deezer's catalog endpoints have never required authentication, unlike every other client here. */
+  readonly deezer: DeezerClient;
   readonly youtube: YoutubeClient;
   /** Undefined when ANTHROPIC_API_KEY isn't set — the AI episode review is an optional quality upgrade, never a requirement to publish. */
   readonly anthropic: AnthropicClient | undefined;
@@ -79,6 +82,7 @@ export function createClientsFromEnv(options: CreateClientsOptions = {}): Pipeli
       : primarySpotify;
 
   const itunes = createItunesClient();
+  const deezer = createDeezerClient();
 
   const oauth2Client = createOAuth2Client({
     clientId: requireEnv("YOUTUBE_CLIENT_ID"),
@@ -91,5 +95,5 @@ export function createClientsFromEnv(options: CreateClientsOptions = {}): Pipeli
   const anthropicApiKey = process.env["ANTHROPIC_API_KEY"];
   const anthropic = anthropicApiKey ? createAnthropicClient(anthropicApiKey) : undefined;
 
-  return { spotify, itunes, youtube, anthropic };
+  return { spotify, itunes, deezer, youtube, anthropic };
 }

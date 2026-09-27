@@ -56,12 +56,13 @@ if (!longVideoRow) {
 const channel = await loadChannelConfig(channelConfigPath);
 const theme = findThemeOrThrow(channel, longVideoRow.theme_id);
 
-const { spotify, itunes, youtube } = createClientsFromEnv();
+const { spotify, deezer, itunes, youtube } = createClientsFromEnv();
 
 console.log(`Recherche des ${shortTrackCount} morceau(x) les moins populaires de l'épisode...`);
 const tracks = await selectPepiteMeconnueTracks(
   db,
   spotify,
+  deezer,
   itunes,
   longVideoRowId,
   shortTrackCount,

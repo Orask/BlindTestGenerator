@@ -1,4 +1,5 @@
 import { SCHEMA_SQL } from "@blindtest/db";
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient, SpotifyTrackMetadata } from "@blindtest/spotify";
 import Database from "better-sqlite3";
@@ -80,6 +81,14 @@ function fakeSpotify(overrides: Partial<SpotifyClient> = {}): SpotifyClient {
   };
 }
 
+function fakeDeezer(byTitle: Record<string, number>): DeezerClient {
+  return {
+    getTrackPopularityRank: vi
+      .fn()
+      .mockImplementation((title: string) => Promise.resolve(byTitle[title] ?? 0)),
+  };
+}
+
 function fakeItunes(overrides: Partial<ItunesClient> = {}): ItunesClient {
   return {
     findPreviewByTitleAndArtist: vi
@@ -92,21 +101,23 @@ function fakeItunes(overrides: Partial<ItunesClient> = {}): ItunesClient {
 }
 
 describe("selectDevineLaChansonTracks", () => {
-  it("returns the episode's first `count` tracks in insertion order", async () => {
-    insertTrackUsage("video-1", "track-1", "Song 1", "Artist 1");
-    insertTrackUsage("video-1", "track-2", "Song 2", "Artist 2");
-    insertTrackUsage("video-1", "track-3", "Song 3", "Artist 3");
+  it("picks the `count` most recognizable tracks of the episode, not insertion order", async () => {
+    insertTrackUsage("video-1", "track-1", "Obscure Song", "Artist 1");
+    insertTrackUsage("video-1", "track-2", "Hit Song", "Artist 2");
+    insertTrackUsage("video-1", "track-3", "Mid Song", "Artist 3");
+    const deezer = fakeDeezer({ "Obscure Song": 5, "Hit Song": 900000, "Mid Song": 50000 });
 
     const result = await selectDevineLaChansonTracks(
       db,
       fakeSpotify(),
+      deezer,
       fakeItunes(),
       "video-1",
       2,
       0,
     );
 
-    expect(result.map((t) => t.title)).toEqual(["Song 1", "Song 2"]);
+    expect(result.map((t) => t.title)).toEqual(["Hit Song", "Mid Song"]);
   });
 
   it("only pulls tracks belonging to the requested episode", async () => {
@@ -123,10 +134,12 @@ describe("selectDevineLaChansonTracks", () => {
     );
     insertTrackUsage("video-1", "track-1", "Song 1", "Artist 1");
     insertTrackUsage("video-2", "track-2", "Other Episode Song", "Other Artist");
+    const deezer = fakeDeezer({ "Song 1": 50000, "Other Episode Song": 900000 });
 
     const result = await selectDevineLaChansonTracks(
       db,
       fakeSpotify(),
+      deezer,
       fakeItunes(),
       "video-1",
       5,
@@ -136,18 +149,31 @@ describe("selectDevineLaChansonTracks", () => {
     expect(result.map((t) => t.title)).toEqual(["Song 1"]);
   });
 
-  it("does not fall back to further tracks when a candidate has no iTunes preview", async () => {
-    insertTrackUsage("video-1", "track-1", "Song 1", "Artist 1");
-    insertTrackUsage("video-1", "track-2", "Song 2", "Artist 2");
-    insertTrackUsage("video-1", "track-3", "Song 3", "Artist 3");
+  it("falls back to the next-most-recognizable track when one has no iTunes preview", async () => {
+    insertTrackUsage("video-1", "track-1", "Most Recognizable", "Artist 1");
+    insertTrackUsage("video-1", "track-2", "Second Most Recognizable", "Artist 2");
+    insertTrackUsage("video-1", "track-3", "Least Recognizable", "Artist 3");
+    const deezer = fakeDeezer({
+      "Most Recognizable": 900000,
+      "Second Most Recognizable": 500000,
+      "Least Recognizable": 100,
+    });
     const itunes = fakeItunes({
       findPreviewByTitleAndArtist: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({
-        previewUrl: "https://preview.example.com/Song 2.m4a",
+        previewUrl: "https://preview.example.com/Second Most Recognizable.m4a",
       }),
     });
 
-    const result = await selectDevineLaChansonTracks(db, fakeSpotify(), itunes, "video-1", 2, 0);
+    const result = await selectDevineLaChansonTracks(
+      db,
+      fakeSpotify(),
+      deezer,
+      itunes,
+      "video-1",
+      1,
+      0,
+    );
 
-    expect(result.map((t) => t.title)).toEqual(["Song 2"]);
+    expect(result.map((t) => t.title)).toEqual(["Second Most Recognizable"]);
   });
 });

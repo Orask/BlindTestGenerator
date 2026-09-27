@@ -66,12 +66,13 @@ const db = openDatabase(dbPath);
 const channel = await loadChannelConfig(channelConfigPath);
 const theme = findThemeBySeedArtistOrThrow(channel, artistName);
 
-const { spotify, itunes, youtube } = createClientsFromEnv();
+const { spotify, deezer, itunes, youtube } = createClientsFromEnv();
 
 console.log(`Recherche des ${shortTrackCount} morceau(x) les plus populaires de ${artistName}...`);
 const tracks = await selectTopArtisteTracks(
   db,
   spotify,
+  deezer,
   itunes,
   channel.id,
   artistName,

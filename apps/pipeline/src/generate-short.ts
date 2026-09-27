@@ -11,10 +11,10 @@ import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildShortMetadata } from "./youtube-metadata.js";
 
 // One-off / cron-able: cuts a vertical YouTube Short from an already-
-// published long episode's *opening* tracks — cheap to prototype since
-// buildOpeningHook (build-episode-tracks.ts) already reordered that episode
-// so its first few tracks are its strongest, most recognizable draws; a
-// Short just needs to borrow that ordering; it doesn't pick anything new.
+// published long episode's *most recognizable* tracks (scored via Deezer's
+// rank, see shorts/popularity-signal.ts — not the episode's opening-hook
+// order, which only compares popularity within each artist's own search
+// results, not across the whole episode).
 // Track selection lives in shorts/devine-la-chanson.ts (Family A, type 1) —
 // this script is now just its CLI wrapper, same shape as the 3 other
 // Family A CLI scripts (generate-short-pepite-meconnue.ts, -top-artiste.ts,
@@ -70,12 +70,13 @@ const fullEpisodeTrackCountRow = db
 const channel = await loadChannelConfig(channelConfigPath);
 const theme = findThemeOrThrow(channel, longVideoRow.theme_id);
 
-const { spotify, itunes, youtube } = createClientsFromEnv();
+const { spotify, deezer, itunes, youtube } = createClientsFromEnv();
 
 console.log(`Ré-hydratation de ${shortTrackCount} morceau(x) pour le short...`);
 const tracks = await selectDevineLaChansonTracks(
   db,
   spotify,
+  deezer,
   itunes,
   longVideoRowId,
   shortTrackCount,

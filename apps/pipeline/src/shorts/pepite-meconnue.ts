@@ -1,29 +1,31 @@
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type Database from "better-sqlite3";
 import { hydrateShortTrack } from "./hydrate-track.js";
+import { popularitySignal } from "./popularity-signal.js";
 import type { ShortCandidateTrack } from "./types.js";
 
 /**
  * Family A, type 2: same episode as "devine la chanson", but the *least*
- * popular tracks instead of the opening hook — a "hidden gem you probably
- * missed" angle instead of "guess the obvious ones". Needs Spotify's real
- * popularity score (see packages/integrations/spotify/src/types.ts —
- * distinct from popularityRank, which is only a search-result rank, not
- * comparable across an episode's ~40-60 different tracks/artists).
+ * well-known tracks instead of the opening hook — a "hidden gem you
+ * probably missed" angle instead of "guess the obvious ones". Scored via
+ * Deezer's `rank` (see popularity-signal.ts) — Spotify's own `popularity`
+ * field, used here originally, was removed by Spotify's February 2026
+ * changelog (see docs/CLOUD_SESSION_LOG.md); Deezer never required
+ * authentication for this kind of lookup, so it isn't affected.
  *
- * Cost note: unlike selectDevineLaChansonTracks (which only re-fetches the
- * `count` tracks it actually uses), this has to call getTrackById for
+ * Cost note: unlike selectDevineLaChansonTracks pre-Deezer (which only
+ * re-fetched the `count` tracks it actually used), this has to score
  * *every* track_used row of the episode to know which ones are least
- * popular — one Spotify request per track in the episode (~40-60), not
- * just the ones that end up in the Short. Acceptable for a once-in-a-while
- * Short, but not free; see docs/CLOUD_SESSION_LOG.md for the tradeoff
- * (storing popularity in tracks_used at record time would avoid this
- * re-fetch entirely — a schema change left for later, not done here).
+ * known — one Deezer + one Spotify call per track in the episode (~40-60),
+ * not just the ones that end up in the Short. Acceptable for a
+ * once-in-a-while Short, but not free.
  */
 export async function selectPepiteMeconnueTracks(
   db: Database.Database,
   spotify: SpotifyClient,
+  deezer: DeezerClient,
   itunes: ItunesClient,
   longVideoRowId: string,
   count: number,
@@ -39,20 +41,26 @@ export async function selectPepiteMeconnueTracks(
     artist: string;
   }[];
 
-  const withPopularity: { row: (typeof trackRows)[number]; popularity: number; cover: string }[] =
-    [];
+  const scored: { row: (typeof trackRows)[number]; score: number }[] = [];
   for (const row of trackRows) {
-    const metadata = await spotify.getTrackById(row.spotify_track_id);
-    withPopularity.push({ row, popularity: metadata.popularity, cover: metadata.albumCoverUrl });
+    const score = await popularitySignal(deezer, row.title, row.artist);
+    scored.push({ row, score });
   }
-  withPopularity.sort((a, b) => a.popularity - b.popularity);
+  scored.sort((a, b) => a.score - b.score);
 
   const tracks: ShortCandidateTrack[] = [];
-  for (const { row, cover } of withPopularity) {
+  for (const { row } of scored) {
     if (tracks.length === count) {
       break;
     }
-    const hydrated = await hydrateShortTrack(itunes, row.title, row.artist, cover, lookupDelayMs);
+    const metadata = await spotify.getTrackById(row.spotify_track_id);
+    const hydrated = await hydrateShortTrack(
+      itunes,
+      row.title,
+      row.artist,
+      metadata.albumCoverUrl,
+      lookupDelayMs,
+    );
     if (hydrated) {
       tracks.push(hydrated);
     }

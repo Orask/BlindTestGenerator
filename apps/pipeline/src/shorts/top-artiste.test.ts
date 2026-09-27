@@ -1,4 +1,5 @@
 import { SCHEMA_SQL } from "@blindtest/db";
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient, SpotifyTrackMetadata } from "@blindtest/spotify";
 import Database from "better-sqlite3";
@@ -48,7 +49,7 @@ function insertTrackUsage(spotifyTrackId: string, title: string, artist: string)
   );
 }
 
-function metadata(popularity: number): SpotifyTrackMetadata {
+function metadata(): SpotifyTrackMetadata {
   return {
     id: "irrelevant",
     title: "irrelevant",
@@ -56,20 +57,26 @@ function metadata(popularity: number): SpotifyTrackMetadata {
     artistNames: ["irrelevant"],
     albumCoverUrl: "https://cover.example.com/x.jpg",
     popularityRank: 0,
-    popularity,
+    popularity: 50,
     releaseDate: "2000-01-01",
   };
 }
 
-function fakeSpotify(byTrackId: Record<string, number>): SpotifyClient {
+function fakeSpotify(): SpotifyClient {
   return {
     searchTracksByArtist: vi.fn(),
-    getTrackById: vi
-      .fn()
-      .mockImplementation((id: string) => Promise.resolve(metadata(byTrackId[id] ?? 0))),
+    getTrackById: vi.fn().mockImplementation(() => Promise.resolve(metadata())),
     searchArtists: vi.fn(),
     searchTrackByTitleAndArtist: vi.fn(),
     getArtistImage: vi.fn(),
+  };
+}
+
+function fakeDeezer(byTitle: Record<string, number>): DeezerClient {
+  return {
+    getTrackPopularityRank: vi
+      .fn()
+      .mockImplementation((title: string) => Promise.resolve(byTitle[title] ?? 0)),
   };
 }
 
@@ -89,11 +96,12 @@ describe("selectTopArtisteTracks", () => {
     insertTrackUsage("track-1", "Low Hit", "Daft Punk");
     insertTrackUsage("track-2", "Big Hit", "Daft Punk");
     insertTrackUsage("track-3", "Unrelated Song", "Other Artist");
-    const spotify = fakeSpotify({ "track-1": 20, "track-2": 90, "track-3": 99 });
+    const deezer = fakeDeezer({ "Low Hit": 20, "Big Hit": 90, "Unrelated Song": 99 });
 
     const result = await selectTopArtisteTracks(
       db,
-      spotify,
+      fakeSpotify(),
+      deezer,
       fakeItunes(),
       "blindtest-fr",
       "Daft Punk",
@@ -106,11 +114,12 @@ describe("selectTopArtisteTracks", () => {
 
   it("matches artist credits with diacritics and case differences", async () => {
     insertTrackUsage("track-1", "Halo", "Beyoncé");
-    const spotify = fakeSpotify({ "track-1": 80 });
+    const deezer = fakeDeezer({ Halo: 80 });
 
     const result = await selectTopArtisteTracks(
       db,
-      spotify,
+      fakeSpotify(),
+      deezer,
       fakeItunes(),
       "blindtest-fr",
       "beyonce",
@@ -123,11 +132,12 @@ describe("selectTopArtisteTracks", () => {
 
   it("matches a collab credit that includes the requested artist among others", async () => {
     insertTrackUsage("track-1", "Collab Song", "Vitaa, Slimane");
-    const spotify = fakeSpotify({ "track-1": 80 });
+    const deezer = fakeDeezer({ "Collab Song": 80 });
 
     const result = await selectTopArtisteTracks(
       db,
-      spotify,
+      fakeSpotify(),
+      deezer,
       fakeItunes(),
       "blindtest-fr",
       "Slimane",
@@ -142,11 +152,12 @@ describe("selectTopArtisteTracks", () => {
     insertTrackUsage("track-1", "Song 1", "Daft Punk");
     insertTrackUsage("track-2", "Song 2", "Daft Punk");
     insertTrackUsage("track-3", "Song 3", "Daft Punk");
-    const spotify = fakeSpotify({ "track-1": 10, "track-2": 20, "track-3": 30 });
+    const deezer = fakeDeezer({ "Song 1": 10, "Song 2": 20, "Song 3": 30 });
 
     const result = await selectTopArtisteTracks(
       db,
-      spotify,
+      fakeSpotify(),
+      deezer,
       fakeItunes(),
       "blindtest-fr",
       "Daft Punk",

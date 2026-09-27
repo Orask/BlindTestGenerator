@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import type { ChannelConfig, ChannelTheme } from "@blindtest/core";
 import { resolveThemeForDay, weekdayFromDate } from "@blindtest/core";
 import { getLatestUploadedVideoForTheme, openDatabase } from "@blindtest/db";
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type { YoutubeClient } from "@blindtest/youtube";
@@ -54,6 +55,7 @@ interface Ctx {
   readonly db: Database.Database;
   readonly channel: ChannelConfig;
   readonly spotify: SpotifyClient;
+  readonly deezer: DeezerClient;
   readonly itunes: ItunesClient;
   readonly youtube: YoutubeClient;
   readonly outputDir: string;
@@ -89,6 +91,7 @@ async function attemptDevineLaChanson(ctx: Ctx): Promise<boolean> {
   const tracks = await selectDevineLaChansonTracks(
     ctx.db,
     ctx.spotify,
+    ctx.deezer,
     ctx.itunes,
     source.id,
     SHORT_TRACK_COUNT,
@@ -144,6 +147,7 @@ async function attemptPepiteMeconnue(ctx: Ctx): Promise<boolean> {
   const tracks = await selectPepiteMeconnueTracks(
     ctx.db,
     ctx.spotify,
+    ctx.deezer,
     ctx.itunes,
     source.id,
     SHORT_TRACK_COUNT,
@@ -184,6 +188,7 @@ async function attemptTopArtiste(ctx: Ctx): Promise<boolean> {
   const tracks = await selectTopArtisteTracks(
     ctx.db,
     ctx.spotify,
+    ctx.deezer,
     ctx.itunes,
     ctx.channel.id,
     artistName,
@@ -324,11 +329,11 @@ if (!channelConfigPath) {
 const dbPath = fileURLToPath(new URL("../../../data/blindtest.sqlite", import.meta.url));
 const db = openDatabase(dbPath);
 const channel = await loadChannelConfig(channelConfigPath);
-const { spotify, itunes, youtube } = createClientsFromEnv();
+const { spotify, deezer, itunes, youtube } = createClientsFromEnv();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
 
 const now = new Date();
-const ctx: Ctx = { db, channel, spotify, itunes, youtube, outputDir, upload, now };
+const ctx: Ctx = { db, channel, spotify, deezer, itunes, youtube, outputDir, upload, now };
 const todaysTypes = shortTypesForDay(weekdayFromDate(now));
 
 console.log(

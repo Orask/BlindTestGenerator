@@ -17,6 +17,7 @@
     "@blindtest/anthropic": "workspace:*",
     "@blindtest/core": "workspace:*",
     "@blindtest/db": "workspace:*",
+    "@blindtest/deezer": "workspace:*",
     "@blindtest/itunes": "workspace:*",
     "@blindtest/spotify": "workspace:*",
     "@blindtest/youtube": "workspace:*",

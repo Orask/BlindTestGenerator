@@ -1,4 +1,5 @@
 import { SCHEMA_SQL } from "@blindtest/db";
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient, SpotifyTrackMetadata } from "@blindtest/spotify";
 import Database from "better-sqlite3";
@@ -53,10 +54,7 @@ function insertTrackUsage(
   );
 }
 
-function metadata(
-  popularity: number,
-  albumCoverUrl = "https://cover.example.com/x.jpg",
-): SpotifyTrackMetadata {
+function metadata(albumCoverUrl = "https://cover.example.com/x.jpg"): SpotifyTrackMetadata {
   return {
     id: "irrelevant",
     title: "irrelevant",
@@ -64,20 +62,26 @@ function metadata(
     artistNames: ["irrelevant"],
     albumCoverUrl,
     popularityRank: 0,
-    popularity,
+    popularity: 50,
     releaseDate: "2000-01-01",
   };
 }
 
-function fakeSpotify(byTrackId: Record<string, number>): SpotifyClient {
+function fakeSpotify(): SpotifyClient {
   return {
     searchTracksByArtist: vi.fn(),
-    getTrackById: vi
-      .fn()
-      .mockImplementation((id: string) => Promise.resolve(metadata(byTrackId[id] ?? 0))),
+    getTrackById: vi.fn().mockImplementation(() => Promise.resolve(metadata())),
     searchArtists: vi.fn(),
     searchTrackByTitleAndArtist: vi.fn(),
     getArtistImage: vi.fn(),
+  };
+}
+
+function fakeDeezer(byTitle: Record<string, number>): DeezerClient {
+  return {
+    getTrackPopularityRank: vi
+      .fn()
+      .mockImplementation((title: string) => Promise.resolve(byTitle[title] ?? 0)),
   };
 }
 
@@ -97,9 +101,17 @@ describe("selectPepiteMeconnueTracks", () => {
     insertTrackUsage("video-1", "track-1", "Popular Song", "Artist 1");
     insertTrackUsage("video-1", "track-2", "Hidden Gem", "Artist 2");
     insertTrackUsage("video-1", "track-3", "Mid Song", "Artist 3");
-    const spotify = fakeSpotify({ "track-1": 90, "track-2": 5, "track-3": 50 });
+    const deezer = fakeDeezer({ "Popular Song": 900000, "Hidden Gem": 5, "Mid Song": 500000 });
 
-    const result = await selectPepiteMeconnueTracks(db, spotify, fakeItunes(), "video-1", 2, 0);
+    const result = await selectPepiteMeconnueTracks(
+      db,
+      fakeSpotify(),
+      deezer,
+      fakeItunes(),
+      "video-1",
+      2,
+      0,
+    );
 
     expect(result.map((t) => t.title)).toEqual(["Hidden Gem", "Mid Song"]);
   });
@@ -118,9 +130,17 @@ describe("selectPepiteMeconnueTracks", () => {
     );
     insertTrackUsage("video-1", "track-1", "Song 1", "Artist 1");
     insertTrackUsage("video-2", "track-2", "Other Episode Least Popular", "Other Artist");
-    const spotify = fakeSpotify({ "track-1": 50, "track-2": 1 });
+    const deezer = fakeDeezer({ "Song 1": 500000, "Other Episode Least Popular": 1 });
 
-    const result = await selectPepiteMeconnueTracks(db, spotify, fakeItunes(), "video-1", 5, 0);
+    const result = await selectPepiteMeconnueTracks(
+      db,
+      fakeSpotify(),
+      deezer,
+      fakeItunes(),
+      "video-1",
+      5,
+      0,
+    );
 
     expect(result.map((t) => t.title)).toEqual(["Song 1"]);
   });
@@ -129,14 +149,26 @@ describe("selectPepiteMeconnueTracks", () => {
     insertTrackUsage("video-1", "track-1", "Least Popular", "Artist 1");
     insertTrackUsage("video-1", "track-2", "Second Least Popular", "Artist 2");
     insertTrackUsage("video-1", "track-3", "Most Popular", "Artist 3");
-    const spotify = fakeSpotify({ "track-1": 1, "track-2": 20, "track-3": 90 });
+    const deezer = fakeDeezer({
+      "Least Popular": 1,
+      "Second Least Popular": 200000,
+      "Most Popular": 900000,
+    });
     const itunes = fakeItunes({
       findPreviewByTitleAndArtist: vi.fn().mockResolvedValueOnce(null).mockResolvedValueOnce({
         previewUrl: "https://preview.example.com/Second Least Popular.m4a",
       }),
     });
 
-    const result = await selectPepiteMeconnueTracks(db, spotify, itunes, "video-1", 1, 0);
+    const result = await selectPepiteMeconnueTracks(
+      db,
+      fakeSpotify(),
+      deezer,
+      itunes,
+      "video-1",
+      1,
+      0,
+    );
 
     expect(result.map((t) => t.title)).toEqual(["Second Least Popular"]);
   });

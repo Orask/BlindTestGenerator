@@ -1,8 +1,10 @@
 import { getUsedTracksForChannel, type UsedTrack } from "@blindtest/db";
+import type { DeezerClient } from "@blindtest/deezer";
 import type { ItunesClient } from "@blindtest/itunes";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type Database from "better-sqlite3";
 import { hydrateShortTrack } from "./hydrate-track.js";
+import { popularitySignal } from "./popularity-signal.js";
 import type { ShortCandidateTrack } from "./types.js";
 
 const COMBINING_DIACRITICS = /[̀-ͯ]/g;
@@ -21,14 +23,17 @@ function normalize(value: string): string {
  * (getUsedTracksForChannel, across every theme/episode) — deliberately
  * never an artist-top-tracks API call, which this Spotify app tier doesn't
  * have access to (see docs/CAHIER_DES_CHARGES.md 3bis). "Best" means
- * highest real Spotify popularity among tracks_used rows credited to this
- * artist, not necessarily the artist's biggest hits overall — an honest
- * framing given the data actually available, see buildTopArtisteMetadata's
- * title wording in youtube-metadata.ts.
+ * highest notoriety (Deezer's `rank`, see popularity-signal.ts — Spotify's
+ * own `popularity` field this used originally was removed by Spotify's
+ * February 2026 changelog, see docs/CLOUD_SESSION_LOG.md) among tracks_used
+ * rows credited to this artist, not necessarily the artist's biggest hits
+ * overall — an honest framing given the data actually available, see
+ * buildTopArtisteMetadata's title wording in youtube-metadata.ts.
  */
 export async function selectTopArtisteTracks(
   db: Database.Database,
   spotify: SpotifyClient,
+  deezer: DeezerClient,
   itunes: ItunesClient,
   channelId: string,
   artistName: string,
@@ -39,23 +44,24 @@ export async function selectTopArtisteTracks(
   const allTracks = getUsedTracksForChannel(db, channelId);
   const matching = allTracks.filter((track) => normalize(track.artist).includes(normalizedArtist));
 
-  const withPopularity: { track: UsedTrack; popularity: number; cover: string }[] = [];
+  const scored: { track: UsedTrack; score: number }[] = [];
   for (const track of matching) {
-    const metadata = await spotify.getTrackById(track.spotifyTrackId);
-    withPopularity.push({ track, popularity: metadata.popularity, cover: metadata.albumCoverUrl });
+    const score = await popularitySignal(deezer, track.title, track.artist);
+    scored.push({ track, score });
   }
-  withPopularity.sort((a, b) => b.popularity - a.popularity);
+  scored.sort((a, b) => b.score - a.score);
 
   const tracks: ShortCandidateTrack[] = [];
-  for (const { track, cover } of withPopularity) {
+  for (const { track } of scored) {
     if (tracks.length === count) {
       break;
     }
+    const metadata = await spotify.getTrackById(track.spotifyTrackId);
     const hydrated = await hydrateShortTrack(
       itunes,
       track.title,
       track.artist,
-      cover,
+      metadata.albumCoverUrl,
       lookupDelayMs,
     );
     if (hydrated) {
