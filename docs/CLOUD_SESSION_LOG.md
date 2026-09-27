@@ -776,3 +776,61 @@ automatisation (voir plus loin dans ce log).
 nouveaux) ; `@blindtest/spotify` et `@blindtest/video-renderer` revérifiés verts en
 même temps (aucune régression des changements des tâches précédentes de cette
 session, qui n'avaient pas encore été confirmés ensemble).
+
+## [2026-09-27] Famille A — complète : templates YouTube + scripts CLI pour les 3 nouveaux types
+
+Suite directe de l'entrée précédente : les sélecteurs de morceaux existaient déjà,
+mais rien ne les rendait réellement utilisables (pas de template de titre/
+description, pas de script CLI). Complété maintenant :
+
+**`youtube-metadata.ts`** — 3 nouvelles fonctions, même style que
+`buildShortMetadata` déjà existant :
+
+- `buildPepiteMeconnueMetadata(theme, tracks)` — angle "morceaux que tu as
+  peut-être ratés" plutôt qu'un défi de reconnaissance.
+- `buildTopArtisteMetadata(artistName, tracks)` — titre honnête : annonce
+  `tracks.length` (2-3, la vraie taille du Short), jamais un "Top 5" fixe qui
+  ne correspondrait pas à ce qui est montré.
+- `buildAnniversaireSortieMetadata({title, artist, yearsAgo})` — un seul
+  morceau, CTA générique (pas d'épisode précis à pointer).
+  8 nouveaux tests dans `youtube-metadata.test.ts`.
+
+**`apps/pipeline/src/shorts/publish-short.ts`** — nouveau module partagé
+(render + upload YouTube optionnel + écriture `videos`/`markVideoUploaded`)
+extrait de la logique qui était dupliquée dans `generate-short.ts` : les 4
+scripts CLI de la famille A ne diffèrent que par _quels_ morceaux et _quel_
+metadata, jamais par ce qui se passe une fois les deux décidés. Pas de test
+dédié (même convention que `render-short.ts`/`render-episode.ts` : le rendu
+Remotion réel n'est pas unit-testable dans ce projet, validé visuellement).
+
+**`generate-short.ts` refactorisé** pour appeler `selectDevineLaChansonTracks`
+
+- `publishShort` au lieu de dupliquer cette logique en interne — corrige une
+  duplication que j'avais moi-même laissée dans la tâche précédente (le
+  sélecteur existait mais n'était pas encore branché). Aucun changement
+  d'interface CLI (mêmes arguments), donc rétrocompatible avec tout usage
+  existant.
+
+**3 nouveaux scripts CLI**, un par type restant :
+
+- `generate-short-pepite-meconnue.ts` — mêmes arguments que `generate-short.ts`
+  (config, id de la vidéo longue, `--track-count`, `--upload`).
+- `generate-short-top-artiste.ts` — `<config> "<nom d'artiste>"` ; résout le
+  thème/la visibilité en cherchant quel thème liste cet artiste dans
+  `seedArtists` (pas de vidéo source à cette échelle-là, donc pas de
+  thème/visibilité à hériter directement).
+- `generate-short-anniversaire.ts` — `<config> [--date=] [--window-days=]` ;
+  s'arrête proprement (code 0, pas une erreur) si aucun anniversaire ne tombe
+  ce jour-là — la majorité des jours n'en auront pas, c'est attendu. Le
+  thème/la chaîne d'origine du morceau sont retrouvés via une requête directe
+  sur `tracks_used` (le match ne porte pas cette info lui-même, volontairement
+  — `getUsedTracksForChannel` reste `DISTINCT` sur plusieurs thèmes).
+
+**Non fait** : ces 3 nouveaux scripts ne sont invoqués nulle part encore (ni
+`package.json`, ni workflow GitHub Actions) — cohérent avec `generate-short.ts`
+qui ne l'était pas non plus avant cette session ; le branchement dans une
+automatisation revient à la tâche suivante (famille B, puis automatisation).
+
+**Validation** : `pnpm build/test/lint/typecheck` verts pour
+`@blindtest/pipeline` — 111 tests (103 + 8 nouveaux tests de metadata), 0
+régression.

@@ -1,7 +1,10 @@
 import type { ChannelTheme } from "@blindtest/core";
 import { describe, expect, it } from "vitest";
 import {
+  buildAnniversaireSortieMetadata,
+  buildPepiteMeconnueMetadata,
   buildShortMetadata,
+  buildTopArtisteMetadata,
   buildYoutubeMetadata,
   type YoutubeMetadataTrack,
 } from "./youtube-metadata.js";
@@ -67,5 +70,71 @@ describe("buildShortMetadata", () => {
 
     expect(metadata.description).toContain("#shorts");
     expect(metadata.description).toContain("#annees80");
+  });
+});
+
+describe("buildPepiteMeconnueMetadata", () => {
+  it("frames the title around the theme, not a countdown challenge", () => {
+    const metadata = buildPepiteMeconnueMetadata(theme, tracks);
+
+    expect(metadata.title).toBe("Tu connais ces pépites Années 80 ? 🎧 #Shorts");
+  });
+
+  it("lists every track in the description", () => {
+    const metadata = buildPepiteMeconnueMetadata(theme, tracks);
+
+    expect(metadata.description).toContain("Dernière danse — Indila");
+    expect(metadata.description).toContain("Papaoutai — Stromae");
+  });
+
+  it("includes the theme hashtag and a pepite hashtag", () => {
+    const metadata = buildPepiteMeconnueMetadata(theme, tracks);
+
+    expect(metadata.description).toContain("#pepite");
+    expect(metadata.description).toContain("#annees80");
+  });
+});
+
+describe("buildTopArtisteMetadata", () => {
+  it("includes the actual track count, not a fixed 'Top N' claim", () => {
+    const metadata = buildTopArtisteMetadata("Daft Punk", tracks);
+
+    expect(metadata.title).toBe("2 pépites de Daft Punk 🎧 #Shorts");
+  });
+
+  it("builds a hashtag from the artist name without punctuation", () => {
+    const metadata = buildTopArtisteMetadata("Jean-Jacques Goldman", tracks);
+
+    expect(metadata.description).toContain("#JeanJacquesGoldman");
+  });
+
+  it("lists every track in the description", () => {
+    const metadata = buildTopArtisteMetadata("Daft Punk", tracks);
+
+    expect(metadata.description).toContain("Dernière danse — Indila");
+  });
+});
+
+describe("buildAnniversaireSortieMetadata", () => {
+  it("includes the years-ago count and the track title in the title", () => {
+    const metadata = buildAnniversaireSortieMetadata({
+      title: "Papaoutai",
+      artist: "Stromae",
+      yearsAgo: 12,
+    });
+
+    expect(metadata.title).toBe('"Papaoutai" est sorti il y a 12 ans 🎂🎧 #Shorts');
+  });
+
+  it("mentions the artist and track in the description", () => {
+    const metadata = buildAnniversaireSortieMetadata({
+      title: "Papaoutai",
+      artist: "Stromae",
+      yearsAgo: 12,
+    });
+
+    expect(metadata.description).toContain("Stromae");
+    expect(metadata.description).toContain("Papaoutai");
+    expect(metadata.description).toContain("12 ans");
   });
 });

@@ -4,25 +4,15 @@ import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
+import { selectPepiteMeconnueTracks } from "./shorts/pepite-meconnue.js";
 import { publishShort } from "./shorts/publish-short.js";
-import { selectDevineLaChansonTracks } from "./shorts/devine-la-chanson.js";
-import { buildShortMetadata } from "./youtube-metadata.js";
+import { buildPepiteMeconnueMetadata } from "./youtube-metadata.js";
 
-// One-off / cron-able: cuts a vertical YouTube Short from an already-
-// published long episode's *opening* tracks — cheap to prototype since
-// buildOpeningHook (build-episode-tracks.ts) already reordered that episode
-// so its first few tracks are its strongest, most recognizable draws; a
-// Short just needs to borrow that ordering; it doesn't pick anything new.
-// Track selection lives in shorts/devine-la-chanson.ts (Family A, type 1) —
-// this script is now just its CLI wrapper, same shape as the 3 other
-// Family A CLI scripts (generate-short-pepite-meconnue.ts, -top-artiste.ts,
-// -anniversaire.ts).
-// Recalibrated from 5 (session of 2026-09-27, never checked against real
-// retention data) to 2 — 2026 Shorts research says completion rate, not
-// duration, drives distribution, and the sweet spot is 15-30s (secondary
-// peak 35-58s, reserved for narrative-dense niches this quiz format isn't).
-// 2 tracks ≈ 38s including the outro, solidly in that range; 5 tracks was
-// ~94s, well past it. See docs/CLOUD_SESSION_LOG.md for the full research.
+// Family A, type 2: same already-published episode as generate-short.ts,
+// but its LEAST popular tracks instead of the opening hook — "hidden gems
+// you probably missed" instead of "guess the obvious ones". See
+// shorts/pepite-meconnue.ts for the selection logic and its cost note (one
+// Spotify call per track in the episode, not just the ones used here).
 const DEFAULT_SHORT_TRACK_COUNT = 2;
 
 const args = process.argv.slice(2);
@@ -40,8 +30,8 @@ if (
   shortTrackCount < 1
 ) {
   console.error(
-    "Usage: generate-short <channel-config.json> <long-video-row-id> [--track-count=5] [--upload]\n" +
-      "Cuts a vertical Short from an already-published long episode's opening tracks.\n" +
+    "Usage: generate-short-pepite-meconnue <channel-config.json> <long-video-row-id> [--track-count=2] [--upload]\n" +
+      "Cuts a vertical Short from an already-published long episode's LEAST popular tracks.\n" +
       "Renders locally by default; pass --upload to also publish it to YouTube (format='short').",
   );
   process.exit(1);
@@ -61,17 +51,13 @@ if (!longVideoRow) {
   throw new Error(`No video row found with id ${longVideoRowId}`);
 }
 
-const fullEpisodeTrackCountRow = db
-  .prepare("SELECT COUNT(*) AS count FROM tracks_used WHERE video_id = ?")
-  .get(longVideoRowId) as { count: number };
-
 const channel = await loadChannelConfig(channelConfigPath);
 const theme = findThemeOrThrow(channel, longVideoRow.theme_id);
 
 const { spotify, itunes, youtube } = createClientsFromEnv();
 
-console.log(`Ré-hydratation de ${shortTrackCount} morceau(x) pour le short...`);
-const tracks = await selectDevineLaChansonTracks(
+console.log(`Recherche des ${shortTrackCount} morceau(x) les moins populaires de l'épisode...`);
+const tracks = await selectPepiteMeconnueTracks(
   db,
   spotify,
   itunes,
@@ -84,20 +70,9 @@ if (tracks.length === 0) {
 
 const runId = Date.now();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
-const outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-short.mp4`;
+const outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-pepite-meconnue.mp4`;
 
-const episodeNumberRow = db
-  .prepare(
-    "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
-  )
-  .get(longVideoRow.theme_id, longVideoRowId) as { count: number };
-
-const metadata = buildShortMetadata(
-  theme,
-  episodeNumberRow.count,
-  tracks.length,
-  fullEpisodeTrackCountRow.count,
-);
+const metadata = buildPepiteMeconnueMetadata(theme, tracks);
 
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
@@ -105,7 +80,6 @@ await publishShort({
   serveUrl,
   themeLabel: theme.label,
   tracks,
-  fullEpisodeTrackCount: fullEpisodeTrackCountRow.count,
   outputPath,
   channelId: longVideoRow.channel_id,
   themeId: longVideoRow.theme_id,
