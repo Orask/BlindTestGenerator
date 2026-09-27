@@ -834,3 +834,54 @@ automatisation revient à la tâche suivante (famille B, puis automatisation).
 **Validation** : `pnpm build/test/lint/typecheck` verts pour
 `@blindtest/pipeline` — 111 tests (103 + 8 nouveaux tests de metadata), 0
 régression.
+
+## [2026-09-27] Famille B — implémentation des types "nouveauté par genre" (5 et 6)
+
+Suite de la recherche déjà loguée (browse/new-releases supprimé, tag:new écarté) :
+implémentation d'**un seul module générique** `apps/pipeline/src/shorts/nouveaute-
+genre.ts`, paramétré par une requête de genre (ex. "rap francais", "house",
+"variete francaise") — pas un fichier par genre, puisque la logique de sélection
+est identique et que seule la requête/l'étiquette change. Une seule exécution CLI
+par genre couvre donc à la fois le type 5 ("nouveauté rap de la semaine") et le
+type 6 ("même concept par genre") : `generate-short-nouveaute.ts <config> "rap
+francais"`, `generate-short-nouveaute.ts <config> "house"`, etc.
+
+**Logique** : `searchArtists(genreQuery)` (déjà utilisé par `discover-artists.ts`)
+pour obtenir des artistes du genre, puis `searchTracksByArtist` sur chacun (déjà le
+cœur du pipeline principal) pour leurs morceaux, filtrés par `release_date` réelle
+(pas plus de 60 jours, sinon "nouveauté" perdrait tout son sens), triés du plus
+récent au plus ancien. Zéro nouvel endpoint, uniquement de la composition de deux
+appels déjà en production.
+
+**Contrainte explicite du cahier des charges respectée à la lettre** : ces Shorts
+ne doivent JAMAIS provenir de morceaux déjà utilisés (`tracks_used`, via
+`getUsedTrackIds` déjà existant) NI des `curatedTracks` configurés par thème (le
+CLI construit un `Set` de clés "titre|artiste" normalisées à partir de
+`channel.themes[].curatedTracks` et le passe en exclusion) — testé explicitement
+(3 tests dédiés : tracks_used, curatedTracks, fraîcheur du `release_date`).
+
+**`buildNouveauteMetadata(genreLabel, tracks)`** ajouté à `youtube-metadata.ts` —
+même famille de template que les autres types famille B/pépite méconnue, CTA
+générique (pas d'épisode à pointer).
+
+**`generate-short-nouveaute.ts`** — nouveau script CLI, réutilise `publishShort`
+comme les 4 scripts famille A. Comme pour top-artiste/anniversaire, pas de vidéo
+source : thème/visibilité pris sur le premier thème du channel config / la
+visibilité par défaut de la chaîne (raison identique : rien d'épisode-spécifique à
+hériter).
+
+**Tests** : 6 nouveaux tests (`nouveaute-genre.test.ts`) + 3 nouveaux tests de
+metadata. `parseReleaseDate` exporté depuis `anniversaire-sortie.ts` et réutilisé
+ici plutôt que redupliqué — ce n'est pas un helper d'une ligne comme `normalize()`,
+une divergence de comportement entre les deux copies aurait un vrai coût de
+correction (dates d'anniversaire vs fraîcheur de nouveauté).
+
+**Validation** : `pnpm build/test/lint/typecheck` verts pour `@blindtest/pipeline`
+— 120 tests (111 + 9 nouveaux), 0 régression.
+
+**Point ouvert, à surveiller** (déjà noté dans l'entrée de recherche famille B) :
+cette solution dépend toujours du flow Client Credentials, que Spotify pourrait
+restreindre davantage selon le changelog de février 2026 — aucune action requise
+maintenant, mais si `searchArtists`/`searchTracksByArtist` devenaient
+indisponibles, ce ne serait pas seulement la famille B qui casserait, mais tout le
+pipeline existant.

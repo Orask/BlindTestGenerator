@@ -20,7 +20,9 @@ export interface AnniversaryMatch {
 // Spotify's release_date precision varies by track (release_date_precision:
 // "year" | "month" | "day") — a month/day-only date is parsed as if it fell
 // on the 1st, which is the best available guess, not a promise of accuracy.
-function parseReleaseDate(raw: string): Date | null {
+// Exported: shared with shorts/nouveaute-genre.ts (Family B), which needs
+// the same parsing to judge how recent a candidate release actually is.
+export function parseReleaseDate(raw: string): Date | null {
   const [yearRaw, monthRaw, dayRaw] = raw.split("-");
   const year = Number(yearRaw);
   if (!yearRaw || Number.isNaN(year)) {

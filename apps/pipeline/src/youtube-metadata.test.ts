@@ -2,6 +2,7 @@ import type { ChannelTheme } from "@blindtest/core";
 import { describe, expect, it } from "vitest";
 import {
   buildAnniversaireSortieMetadata,
+  buildNouveauteMetadata,
   buildPepiteMeconnueMetadata,
   buildShortMetadata,
   buildTopArtisteMetadata,
@@ -136,5 +137,26 @@ describe("buildAnniversaireSortieMetadata", () => {
     expect(metadata.description).toContain("Stromae");
     expect(metadata.description).toContain("Papaoutai");
     expect(metadata.description).toContain("12 ans");
+  });
+});
+
+describe("buildNouveauteMetadata", () => {
+  it("includes the genre label in the title", () => {
+    const metadata = buildNouveauteMetadata("Rap FR", tracks);
+
+    expect(metadata.title).toBe("Nouveautés Rap FR de la semaine 🎧 #Shorts");
+  });
+
+  it("builds a hashtag from the genre label without spaces", () => {
+    const metadata = buildNouveauteMetadata("Rap FR", tracks);
+
+    expect(metadata.description).toContain("#RapFR");
+  });
+
+  it("lists every track in the description", () => {
+    const metadata = buildNouveauteMetadata("Rap FR", tracks);
+
+    expect(metadata.description).toContain("Dernière danse — Indila");
+    expect(metadata.description).toContain("Papaoutai — Stromae");
   });
 });

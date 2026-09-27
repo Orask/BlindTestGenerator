@@ -159,3 +159,32 @@ export function buildAnniversaireSortieMetadata(track: AnniversaryMetadataTrack)
 
   return { title, description, tags };
 }
+
+// Family B, types 5/6 (nouveaute-genre.ts): pure traffic generation, no
+// episode to point back to — the CTA is channel-level, same as
+// buildAnniversaireSortieMetadata. `genreLabel` is a human-readable display
+// name (e.g. "Rap FR", "House") distinct from the raw Spotify search query
+// used to find the tracks (e.g. "rap francais").
+export function buildNouveauteMetadata(
+  genreLabel: string,
+  tracks: readonly YoutubeMetadataTrack[],
+): YoutubeMetadata {
+  const genreHashtag = genreLabel.replace(/[^a-zA-Z0-9]/g, "");
+  const trackList = tracks.map((track) => `${track.title} — ${track.artist}`).join("\n");
+
+  const title = `Nouveautés ${genreLabel} de la semaine 🎧 #Shorts`;
+
+  const description = [
+    `Les sorties ${genreLabel} du moment à connaître avant tout le monde !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #nouveautes #${genreHashtag}`,
+    "",
+    trackList,
+  ].join("\n");
+
+  const tags = ["nouveautes", genreLabel, "shorts"];
+
+  return { title, description, tags };
+}
