@@ -1830,3 +1830,78 @@ genre.ts` la session précédente.
 (`@blindtest/deezer` : 8 tests ; `@blindtest/pipeline` : 131 tests, 0 régression) ;
 `pnpm format:check` vert (seul `.claude/settings.local.json`, fichier local
 gitignored non lié à cette session, reste signalé).
+
+## [2026-09-27] Étape 2 — curatedTracks massivement grossis pour tous les thèmes
+
+**Écart assumé par rapport à la demande initiale** : le plan prévoyait d'utiliser
+Deezer pour PRIORISER/VÉRIFIER les ajouts par notoriété réelle — impossible depuis
+ce sandbox puisque `api.deezer.com` est bloqué (voir plus haut), exactement comme
+Spotify. Impossible non plus de vérifier l'existence des morceaux sur Spotify
+(`verify-curated-songs.ts`/`collect-curated-tracks.ts`, tous deux déjà existants
+dans ce projet mais nécessitant le réseau). **Concrètement, aucun appel API n'a pu
+valider un seul des ajouts ci-dessous depuis ce sandbox.**
+
+**Méthode retenue à la place** : curation manuelle par connaissance directe de
+titres réellement très connus/iconiques (même principe que la toute première
+vague de `curatedTracks` de ce projet, committée avant l'existence d'un outil de
+vérification automatique — voir tâche 2 de la toute première session : "Revérifier
+~10 morceaux non confirmés"). **Priorité donnée à l'exactitude plutôt qu'au volume**
+— plutôt que de forcer un doublement exact avec des titres de confiance
+incertaine, chaque thème a reçu un nombre d'ajouts proportionnel à ma confiance
+réelle sur l'exactitude (titre + attribution d'artiste) :
+
+| Thème            | Avant   | Ajoutés  | Après   | Croissance |
+| ---------------- | ------- | -------- | ------- | ---------- |
+| annees-80        | 25      | +13      | 38      | +52%       |
+| annees-90        | 28      | +8       | 36      | +29%       |
+| annees-2000      | 36      | +6       | 42      | +17%       |
+| rap-fr           | 20      | +12      | 32      | +60%       |
+| variete-actuelle | 37      | +10      | 47      | +27%       |
+| classiques-fr    | 44      | +19      | 63      | +43%       |
+| generiques       | 63      | +38      | 101     | +60%       |
+| **Total**        | **253** | **+106** | **359** | **+42%**   |
+
+**`generiques` a reçu la plus grosse expansion, délibérément** — c'est le thème où
+ma confiance est la plus haute (thèmes de films/séries/jeux/anime mondialement
+connus, moins de risque d'erreur d'attribution que sur des titres de chanson
+française précis par décennie) ET c'est le thème dont la marge de manœuvre
+`curatedTracks` vs cooldown était identifiée comme la plus tendue la session
+précédente (63 morceaux à peine suffisants pour 60/semaine avec un cooldown de 14
+jours) — **63 → 101 change concrètement ce calcul** : voir l'entrée "Cas Claude
+Lombard" plus haut dans ce log, cette expansion répond directement au risque
+`discoveryQuery` identifié là-bas SANS qu'il ait fallu trancher entre les 3 pistes
+proposées (affiner la requête / grossir curatedTracks / désactiver la découverte)
+— le simple fait de grossir généreusement la liste régle le problème de marge.
+
+**Aucun doublon exact introduit** — vérifié par le test déjà existant
+`load-channel-config.test.ts` ("has no duplicate curated (title, artist) pairs
+within a single theme"), qui passe. Formatage JSON strictement compact préservé
+(mêmes conventions Prettier que le fichier existant — un travail supplémentaire a
+été nécessaire ici : un premier essai avec `json.dump(..., indent=2)` en Python
+avait fait exploser chaque paire `{title, artist}` sur plusieurs lignes après
+passage de Prettier, à cause de la règle de Prettier qui préserve un objet
+multi-ligne s'il détecte un retour à la ligne juste après l'accolade ouvrante dans
+la source — corrigé en écrivant du JSON compact en Python avant de laisser
+Prettier reformater, ce qui reproduit exactement le style ligne-par-objet déjà en
+place).
+
+**À faire avant de faire confiance à ces 106 ajouts en production, comme demandé
+implicitement par la contrainte réseau de ce sandbox** :
+
+1. Lancer `verify-curated-songs.ts` (déjà existant dans ce projet) en local pour
+   confirmer que chaque paire (titre, artiste) trouve bien un morceau exact sur
+   Spotify — une paire imprécise ou une erreur de ma part sera silencieusement
+   ignorée par `collectCuratedTracks` (déjà testé : "skips a pair with no exact
+   match instead of failing the whole batch"), donc le risque n'est PAS une
+   corruption de données, seulement un ajout qui ne servira jamais.
+2. Si l'utilisateur souhaite vraiment atteindre un doublement complet pour chaque
+   thème (annees-90/2000/variete-actuelle/classiques-fr n'ont pas atteint 100% de
+   croissance ici), le moyen le plus fiable est d'automatiser la démarche avec un
+   vrai accès réseau : générer un plus grand vivier de candidats (recherche
+   `searchArtists`/`searchTracksByArtist` déjà existante sur les `seedArtists` du
+   thème) puis filtrer par `rank` Deezer au-dessus d'un seuil — évite complètement
+   le risque d'erreur d'attribution manuelle à ce volume.
+
+**Validation** : `pnpm --filter @blindtest/pipeline test -- load-channel-config`
+vert (6 tests, y compris le check anti-doublon et la couverture des 7 jours) ;
+`pnpm build/test/lint/typecheck` revérifiés verts pour tout le workspace.
