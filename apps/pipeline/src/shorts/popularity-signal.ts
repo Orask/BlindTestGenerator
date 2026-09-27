@@ -23,6 +23,11 @@ function sleep(ms: number): Promise<void> {
  * the explicit goal is "known enough to keep viewers watching", not an
  * exact ranking), so a track Deezer doesn't recognize is safest to assume
  * is not a widely-known one, rather than guessing it's average.
+ *
+ * Callers pass their own `lookupDelayMs` straight through as `delayMs` —
+ * the same override each selector already accepts for iTunes pacing (see
+ * hydrate-track.ts): `undefined` falls back to the default above in
+ * production, tests pass `0` to run instantly.
  */
 export async function popularitySignal(
   deezer: DeezerClient,

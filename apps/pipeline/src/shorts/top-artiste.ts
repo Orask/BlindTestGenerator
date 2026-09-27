@@ -46,7 +46,7 @@ export async function selectTopArtisteTracks(
 
   const scored: { track: UsedTrack; score: number }[] = [];
   for (const track of matching) {
-    const score = await popularitySignal(deezer, track.title, track.artist);
+    const score = await popularitySignal(deezer, track.title, track.artist, lookupDelayMs);
     scored.push({ track, score });
   }
   scored.sort((a, b) => b.score - a.score);

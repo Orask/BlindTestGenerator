@@ -43,7 +43,7 @@ export async function selectPepiteMeconnueTracks(
 
   const scored: { row: (typeof trackRows)[number]; score: number }[] = [];
   for (const row of trackRows) {
-    const score = await popularitySignal(deezer, row.title, row.artist);
+    const score = await popularitySignal(deezer, row.title, row.artist, lookupDelayMs);
     scored.push({ row, score });
   }
   scored.sort((a, b) => a.score - b.score);
