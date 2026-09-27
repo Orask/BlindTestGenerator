@@ -1074,3 +1074,103 @@ Tout le code de cette session est committé et poussé sur `main-hpf4qz` au fur 
 mesure, avec `pnpm build/test/lint/typecheck` verts à chaque étape (129 tests
 `@blindtest/pipeline`, 38 tests `@blindtest/db`, 0 régression sur les autres
 packages).
+
+---
+
+# Nouvelle session cloud — 2026-09-27 (suite 2)
+
+Reprise après un test local (vraies credentials, hors sandbox) qui a trouvé un bug
+réel déjà corrigé et poussé par l'utilisateur (commit `54f5208` : téléchargement des
+pochettes avant le bundle Remotion dans les 6 scripts de Shorts — pull effectué,
+`pnpm build/test` reverifiés verts, 129 tests). Deux découvertes non committées à
+creuser en priorité avant toute nouvelle feature, puis recherche business
+multi-plateformes.
+
+## [2026-09-27] `popularity` toujours `undefined` sur `/v1/tracks/{id}` — CAUSE IDENTIFIÉE : champ supprimé par Spotify en février 2026, pas une restriction de tier
+
+**Recherche demandée avant tout code** — pas de credentials nécessaires, uniquement
+documentation/changelog. Confirmé par plusieurs sources indépendantes qui citent
+directement le changelog officiel Spotify for Developers (accès direct à
+`developer.spotify.com` bloqué par le proxy réseau de ce sandbox, comme
+`api.spotify.com` — mêmes recherches indirectes que pour la découverte
+browse/new-releases de la session précédente) :
+
+- **Cause exacte** : le changelog officiel "Web API Changelog — February 2026"
+  liste explicitement `[REMOVED] popularity — The popularity of the album/track`
+  pour les objets `Track` ET `Album` (et `followers` pour `Artist`/`User`). Ce n'est
+  **pas une restriction liée au tier de l'app** (Development Mode vs Extended Quota
+  Mode) — c'est un champ supprimé de la réponse API pour **tout le monde**, quel que
+  soit le flow d'auth ou le statut de l'app. Confirmé par 3 sources indépendantes
+  citant le même changelog : issue GitHub `ramsayleung/rspotify#550`, issue GitHub
+  `NovaLux12/spotify-mcp-server#639` (liste précise : "popularity (album and
+  track)"), et le fil communautaire officiel Spotify ("February 2026 Spotify for
+  Developers update thread").
+- **`releaseDate` (`album.release_date`) N'EST PAS dans la liste des champs
+  supprimés** — vérifié explicitement par une recherche dédiée sur la liste
+  complète des champs retirés (`available_markets`, `external_ids` — réintroduit en
+  mars 2026 —, `linked_from`, `popularity` pour Track ; `album_group`,
+  `available_markets`, `external_ids`, `label`, `popularity` pour Album). **Donc
+  `anniversaire-sortie.ts` et `nouveaute-genre.ts`, qui reposent sur `releaseDate`
+  et jamais sur `popularity`, ne sont probablement PAS affectés par ce problème
+  précis** — à reconfirmer en live dès que le rate-limit Spotify sera levé (~4h14
+  UTC selon l'utilisateur), mais rien dans les changelogs trouvés n'indique que
+  `release_date` ait bougé.
+- **Pourquoi aucune erreur, juste `undefined` silencieux** : `RawSpotifyTrack` dans
+  `packages/integrations/spotify/src/client.ts` déclare `popularity: number` côté
+  TypeScript (ajouté la session précédente), mais TypeScript ne valide rien au
+  runtime — le JSON réel renvoyé par Spotify n'a simplement plus cette clé, donc
+  `track.popularity` vaut `undefined` en JS, et le mapping `popularity:
+track.popularity` propage cet `undefined` sans qu'aucune exception ne se déclenche
+  nulle part dans la chaîne. Un bug de type "silent-wrong-answer", pas un crash — le
+  même terme est utilisé par l'audit cité dans `NovaLux12/spotify-mcp-server#639`
+  pour qualifier exactement ce genre de problème.
+- **Signal déjà noté comme risque ouvert la session précédente, maintenant
+  matérialisé** : l'entrée "Conception abstraction... famille B" de cette même
+  session notait déjà "le changelog Spotify de février 2026 indique aussi un
+  éloignement du flow Client Credentials pour les endpoints de métadonnées... à
+  surveiller". Une source (commentaire épinglé sur `ramsayleung/rspotify#550`)
+  confirme la citation exacte : Spotify a déclaré vouloir "mov[e] away from the
+  Client Credentials flow for metadata endpoints" — cohérent avec la suppression de
+  `popularity` étant un premier pas concret dans cette direction, pas juste un
+  changement de schéma isolé.
+
+**Impact réel sur le code de cette session (non corrigé ici, cause seulement
+documentée comme demandé)** :
+
+- `shorts/pepite-meconnue.ts` : trie par `popularity` croissante — avec
+  `popularity` toujours `undefined`, le comparateur `(a, b) => a.popularity -
+b.popularity` retourne `NaN` pour chaque paire, ce que `Array.prototype.sort`
+  traite comme "pas de changement d'ordre" dans V8/Node — le tri est un no-op
+  silencieux, le Short retombe sur l'ordre `tracks_used` (par `rowid`), pas sur les
+  morceaux réellement les moins populaires.
+- `shorts/top-artiste.ts` : même mécanisme, tri par popularité décroissante devenu
+  no-op.
+- Les tests unitaires de ces deux fichiers (écrits cette session) ne détectent PAS
+  ce problème : ils passent des fixtures avec de vraies valeurs de `popularity`
+  (`50`, `90`, etc.), donc le tri fonctionne correctement dans les tests — c'est
+  uniquement en conditions réelles (vrai JSON Spotify, sans le champ) que le
+  problème apparaît. Écart classique fixture-vs-réalité, comme le
+  `toEqual`/`undefined` de la session précédente sur `client.test.ts`, mais cette
+  fois la fixture elle-même était fausse (supposait un champ qui n'existe plus),
+  pas le test.
+
+**Pas de solution codée dans cette entrée, comme demandé.** Pistes possibles pour
+la prochaine étape (à valider une fois le rate-limit levé et `release_date` reconfirmé
+intact en live) :
+
+1. Abandonner le tri par `popularity` réelle pour ces deux types, revenir à une
+   heuristique disponible sans ce champ (ex. `popularityRank` du moment de la
+   recherche originale, déjà enregistré nulle part dans `tracks_used` — demanderait
+   un changement de schéma pour être rejouable après coup).
+2. Chercher si `popularity` reste accessible via un autre endpoint non listé comme
+   affecté (ex. `/v1/search` renvoie-t-il encore `popularity` sur les résultats
+   `type=track` ? Pas vérifié — aucune recherche n'a listé `/v1/search` parmi les
+   endpoints affectés par la suppression de champ, seulement les objets Track/Album/
+   Artist eux-mêmes, ce qui suggère que la suppression s'applique partout où ces
+   objets apparaissent, y compris dans les résultats de recherche — à vérifier en
+   direct, pas supposé).
+3. Accepter que "pépite méconnue"/"top artiste" ne puissent plus honnêtement
+   prétendre trier par popularité réelle, et ajuster leur framing marketing en
+   conséquence (ex. "pépite méconnue" devient "un morceau plus confidentiel de
+   l'épisode" sans ordre de tri garanti, "top artiste" redevient un tirage parmi
+   l'historique sans classement).
