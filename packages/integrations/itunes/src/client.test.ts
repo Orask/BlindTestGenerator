@@ -81,12 +81,52 @@ describe("createItunesClient.findPreviewByTitleAndArtist", () => {
     expect(result).toBeNull();
   });
 
-  it("throws on an HTTP-level failure", async () => {
-    const client = createItunesClient(fakeFetch({}, false, 500));
+  it("throws once retries are exhausted on a persistent HTTP-level failure", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = fakeFetch({}, false, 500);
+    const client = createItunesClient(fetchImpl);
 
-    await expect(client.findPreviewByTitleAndArtist("Title", "Artist")).rejects.toThrow(
-      "iTunes search failed",
-    );
+    const resultPromise = client.findPreviewByTitleAndArtist("Title", "Artist");
+    const expectation = expect(resultPromise).rejects.toThrow("iTunes search failed");
+    await vi.runAllTimersAsync();
+    await expectation;
+
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
+    vi.useRealTimers();
+  });
+
+  it("retries after a non-2xx status other than 403/429 too — iTunes never legitimately signals no-match this way", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 404,
+        text: () => Promise.resolve("<html>your request produced an error</html>"),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            resultCount: 1,
+            results: [
+              {
+                trackName: "Dernière danse",
+                artistName: "Indila",
+                previewUrl: "https://example.com/preview.m4a",
+              },
+            ],
+          }),
+      }) as unknown as typeof fetch;
+    const client = createItunesClient(fetchImpl);
+
+    const resultPromise = client.findPreviewByTitleAndArtist("Dernière danse", "Indila");
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({ previewUrl: "https://example.com/preview.m4a" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
   });
 
   it("retries after a 403 (iTunes' undocumented rate limiting) and succeeds", async () => {

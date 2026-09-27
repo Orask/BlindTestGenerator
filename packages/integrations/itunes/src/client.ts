@@ -15,14 +15,18 @@ interface ItunesSearchResponse {
 
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
 
-// iTunes Search returns an intermittent, apparently random 403 (observed
-// live: the exact same query flips between 200 and 403 across repeated
-// calls seconds apart, roughly half the time — not correlated with query
-// content or our own request volume, likely a degraded edge node in
-// Apple's pool). A short, capped backoff with several attempts is cheap
-// and brings the odds of exhausting retries on any one lookup down to a
-// fraction of a percent.
-const RATE_LIMIT_STATUSES = new Set([403, 429]);
+// iTunes Search returns an intermittent, apparently random non-2xx status
+// (observed live: the exact same query flips between 200 and 403 across
+// repeated calls seconds apart, roughly half the time; later also a bare
+// 404 with an HTML "your request produced an error" body — clearly Apple's
+// own backend having a bad moment, not a real "not found", since a genuine
+// no-results search always comes back 200 with an empty results array).
+// Since iTunes never legitimately signals "no match" via a non-ok status,
+// retrying every non-ok response uniformly — rather than allowlisting each
+// specific code we happen to have observed so far — is both simpler and
+// covers whatever anomalous status shows up next. A short, capped backoff
+// with several attempts is cheap and brings the odds of exhausting retries
+// on any one lookup down to a fraction of a percent.
 const MAX_ATTEMPTS = 8;
 const BASE_RETRY_DELAY_MS = 500;
 const MAX_RETRY_DELAY_MS = 4000;
@@ -79,7 +83,7 @@ export function createItunesClient(fetchImpl: typeof fetch = fetch): ItunesClien
           return { previewUrl: match.previewUrl };
         }
 
-        if (RATE_LIMIT_STATUSES.has(response.status) && attempt < MAX_ATTEMPTS) {
+        if (attempt < MAX_ATTEMPTS) {
           await sleep(Math.min(BASE_RETRY_DELAY_MS * attempt, MAX_RETRY_DELAY_MS));
           continue;
         }

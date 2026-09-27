@@ -38,6 +38,26 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// itunes.findPreviewByTitleAndArtist already retries transient errors
+// internally (see @blindtest/itunes), but a genuinely persistent failure on
+// one track (confirmed live: a run crashed entirely over a single track's
+// lookup) shouldn't be able to take down the other ~59 — treated the same
+// as "no preview found", so the caller just moves on to the next candidate.
+async function safeFindPreview(
+  itunes: ItunesClient,
+  title: string,
+  artist: string,
+): Promise<Awaited<ReturnType<ItunesClient["findPreviewByTitleAndArtist"]>>> {
+  try {
+    return await itunes.findPreviewByTitleAndArtist(title, artist);
+  } catch (error) {
+    console.warn(
+      `Résolution iTunes échouée pour "${title}" — ${artist}, morceau ignoré : ${(error as Error).message}`,
+    );
+    return null;
+  }
+}
+
 /**
  * Applies anti-repeat + de-duplication, audio resolution, and a per-artist
  * cap in a single pass, since a track only "counts" once we know a preview
@@ -86,7 +106,7 @@ export async function buildEpisodeTracks(
     }
     seenIds.add(track.id);
 
-    const preview = await itunes.findPreviewByTitleAndArtist(track.title, track.artist);
+    const preview = await safeFindPreview(itunes, track.title, track.artist);
     await sleep(lookupDelayMs);
     if (!preview) {
       return;
@@ -155,7 +175,7 @@ export async function buildEpisodeTracks(
       }
 
       seenIds.add(track.id);
-      const preview = await itunes.findPreviewByTitleAndArtist(track.title, track.artist);
+      const preview = await safeFindPreview(itunes, track.title, track.artist);
       await sleep(lookupDelayMs);
       if (!preview) {
         continue;

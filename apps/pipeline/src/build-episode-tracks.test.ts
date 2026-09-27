@@ -76,6 +76,26 @@ describe("buildEpisodeTracks", () => {
     expect(result).toEqual([{ ...track("2"), audioUrl: "https://preview.example.com/2.m4a" }]);
   });
 
+  it("treats a persistent iTunes lookup failure like an unavailable preview, not a fatal error", async () => {
+    const itunes: ItunesClient = {
+      findPreviewByTitleAndArtist: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("iTunes search failed: 404 <html>...</html>"))
+        .mockResolvedValueOnce({ previewUrl: "https://preview.example.com/2.m4a" }),
+    };
+
+    const result = await buildEpisodeTracks(
+      [track("1"), track("2")],
+      new Set(),
+      new Set(),
+      itunes,
+      1,
+      0,
+    );
+
+    expect(result).toEqual([{ ...track("2"), audioUrl: "https://preview.example.com/2.m4a" }]);
+  });
+
   it("throws InsufficientTracksError when not enough tracks resolve an audio preview", async () => {
     const itunes: ItunesClient = { findPreviewByTitleAndArtist: vi.fn().mockResolvedValue(null) };
 
