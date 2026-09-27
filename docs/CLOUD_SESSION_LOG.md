@@ -1523,3 +1523,72 @@ réaliste pour cet objectif est donc **~90% automatisable via API officielle**
 hebdomadaire pour les strikes/restrictions** plutôt qu'une tentative de tout
 automatiser — cohérent avec la contrainte explicite de l'utilisateur d'éviter le
 scraping.
+
+## [2026-09-27] Ce qui est réutilisable de ce projet pour une future extension multi-plateforme/multi-chaîne (analyse seulement)
+
+**Analysé** : `packages/integrations/spotify/src/rotating-client.ts`, le pattern de
+cron/scheduling des deux workflows GitHub Actions existants, et
+`packages/core/src/channel-config.ts`.
+
+### Directement réutilisable en l'état (le pattern, pas le code)
+
+- **`packages/integrations/<service>/` en tant que structure** — `types.ts` (une
+  interface `XClient` + ses types de retour) + `client.ts` (l'implémentation réelle
+  contre l'API HTTP) + `index.ts` (exports). Déjà appliqué 4 fois dans ce projet
+  (spotify, itunes, youtube, anthropic) — le patron exact à suivre pour un futur
+  `packages/integrations/instagram/`, `.../tiktok/`, `.../facebook/`. Rien à
+  généraliser : c'est déjà une convention, pas un module partagé à extraire.
+- **Le pattern des workflows GitHub Actions** (`daily-pipeline.yml`/
+  `daily-shorts.yml` de cette session) — `schedule` + `workflow_dispatch` avec
+  input de contrôle (`upload`), secrets par credential, persistance d'état
+  (commit de la DB) après le run — **entièrement générique**, ne dépend d'aucune
+  logique YouTube/Spotify. Un futur `sync-stats-daily.yml` (lire les stats de
+  toutes les plateformes) ou `publish-instagram-daily.yml` suivrait exactement la
+  même forme.
+- **`create-clients.ts`** — factory qui construit tous les clients typés depuis les
+  variables d'environnement, avec fallback "silencieux" quand un service optionnel
+  n'est pas configuré (`ANTHROPIC_API_KEY` absent ⇒ `anthropic: undefined`, jamais
+  une erreur). Le même principe s'applique directement à une chaîne qui n'a pas
+  encore de compte TikTok configuré, par exemple.
+
+### Réutilisable dans son PRINCIPE, mais pas le code tel quel
+
+- **`rotating-client.ts`** — le concept ("plusieurs clients credentialés
+  indépendants, bascule sticky quand l'un est épuisé, jamais de round-robin qui
+  retape le même quota") est directement pertinent au-delà de Spotify. **Connexion
+  concrète trouvée cette session** : le problème de quota YouTube identifié dans la
+  recherche business (10 000 unités/jour PAR PROJET Google Cloud, pas par chaîne —
+  20 chaînes sous un seul projet dépasseraient largement ce quota) pourrait se
+  résoudre avec exactement ce même principe : plusieurs projets Google Cloud
+  (`YOUTUBE_CLIENT_ID_2`/`_3`... comme `SPOTIFY_CLIENT_ID_2`/`_3` déjà fait), et un
+  `createRotatingYoutubeClient` qui route vers un projet non épuisé. **Différence
+  importante à noter** : le rate-limit Spotify est transitoire (quelques dizaines
+  de secondes, la bascule sticky a du sens dans une même session), alors que le
+  quota YouTube se réinitialise une fois par jour — la bascule serait donc plus
+  une **assignation statique par chaîne** (chaîne N → toujours projet N) qu'un
+  vrai failover dynamique intra-session. Le code actuel n'est pas directement
+  copiable, mais l'idée générale (pool de credentials indépendants + logique de
+  sélection) transfère bien.
+- **`channel-config.ts` (le concept de "config déclarative par chaîne")** —
+  l'idée d'un fichier JSON décrivant une identité de contenu (thèmes, jour de
+  publication, visibilité) reste pertinente, mais **le schéma actuel est
+  structurellement mono-plateforme** : `youtubePlaylistId` au niveau du thème
+  suppose UNE seule destination de publication ; `seedArtists`/`discoveryQuery`/
+  `curatedTracks` sont des concepts de sélection de CONTENU (quoi mettre dans la
+  vidéo), pas de distribution (où la publier) — ils resteraient identiques
+  quelle que soit la plateforme de destination, donc pas à dupliquer par
+  plateforme. Une évolution multi-plateforme ajouterait plutôt une notion séparée
+  ("cette chaîne logique a aussi un compte Instagram X, un compte TikTok Y...")
+  greffée à côté du contenu, pas dans les thèmes eux-mêmes.
+
+### Pas réutilisable / à refaire de zéro
+
+- **La table `videos`** (`packages/db/src/schema.ts`) est structurée pour UNE
+  plateforme (`youtube_video_id`, `format: 'long'|'short'`) — cohérent avec
+  l'esquisse de modèle de données de la tâche précédente : une extension
+  multi-plateforme demande une nouvelle table (`platform_posts` ou équivalent),
+  pas un ajout de colonne à celle-ci.
+- **`build-episode-tracks.ts`/`opening-hook.ts`/toute la logique de sélection
+  musicale** — spécifique au concept "blind test", n'a pas vocation à être
+  généralisée pour d'autres plateformes ; c'est la partie CONTENU, indépendante de
+  la partie DISTRIBUTION discutée ici.
