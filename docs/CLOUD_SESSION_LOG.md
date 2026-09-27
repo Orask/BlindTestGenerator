@@ -1429,3 +1429,97 @@ le travail de qualité continue :
 lui-même (personne ne peut rien publier avant l'approbation de toute façon), et le
 site de centralisation des stats (voir tâche suivante) — les deux dépendent d'API
 dont l'accès n'existera pas avant plusieurs semaines au mieux.
+
+## [2026-09-27] Esquisse — modèle de données générique pour un futur site de centralisation des stats (conception seulement, aucune implémentation)
+
+**Objectif rappelé** : éviter de se logger sur ~20 chaînes × jusqu'à 5 plateformes
+pour connaître vues/abonnés/blocages/rythme de publication. Conçu à partir des
+contraintes réelles trouvées dans la tâche précédente (ce qui est vraiment exposé
+par chaque API), pas d'hypothèses optimistes.
+
+### Principe directeur : deux sources de vérité très différentes, à ne pas mélanger
+
+1. **Ce que CE projet publie lui-même** (déjà connu, zéro appel API externe
+   nécessaire) — le rythme de publication, l'horodatage, le format, le type de
+   contenu (Short famille A/B, épisode long...). Ce projet a déjà exactement ce
+   pattern pour YouTube (table `videos` dans `packages/db`) — un futur site
+   multi-plateforme n'a qu'à généraliser cette table, pas besoin d'appeler quelque
+   API que ce soit pour savoir "qu'est-ce qu'on a publié et quand".
+2. **Ce que chaque plateforme rapporte a posteriori sur ce contenu** (vues,
+   likes, abonnés au moment T) — nécessite un appel API en lecture, périodique
+   (les métriques d'un post évoluent dans le temps, un simple _snapshot_ daté, pas
+   une valeur figée).
+
+Ces deux sources ne doivent PAS partager une seule ligne/table : la première est
+un fait immuable (on a publié CE contenu à CETTE heure), la seconde est une série
+temporelle qui change à chaque synchronisation.
+
+### Champs communs à toutes les plateformes (le "socle")
+
+Directement dérivés de ce que la recherche précédente a confirmé comme
+**réellement exposé par au moins Instagram/Facebook/TikTok/YouTube** :
+
+- `platform` (`youtube` | `instagram` | `tiktok` | `facebook` | `snapchat`)
+- `channel_id` (identifiant interne à CE projet, pas celui de la plateforme — pour
+  relier un compte Instagram et un compte TikTok qui appartiennent à la même
+  "chaîne" logique, ex. "BlindTest FR")
+- `platform_account_id` (identifiant natif de la plateforme — nécessaire pour
+  chaque appel API, distinct du `channel_id` logique ci-dessus)
+- `followers_count` (vrai partout — Instagram/TikTok/Facebook/YouTube l'exposent
+  tous via API)
+- `snapshot_at` (horodatage de CETTE mesure — jamais une valeur "actuelle" unique,
+  toujours une entrée dans une série temporelle)
+- `recent_post_views_total` / `recent_post_engagement_total` — agrégé sur une
+  fenêtre récente (ex. 7/30 jours), calculable sur toutes les plateformes à partir
+  des métriques par post, même si le nom exact du champ diffère à la source
+  (`views` YouTube/TikTok vs `impressions`/`reach` Instagram/Facebook — nécessite
+  une table de correspondance par plateforme, pas un champ magique universel)
+
+### Champs par-poste (une ligne par vidéo/Short/Reel publié), communs eux aussi
+
+- `platform_post_id`, `channel_id`, `published_at` (= la table `videos` déjà
+  existante, généralisée), `format` (long/short/reel/story/spotlight —
+  vocabulaire déjà propre à chaque plateforme, à normaliser une fois)
+- `views`, `likes`, `comments`, `shares` — quand disponibles ; **certains champs
+  n'existent tout simplement pas partout** (ex. "saves" existe sur Instagram, pas
+  sur YouTube) — le modèle doit accepter des colonnes `NULL`/absentes par
+  plateforme plutôt que forcer une fausse valeur à 0, pour ne pas confondre "pas
+  mesuré par cette plateforme" avec "zéro interaction réelle".
+
+### Champ spécifique par plateforme — PAS un champ commun
+
+- **`strikes`/`blocages`/`compte restreint`** : confirmé dans la recherche
+  précédente — **AUCUNE des 4 plateformes (Instagram/Facebook/TikTok/YouTube) ne
+  documente d'endpoint API exposant cette information.** Elle n'existe QUE dans le
+  tableau de bord humain de chaque plateforme (Meta "État du compte", TikTok
+  "Account status", YouTube Studio). **Implication de conception directe : ce
+  champ ne peut PAS être un job de synchronisation automatique comme les autres —
+  soit une saisie manuelle périodique (un humain regarde le dashboard une fois par
+  semaine et coche une case sur le site de centralisation), soit laissé de côté
+  pour une v1.** Aucune tentative de scraper ces dashboards humains — au-delà du
+  risque ToS déjà écarté explicitement par l'utilisateur, ces pages nécessitent une
+  session utilisateur connectée (pas un token API), donc un scraper devrait
+  imiter un navigateur connecté par compte — un risque et une fragilité largement
+  plus élevés qu'un champ simplement saisi à la main.
+- **`rythme de publication`** : PAS besoin d'API du tout, comme expliqué plus
+  haut — c'est une agrégation de la table de posts déjà connue par ce projet
+  (`COUNT(*) GROUP BY date`), pas une donnée à synchroniser depuis l'extérieur.
+
+### Ce qui est récupérable via API officielle vs seulement en scrapant (à éviter)
+
+| Donnée                                | Récupérable via API officielle                                                                                                                                           | Notes                                                                                                    |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| Abonnés/followers                     | Oui (toutes plateformes)                                                                                                                                                 | —                                                                                                        |
+| Vues/impressions par post             | Oui (toutes plateformes, vocabulaire différent)                                                                                                                          | —                                                                                                        |
+| Likes/commentaires/partages           | Oui (toutes plateformes)                                                                                                                                                 | —                                                                                                        |
+| Rythme de publication                 | Oui, mais pas besoin d'appel API — déjà connu de ce projet                                                                                                               | —                                                                                                        |
+| Démographie de l'audience (âge, pays) | Partiellement — Instagram/TikTok l'exposent au niveau agrégé du compte, pas par post individuel dans tous les cas                                                        | À creuser plus tard si jugé utile, pas prioritaire pour l'objectif "éviter de se logger sur 100 comptes" |
+| **Strikes/blocages/restrictions**     | **NON, sur aucune des plateformes recherchées**                                                                                                                          | Champ manuel uniquement, voir ci-dessus                                                                  |
+| Revenus/monétisation détaillés        | Partiel (YouTube Analytics API le permet avec des scopes sensibles supplémentaires ; pas creusé pour les autres plateformes cette session, hors périmètre de la demande) | À rechercher séparément si un jour pertinent                                                             |
+
+**Recommandation de conception** (pas d'implémentation) : un site de centralisation
+réaliste pour cet objectif est donc **~90% automatisable via API officielle**
+(vues/abonnés/rythme), avec **un petit formulaire de saisie manuelle
+hebdomadaire pour les strikes/restrictions** plutôt qu'une tentative de tout
+automatiser — cohérent avec la contrainte explicite de l'utilisateur d'éviter le
+scraping.
