@@ -955,3 +955,122 @@ du nouveau workflow validé avec `python3 -c "import yaml; yaml.safe_load(...)"`
 Pas de test end-to-end réel du workflow lui-même (nécessiterait des credentials
 GitHub Actions + Spotify/YouTube réels, indisponibles dans ce sandbox — voir tâche
 suivante).
+
+## [2026-09-27] Validation end-to-end réelle — toujours bloquée, revérifié
+
+Revérifié comme demandé explicitement avant de conclure : toujours aucun fichier
+`.env`, aucune variable `SPOTIFY_*`/`YOUTUBE_*`/`ANTHROPIC_API_KEY` dans
+l'environnement, et le proxy réseau de ce sandbox refuse explicitement (403,
+"organization policy") les tunnels CONNECT vers `api.spotify.com` et
+`accounts.spotify.com` — identique aux sessions précédentes, aucun changement.
+
+**Conséquence** : impossible de générer réellement le Short "devine la chanson" sur
+l'épisode "Génériques" déjà publié (`e81a9fc8-dcde-4224-b9e5-abe1e69c157f`) ni sur
+aucun des 5 autres types, ni de tester le workflow `daily-shorts.yml` en conditions
+réelles, dans ce sandbox. Tout le travail de cette session (familles A et B,
+automatisation) a donc été validé par :
+
+- Build/lint/typecheck/tests unitaires réels (129 tests pipeline, 38 tests db, 0
+  régression) — logique de sélection, filtres, tris, exclusions, templates de
+  métadonnées toutes couvertes par des tests avec de vraies fixtures.
+- Un vrai rendu Remotion local (chromium_headless_shell, voir tâche du correctif
+  visuel) pour valider que le nouveau `ShortHeader`/dimensionnement `Short.tsx`
+  produit visuellement ce qui était attendu — mais uniquement avec des images de
+  test synthétiques, jamais avec de vraies données Spotify/iTunes.
+- Relecture manuelle attentive de chaque script CLI et de l'orchestrateur pour la
+  cohérence des arguments/chemins/appels, sans pouvoir les exécuter de bout en bout.
+
+**Reste un vrai point de risque non couvert par les tests** : le comportement réel
+de `searchArtists`/`searchTracksByArtist` sur ce tier d'app Spotify pour la famille
+B (formes de données non vérifiées en direct dans cette session, malgré la demande
+explicite de le faire si des credentials étaient disponibles) et l'upload YouTube
+réel (visibilité, format Shorts, `publishAt`). **Premier test à faire en local**,
+avant tout `--upload` réel ou avant d'activer `SHORTS_AUTO_UPLOAD` : lancer
+`generate-short.ts` sur l'épisode déjà publié mentionné ci-dessus SANS `--upload`
+d'abord (vérifier le rendu), puis avec `--upload` en visibilité privée — exactement
+la démarche demandée par l'utilisateur en cas de credentials disponibles,
+maintenant à faire hors de ce sandbox.
+
+## [2026-09-27] FIN DE SESSION — résumé pour la reprise
+
+**Les 9 tâches demandées dans cette session sont terminées** (la dernière,
+validation end-to-end réelle, reste bloquée par credentials/réseau — voir
+l'entrée juste au-dessus). Résumé express :
+
+| #   | Tâche                                             | État                                                                                                   |
+| --- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| 11  | Credentials/réseau + lecture code Shorts existant | Vérifié bloqué (identique aux sessions précédentes) ; code existant lu en détail avant tout changement |
+| 12  | Recherche fréquence/durée/first-second 2026       | Fait, sources citées, décisions du projet ajustées en conséquence (pas de chiffre imposé à l'avance)   |
+| 13  | Vide visuel CountdownRing/RevealCard              | Fait, rétrocompatible (prop `size` optionnelle), **vérifié par rendu réel**                            |
+| 14  | Abstraction "type de Short"                       | Fait : petits modules indépendants par type, sortie partagée (`ShortCandidateTrack`)                   |
+| 15  | Famille A (4 types liés à un épisode)             | Fait, testé (sélecteurs + templates + CLI), **jamais exécuté avec de vraies données**                  |
+| 16  | Famille B (2 types nouveauté, trafic pur)         | Fait, testé, source de données validée par recherche (pas codée à l'aveugle)                           |
+| 17  | Automatisation quotidienne (dry-run)              | Fait : rotation ~2/jour calibrée sur la recherche, workflow dédié, dry-run par défaut                  |
+| 18  | Validation end-to-end réelle                      | **Bloquée** — mêmes limites réseau/credentials que la session précédente, revérifié                    |
+| 19  | Ce récapitulatif                                  | Cette entrée                                                                                           |
+
+**Ce qui a changé par rapport à la décision de la session précédente** : le prototype
+initial était pensé comme un script manuel, un seul type de Short. Cette session
+l'étend (sans dupliquer le code existant, comme demandé) à 6 types répartis en 2
+familles, avec une automatisation quotidienne réelle calibrée sur une vraie
+recherche 2026 plutôt qu'un chiffre arbitraire.
+
+**État du code, tout committé et poussé sur `main-hpf4qz` au fur et à mesure** (7
+commits cette session, jamais de travail non poussé) :
+
+- `packages/video-renderer/` : `CountdownRing`/`RevealCard`/`TrackSegment` avec
+  tailles optionnelles rétrocompatibles ; `ShortIntro.tsx` supprimé, remplacé par
+  `ShortHeader.tsx` (bandeau non-bloquant) ; `Short.tsx` recalibré (2 morceaux par
+  défaut, ~38s) ; `ShortOutro.tsx`/`short-schema.ts` avec `fullEpisodeTrackCount`
+  optionnel pour les types sans épisode source.
+- `packages/integrations/spotify/` : `SpotifyTrackMetadata` étendu avec `popularity`
+  (vraie popularité 0-100, distincte de `popularityRank`) et `releaseDate`.
+- `packages/db/` : `getUsedTracksForChannel` (historique toute-chaîne) et
+  `getLatestUploadedVideoForTheme` (épisode du jour pour l'automatisation).
+- `apps/pipeline/src/shorts/` : 4 sélecteurs famille A (`devine-la-chanson`,
+  `pepite-meconnue`, `top-artiste`, `anniversaire-sortie`), 1 sélecteur générique
+  famille B (`nouveaute-genre`, paramétré par genre), `hydrate-track.ts` +
+  `publish-short.ts` partagés, `weekly-rotation.ts` (calendrier + rotation
+  genre/artiste).
+- `apps/pipeline/src/generate-short*.ts` : 4 scripts CLI famille A + 1 famille B +
+  `generate-shorts-daily.ts` (orchestrateur de la rotation quotidienne).
+- `apps/pipeline/src/youtube-metadata.ts` : 4 nouveaux templates de titre/description
+  (un par type sans template existant).
+- `.github/workflows/daily-shorts.yml` : nouveau workflow dédié, dry-run par défaut.
+
+**Ordre suggéré pour la suite (locale ou prochaine session cloud avec credentials)** :
+
+1. **D'abord, avant tout le reste** : lancer `generate-short.ts` sur l'épisode
+   "Génériques" déjà publié (`e81a9fc8-dcde-4224-b9e5-abe1e69c157f`) sans `--upload`
+   pour vérifier le rendu (nouveau dimensionnement, bandeau non-bloquant), puis avec
+   `--upload` en visibilité privée — exactement la démarche demandée par
+   l'utilisateur, jamais faite faute de credentials dans ce sandbox.
+2. Répéter la même vérification (sans puis avec `--upload`, en privé) pour les 3
+   autres scripts CLI famille A (`generate-short-pepite-meconnue.ts`,
+   `-top-artiste.ts`, `-anniversaire.ts`) et le script famille B
+   (`generate-short-nouveaute.ts`) — c'est là que la forme réelle des données
+   `searchArtists`/`searchTracksByArtist` sera vérifiée pour de vrai pour la
+   première fois (jamais fait dans ce sandbox, malgré la demande explicite).
+3. Une fois les 6 types validés manuellement en privé, lancer
+   `generate-shorts-daily.ts` sans `--upload` une fois (dry run complet de la
+   rotation du jour), vérifier les logs (quels types ont été ignorés et pourquoi),
+   puis avec `--upload` en privé.
+4. Ajuster `MAX_RELEASE_AGE_DAYS`/`ARTIST_SEARCH_LIMIT`
+   (`shorts/nouveaute-genre.ts`) si la fraîcheur réelle des résultats
+   `searchTracksByArtist` s'avère différente de ce qui était supposé (aucune donnée
+   réelle vérifiée dans cette session, decision prise sur la seule base de la
+   forme documentée de l'API).
+5. Seulement une fois tout ça validé en privé pendant quelques jours : activer
+   `SHORTS_AUTO_UPLOAD` (variable de repo) pour laisser `daily-shorts.yml` publier
+   automatiquement, et éventuellement repasser en visibilité publique.
+6. Écrire les templates `youtube-metadata.ts` restants si l'usage réel montre qu'un
+   des 4 nouveaux mérite un texte plus travaillé que ce qui a été écrit ici sans
+   retour utilisateur réel.
+7. Reprendre les tâches 1-10 (audit `curatedTracks`, config du déclencheur externe,
+   etc.) de la session précédente si pas encore faites — inchangées, non retouchées
+   cette session.
+
+Tout le code de cette session est committé et poussé sur `main-hpf4qz` au fur et à
+mesure, avec `pnpm build/test/lint/typecheck` verts à chaque étape (129 tests
+`@blindtest/pipeline`, 38 tests `@blindtest/db`, 0 régression sur les autres
+packages).
