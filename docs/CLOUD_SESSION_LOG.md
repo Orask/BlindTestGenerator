@@ -636,3 +636,38 @@ Sources (liens complets retournés par les 3 recherches de cette session) : air.
 metricool.com, shortimize.com, sendshort.ai, flowshorts.app, vidiq.com, miraflow.ai,
 blitzcutai.com, socialync.io, toptal.com, et autres agrégateurs 2026 convergents sur
 ces points.
+
+## [2026-09-27] Correctif visuel + recalibrage durée — TERMINÉ, vérifié par rendu réel
+
+**Vide visuel (priorité demandée)** : `CountdownRing` et `RevealCard` prennent
+maintenant une prop de taille optionnelle (`size`/`coverSize`), rétrocompatible —
+absente, comportement identique à avant (340px/360px, format long `Episode.tsx`
+inchangé, zéro risque de régression puisque `Episode.tsx` n'a pas été touché).
+`TrackSegment.tsx` relaie ces props optionnelles. `Short.tsx` passe 620px pour les
+deux (contre 340/360px) — remplit beaucoup plus le cadre vertical 1080×1920.
+
+**Première seconde (point c de la recherche ci-dessus, appliqué directement)** :
+supprimé `ShortIntro.tsx` (séquence plein écran bloquante de 2,5s, texte statique)
+— exactement l'anti-pattern identifié par la recherche. Remplacé par
+`ShortHeader.tsx` : un bandeau non-bloquant (thème en petit, pilule semi-
+transparente en haut) superposé sur l'anneau du premier morceau, qui démarre lui
+dès la frame 0. Le nouveau `totalShortDurationInFrames` ne compte plus de temps
+d'intro séparé — supprimé du calcul, pas juste caché.
+
+**Durée recalibrée (point b de la recherche)** : `DEFAULT_SHORT_TRACK_COUNT` dans
+`generate-short.ts` passe de 5 à **2** morceaux — 5 morceaux ≈ 94s (bien au-delà de
+la fourchette 15-30/35-58s qui maximise le taux de complétion) ; 2 morceaux ≈ 38s,
+dans la fourchette haute recommandée. Toujours configurable via `--track-count`.
+
+**Vérifié par un vrai rendu Remotion local** (même méthode que la session
+précédente : `chromium_headless_shell` + `ignoreCertificateErrors`, images de test
+en couleurs unies) : 4 frames (frame 0, bandeau visible, reveal, outro) rendues en
+PNG et envoyées à l'utilisateur, comparables aux captures "avant" de la session
+précédente. Différence visuelle nette : plus de vide, contenu visible dès la
+première frame.
+
+**Validation faite** : `pnpm build/lint/typecheck` verts pour `@blindtest/video-
+renderer` et `@blindtest/pipeline` (aucun test unitaire cassé — `Short.tsx`/
+`CountdownRing.tsx`/`RevealCard.tsx`/`TrackSegment.tsx` n'ont pas de tests unitaires
+dédiés dans ce projet, cohérent avec le reste des composants React de
+`video-renderer`, vérification visuelle étant la méthode établie ici).

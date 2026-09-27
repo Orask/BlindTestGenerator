@@ -18,7 +18,13 @@ import { buildShortMetadata } from "./youtube-metadata.js";
 // them, and a Short reusing that same footage isn't a second, independent
 // use of the track — recording it again would double-count it.
 const ITUNES_LOOKUP_DELAY_MS = 3500;
-const DEFAULT_SHORT_TRACK_COUNT = 5;
+// Recalibrated from 5 (session of 2026-09-27, never checked against real
+// retention data) to 2 — 2026 Shorts research says completion rate, not
+// duration, drives distribution, and the sweet spot is 15-30s (secondary
+// peak 35-58s, reserved for narrative-dense niches this quiz format isn't).
+// 2 tracks ≈ 38s including the outro, solidly in that range; 5 tracks was
+// ~94s, well past it. See docs/CLOUD_SESSION_LOG.md for the full research.
+const DEFAULT_SHORT_TRACK_COUNT = 2;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
