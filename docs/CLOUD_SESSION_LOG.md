@@ -255,3 +255,33 @@ n'est jamais complétée.
 
 **Prochain pas concret** : suivre la section 3decies de `docs/CAHIER_DES_CHARGES.md`
 pour configurer le déclencheur externe.
+
+---
+
+## [2026-09-27] Tâche 10 — channel_id sur blocked_tracks — TERMINÉ
+
+Ajouté `channel_id TEXT NOT NULL REFERENCES channels(id)` à `blocked_tracks`
+(`packages/db/src/schema.ts`), avec migration idempotente pour les bases existantes
+(`migrateBlockedTracksChannelId` dans `database.ts`, `ALTER TABLE ... ADD COLUMN
+... DEFAULT 'blindtest-fr'`, backfill correct pour ce projet mono-chaîne). `blockTrack()`
+prend maintenant un `channelId` obligatoire ; câblé dans `replace-blocked-tracks.ts`
+via `videoRow.channel_id` (déjà disponible, la vidéo bloquée sait sur quelle chaîne
+elle a été publiée).
+
+**Décision arbitraire et pourquoi** : `getBlockedTrackIds()` reste volontairement
+**non filtrée par chaîne** — le commentaire déjà présent dans `schema.ts` explique
+qu'une réclamation Content ID porte sur l'enregistrement lui-même, pas sur la chaîne ;
+une deuxième chaîne qui republierait le même morceau risquerait exactement la même
+réclamation. `channel_id` est donc une piste d'audit (quelle chaîne a découvert le
+blocage), pas une clé de filtrage — j'ai documenté ce choix explicitement dans le code
+pour qu'une future implémentation multi-chaînes ne le change pas par erreur en pensant
+combler un oubli.
+
+**Validation faite** : 3 nouveaux tests unitaires (`database.test.ts` : migration sur
+DB fraîche / DB legacy sans la colonne / idempotence ; `blocked-tracks-repository.test.ts`
+: nouveau cas + FK maintenant respectée dans le `beforeEach`), `pnpm build/test/lint/
+typecheck` tous verts. **Migration réellement exécutée contre le vrai
+`data/blindtest.sqlite` committé** (pas seulement en test) : colonne ajoutée, 2 lignes
+existantes backfillées à `'blindtest-fr'`, tous les compteurs de lignes de toutes les
+tables identiques avant/après (vérifié par script), donc committée telle quelle — la
+prochaine fois que le pipeline tournera (CI ou local), la migration sera un no-op.

@@ -79,6 +79,7 @@ const db = openDatabase(dbPath);
 
 const videoRow = db.prepare("SELECT * FROM videos WHERE id = ?").get(videoRowId) as
   | {
+      channel_id: string;
       theme_id: string;
       visibility: "private" | "unlisted" | "public";
       youtube_video_id: string | null;
@@ -115,6 +116,7 @@ const blockedAt = new Date();
 for (const row of blockedRows) {
   blockTrack(db, {
     spotifyTrackId: row.spotify_track_id,
+    channelId: videoRow.channel_id,
     title: row.title,
     artist: row.artist,
     reason: "YouTube Content ID : vidéo bloquée dans le monde entier",
