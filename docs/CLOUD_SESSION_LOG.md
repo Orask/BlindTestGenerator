@@ -333,3 +333,51 @@ au niveau du script CLI entier).
 
 **Validation faite** : 8 nouveaux tests (82 tests pipeline au total, avant 74),
 `pnpm build/test/lint/typecheck` tous verts.
+
+---
+
+## [2026-09-27] Tâche 9 — Miniatures pour thèmes pauvres en photos d'artistes — TERMINÉ, vérifié visuellement
+
+**Diagnostic confirmé par un vrai rendu local** (voir méthode ci-dessous) : quand
+`resolveHeroArtistImages` (`render-thumbnail.ts`) ne trouve **aucune** photo Spotify
+d'artiste — cas fréquent sur le thème "Génériques dessins animés/films" (crédits
+compositeur/orchestre, rarement présents sur Spotify avec portrait), la miniature
+retombait sur `CoverGridFallback` : une grille de 40 pochettes assombries à 50% de
+luminosité + un dégradé radial qui les assombrit encore plus au centre — résultat :
+un grand vide noir sur les 2/3 inférieurs de l'image, très faible visuellement.
+
+**Correctif** (`packages/video-renderer/src/Thumbnail.tsx`) : quand `artistImageUrls`
+est vide, les pochettes distinctes (`coverImageUrls` dédupliquées) passent maintenant
+dans le **même composant `HeroCollage`** que les vraies photos d'artistes (mêmes
+`HERO_LAYOUTS` 1-6 déjà conçus et déjà bons) — au lieu de la grille assombrie. La
+grille reste en tout dernier recours, seulement si vraiment aucune image du tout
+n'est disponible (cas pathologique qui ne devrait jamais arriver en pratique).
+
+**Décision arbitraire et pourquoi** : réutiliser `HeroCollage` tel quel (même bordure
+colorée, même ombre) plutôt que créer un style visuel distinct pour "pochettes" vs
+"visages" — cohérence de marque, et le rendu vérifié (voir ci-dessous) montre que ça
+fonctionne très bien visuellement sans changement supplémentaire.
+
+**Méthode de vérification — rendu Remotion réel, pas une lecture de code seule** :
+ce sandbox n'a pas de credentials Spotify, mais le rendu de la composition `Thumbnail`
+elle-même ne nécessite aucun réseau externe (juste des images locales). Chromium étant
+préinstallé (`/opt/pw-browsers`), j'ai généré des images de test (carrés de couleurs
+unies, aucune bibliothèque d'images disponible dans ce sandbox) et fait tourner
+`bundleVideoRenderer()` + `renderStill` en pointant `browserExecutable` vers
+`chromium_headless_shell` (le Chrome standard de Playwright refuse l'ancien mode
+headless que Remotion utilise) avec `chromiumOptions.ignoreCertificateErrors: true`
+(le proxy de cet environnement fait échouer le chargement TLS des Google Fonts
+sinon). 5 scénarios rendus en PNG réels et inspectés visuellement : 0 photo (avant/
+après), 0 photo + 6 pochettes distinctes, 1/2/3 photos d'artiste (pour confirmer
+l'absence de régression sur le cas déjà bon). Images avant/après envoyées à
+l'utilisateur. Scripts de test et images placeholder non committés (nettoyés après
+usage, `packages/video-renderer/public/{covers,artists}` étaient de toute façon déjà
+gitignorés).
+
+**Validation faite** : rendu visuel réel (voir ci-dessus) + `pnpm build/lint/
+typecheck` verts pour `@blindtest/video-renderer`. Pas de test unitaire ajouté pour
+`Thumbnail.tsx` — aucun composant React de ce package n'a de test unitaire existant
+(seule `countdown-math.ts`, logique pure, en a), la vérification visuelle est la
+méthode déjà établie dans ce projet pour ce type de composant (voir historique des
+compositions bannière/photo de profil de chaîne, "rendues une fois et livrées
+directement à l'utilisateur").
