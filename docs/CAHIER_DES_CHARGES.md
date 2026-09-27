@@ -225,6 +225,29 @@ Le run est maintenant idempotent (`hasUploadedVideoForThemeToday` dans `packages
 
 Le `schedule` cron à 03:00 UTC peut rester tel quel indéfiniment (filet de sécurité) — inutile de le retirer une fois le déclencheur externe en place.
 
+### 3undecies. Rattrapage documentaire — fonctionnalités livrées jamais décrites ici
+
+Plusieurs fonctionnalités ont été ajoutées au fil des sessions sans jamais être répercutées dans ce document. Rattrapage :
+
+- **Revue IA optionnelle de l'épisode** (`apps/pipeline/src/review-episode.ts`) : si `ANTHROPIC_API_KEY` est configurée, chaque épisode généré est soumis à Claude avant publication pour un contrôle de cohérence thématique (ex. un morceau trap/RnB qui ne colle pas au thème "Années 80"). Entièrement optionnel — absence de la clé = comportement identique à avant cette fonctionnalité, aucun blocage.
+- **`curatedTracks`** (`channel-config.ts`, voir aussi le commentaire dans `collect-curated-tracks.ts`) : pour chaque thème, une liste optionnelle de paires (titre, artiste) précises, recherchées en exact-match sur Spotify et prioritaires sur la recherche par `seedArtists` — garantit que les morceaux les plus reconnaissables d'un artiste sortent, plutôt qu'un titre obscur remonté par la recherche par nom. Essentiel pour le thème "Génériques" (63 morceaux curatés, seedArtists ne suffirait pas) ; complété pour tous les thèmes restants le 2026-09-27 (voir 3duodecies).
+- **Liste noire permanente Content ID** (table `blocked_tracks`, `packages/db/src/blocked-tracks-repository.ts`) : un morceau confirmé responsable d'un blocage Content ID mondial (identifié manuellement via YouTube Studio, l'API publique n'exposant pas le détail des réclamations) est banni à vie de toute sélection future, tous thèmes confondus — la réclamation porte sur l'enregistrement, pas sur le thème. `apps/pipeline/src/replace-blocked-tracks.ts` reconstruit et republie un épisode déjà publié en retirant le(s) morceau(x) fautif(s).
+- **Scripts de récupération manuelle** (`apps/pipeline/src/`) : `recut-episode.ts` (réordonne un épisode déjà publié sans en changer les morceaux), `reupload-video.ts` (relance un upload échoué en réutilisant le rendu existant), `set-thumbnail.ts` (applique une miniature a posteriori) — un-off, jamais dans le cron quotidien.
+- **Miniature avec vraies photos d'artistes** (`packages/video-renderer/src/Thumbnail.tsx`) : collage de 1 à 6 photos de profil Spotify des artistes les plus proéminents de l'épisode, plutôt qu'une grille de pochettes. Fallback pochettes amélioré le 2026-09-27 (voir 3duodecies).
+- **Bannière et photo de profil de chaîne** (`ChannelBanner.tsx`, `ChannelProfilePicture.tsx`) : compositions Remotion aux mêmes couleurs/police que le reste, rendues une fois et livrées à l'utilisateur pour upload manuel dans YouTube Studio — pas des assets régénérés automatiquement par le pipeline.
+
+### 3duodecies. Session cloud du 2026-09-27 — récapitulatif
+
+Session autonome à budget limité (voir `docs/CLOUD_SESSION_LOG.md` pour le détail complet, décisions et justifications de chaque point) :
+
+- `curatedTracks` complété pour les 2 derniers thèmes sans (`variete-actuelle`, `classiques-fr`) — non vérifié contre l'API Spotify (pas de credentials dans le sandbox cloud), à auditer avec `scripts/export-curated-songs-ndjson.mjs` + `curate-songs-cli.ts` dès que possible.
+- **Rotation multi-app Spotify** (`createRotatingSpotifyClient`, `packages/integrations/spotify/src/rotating-client.ts`) : bascule automatiquement sur une app Spotify de secours (`SPOTIFY_CLIENT_ID_2`/`_SECRET_2`, etc., optionnelles) en cas de rate-limit/quota épuisé sur l'app principale, au lieu de stopper tout le run. 100% rétrocompatible sans app supplémentaire configurée.
+- Déclencheur externe fiable + idempotence du run quotidien (section 3decies ci-dessus).
+- `channel_id` ajouté à `blocked_tracks` (audit trail, pas une clé de filtrage — voir section 6).
+- Fallback miniature amélioré : pochettes en collage façon "hero" au lieu d'une grille assombrie quand aucune photo d'artiste n'est trouvée (fréquent sur "Génériques").
+- **Prototype de composition Shorts verticale** (`packages/video-renderer/src/Short.tsx`, `apps/pipeline/src/generate-short.ts`) — voir section 9 (roadmap v1.2).
+- Extraction et tests pour la logique dupliquée des 4 scripts de récupération manuelle (`find-theme-by-id.ts`, `match-blocked-track-rows.ts`).
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
@@ -296,7 +319,9 @@ Template titre/description implémenté dans `apps/pipeline/src/youtube-metadata
 - `channels` : id, nom, langue, config de branding, identifiants OAuth YouTube (référence sécurisée, pas en clair dans le repo), visibilité courante (`private`/`unlisted`/`public`).
 - `channel_themes` : id, channel_id, day (lundi..dimanche), label, youtube_playlist_id (nullable, rempli au premier upload). `seedArtists` n'est pas dupliqué en base : il vit uniquement dans le JSON de config, relu à chaque run.
 - `tracks_used` : id (surrogate), channel_id, theme_id, spotify_track_id, titre, artiste, date d'utilisation, video_id (FK). Un même morceau peut apparaître plusieurs fois dans le temps (réutilisation contrôlée après cooldown, section 3sexies) — l'anti-repeat n'est plus une contrainte d'unicité en base mais une règle applicative (`apps/pipeline/src/build-episode-tracks.ts` : exclusion stricte sous 14 jours, réutilisation plafonnée à 2/épisode au-delà).
-- `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short).
+- `videos` : id, channel_id, theme_id, date de génération, chemin fichier, youtube_video_id, statut (draft/uploaded/failed), visibilité effective au moment de l'upload, format (long/short — `short` utilisé pour la première fois par `generate-short.ts`, prototype Shorts, section 9).
+- `blocked_tracks` : spotify_track_id (clé primaire), channel_id (piste d'audit — quelle chaîne a découvert le blocage, jamais utilisé comme filtre, voir 3undecies), titre, artiste, raison, date de blocage. Exclusion stricte et définitive, tous thèmes et (à terme) toutes chaînes confondus.
+- `service_cooldowns` : service (ex. "spotify"), horodatage jusqu'auquel le considérer en rate-limit — persiste un cooldown détecté entre deux runs CI (pas de disque persistant sur les runners GitHub Actions).
 
 Ce modèle est ce qui garantit qu'on ne rejoue jamais deux fois le même morceau sur une même chaîne, et qu'on peut suivre l'historique par chaîne et par thème indépendamment.
 
@@ -315,13 +340,16 @@ Objectif affiché : chaînes publiques sérieuses avec monétisation visée à t
 - [x] Projet Google Cloud, "YouTube Data API v3" activée, écran de consentement OAuth (Google Auth Platform), identifiants OAuth Desktop app — fait le 2026-08-07.
 - [x] Chaîne YouTube "BlindTest FR" créée et liée au compte autorisé — fait le 2026-08-07.
 - Aucun compte requis côté iTunes Search (API publique en lecture) — rien à faire.
+- [ ] _Optionnel_ — clé API Anthropic (console.anthropic.com) pour activer la revue IA de l'épisode avant publication (section 3undecies). Sans elle, le pipeline fonctionne à l'identique, l'étape est simplement sautée.
+- [ ] _Optionnel_ — 1 à quelques apps Spotify Developer supplémentaires (mêmes étapes que la première) pour la rotation de secours en cas de rate-limit (`SPOTIFY_CLIENT_ID_2`/`SPOTIFY_CLIENT_SECRET_2`, etc., section 3duodecies).
+- [ ] _Optionnel_ — déclencheur externe pour le run quotidien (PAT GitHub + service de cron tiers) — voir section 3decies pour la marche à suivre complète.
 
 Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `.env.example` pour la liste des variables attendues. Le refresh token YouTube a été obtenu via `packages/integrations/youtube/scripts/authorize.ts` (flow OAuth interactif à usage unique, serveur loopback local).
 
 ## 9. Roadmap (au-delà de la v1)
 
-- **v1.1** — Multi-chaînes : plusieurs fichiers de config actifs simultanément, scheduler par chaîne.
-- **v1.2** — Format shorts (~1 min, moins de morceaux, montage plus punchy).
+- **v1.1** — Multi-chaînes : plusieurs fichiers de config actifs simultanément, scheduler par chaîne. Un premier pas fait le 2026-09-27 : `channel_id` ajouté à `blocked_tracks` (section 6), sans implémentation multi-chaînes elle-même.
+- **v1.2** — Format Shorts : **prototypé le 2026-09-27**, pas encore en routine. Composition Remotion verticale (`Short.tsx`, 1080×1920) qui reprend le gameplay countdown+reveal du format long sur les 5-6 premiers morceaux (les plus reconnaissables) d'un épisode déjà publié, terminée par un renvoi vers l'épisode complet. Script `generate-short.ts` (manuel, `--upload` optionnel) pour rendre et publier. Vérifié par un rendu Remotion réel (voir `docs/CLOUD_SESSION_LOG.md`) mais jamais exécuté avec de vraies credentials Spotify/iTunes/YouTube (aucune dans le sandbox cloud) ni publié en conditions réelles. Limite connue : le countdown/reveal, dimensionné pour le format 16:9, laisse un vide visuel en haut/bas du cadre vertical — amélioration de suivi possible, pas bloquante. Recherche associée sur la croissance d'abonnés via Shorts dans `docs/CLOUD_SESSION_LOG.md` (tâche du 2026-09-27).
 - **v1.3** — Passage à un hébergement cloud (VPS ou serverless) pour une automatisation indépendante du Mac.
 - **v2** — Multi-plateformes : interface `Publisher` commune, implémentations TikTok (Content Posting API, review d'app requise), Meta Graph API (Instagram/Facebook), Snapchat (API de publication très limitée, à valider si seulement possible manuellement).
 - **v2.x** — Monitoring actif des réclamations Content ID, dashboard de suivi multi-chaînes.
@@ -350,3 +378,7 @@ Identifiants stockés dans `.env` local (gitignored, jamais commité) — voir `
 - Vérifier en conditions réelles si la musique Pixabay déclenche effectivement une réclamation Content ID sur la vidéo, et son impact (blocage vs monétisation partagée).
 - ~~Mettre en place l'automatisation réelle (launchd/cron)~~ — **fait le 2026-08-08**, deux vrais bugs de déclenchement trouvés et corrigés le 09 et le 10 (section 3nonies : accès TCC, réseau pas encore prêt au réveil). Reste à observer un déclenchement 6h00 entièrement autonome de bout en bout (les deux jours testés ont nécessité soit un re-déclenchement manuel, soit ont échoué avant correctif) avant de considérer l'automatisation pleinement fiable.
 - Demander une augmentation de quota YouTube Data API (ou étaler sur 2 jours) avant d'utiliser `runWeeklyBatch()` en production — un lot de 7 dépasse le quota par défaut (section 3sexies).
+- Finir la mise en place du déclencheur externe pour le run quotidien (section 3decies) — reste une étape manuelle côté utilisateur (PAT GitHub + service de cron tiers).
+- Vérifier les `curatedTracks` de `variete-actuelle` et `classiques-fr` (ajoutés le 2026-09-27 sans accès à l'API Spotify) contre le vrai catalogue, avec `scripts/export-curated-songs-ndjson.mjs` + `curate-songs-cli.ts` — voir `docs/CLOUD_SESSION_LOG.md`.
+- Exécuter `generate-short.ts` en conditions réelles (jamais testé avec de vraies credentials) et évaluer si le format mérite d'être ajouté au cron quotidien ou de rester un outil manuel ponctuel.
+- Créer 2-3 apps Spotify Developer supplémentaires pour activer réellement la rotation multi-app (`SPOTIFY_CLIENT_ID_2`/`_SECRET_2`, etc., section 3duodecies) — le code est prêt, aucune app de secours n'est encore configurée.

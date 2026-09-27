@@ -463,3 +463,73 @@ publication avant d'en faire une habitude.
 
 **Validation faite** : rendu visuel réel + `pnpm build/test/lint/typecheck` tous
 verts (85 tests pipeline, 3 nouveaux pour `buildShortMetadata`).
+
+---
+
+## [2026-09-27] Tâche 8 — Mise à jour docs/CAHIER_DES_CHARGES.md — TERMINÉ
+
+Ajouté 2 nouvelles sous-sections datées (3undecies, 3duodecies) : un rattrapage
+documentaire pour des fonctionnalités déjà en prod mais jamais décrites dans ce
+document (revue IA Anthropic optionnelle, `curatedTracks`, liste noire Content ID
+`blocked_tracks`, scripts de récupération manuelle, miniature avec photos d'artistes,
+bannière/photo de profil de chaîne), puis un récapitulatif de tout ce qui a été fait
+dans cette session cloud avec renvoi vers `CLOUD_SESSION_LOG.md` pour le détail
+complet. Mis à jour : section 6 (modèle de données — ajout `blocked_tracks` et
+`service_cooldowns`, précision sur `format`), section 8 (prérequis utilisateur —
+3 nouvelles lignes optionnelles : clé Anthropic, apps Spotify de secours,
+déclencheur externe), section 9 (roadmap — v1.2 Shorts marqué "prototypé", v1.1
+multi-chaînes noté "premier pas fait"), section 11 (5 nouveaux points ouverts reflétant
+l'état réel après cette session).
+
+**Validation faite** : `prettier --write` appliqué, `pnpm build/test/lint/typecheck`
+tous verts.
+
+---
+
+## [2026-09-27] FIN DE SESSION — résumé pour la reprise
+
+**Toutes les 10 tâches de la liste de priorité sont terminées** (certaines
+partiellement, par manque de credentials dans ce sandbox — voir chaque entrée
+ci-dessus pour le détail). Résumé express :
+
+| #   | Tâche                                          | État                                                                                                 |
+| --- | ---------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| 1   | curatedTracks variete-actuelle + classiques-fr | Fait, **non vérifié contre Spotify**                                                                 |
+| 2   | Revérifier ~10 morceaux incertains             | Liste précise introuvable ; outillage d'audit livré à la place                                       |
+| 3   | Run quotidien de ce matin                      | Vérifié : a échoué puis réussi en retry, déjà géré avant cette session                               |
+| 4   | Diversifier vérif. Spotify                     | Rotation multi-app faite et testée ; MusicBrainz documenté seulement (réseau bloqué)                 |
+| 5   | Fiabiliser l'heure du run                      | Code fait et testé ; **config externe (PAT + cron tiers) reste à faire côté utilisateur**            |
+| 6   | Croissance abonnés + Shorts                    | Recherche faite ; prototype Shorts codé et **vérifié par rendu réel**, jamais testé avec credentials |
+| 7   | Tests scripts CLI 0%                           | Fait (refactor + 8 tests)                                                                            |
+| 8   | Mise à jour cahier des charges                 | Fait                                                                                                 |
+| 9   | Miniatures thèmes pauvres en photos            | Fait et **vérifié par rendu réel**                                                                   |
+| 10  | channel_id sur blocked_tracks                  | Fait, migration exécutée sur la vraie DB                                                             |
+
+**Ce qui bloque toute nouvelle vérification en conditions réelles dans ce type de
+session cloud** : aucune credential (`.env` absent, `SPOTIFY_*`/`YOUTUBE_*`/
+`ANTHROPIC_API_KEY` non configurées dans l'environnement), et la politique réseau de
+cet environnement bloque certains hosts externes (confirmé pour `musicbrainz.org`,
+probablement Spotify/YouTube aussi). Une session cloud future avec ces credentials
+configurées dans les settings de l'environnement (ou une reprise en local, qui a déjà
+`.env`) pourrait exécuter tout ce qui est resté "code prêt mais jamais testé en
+conditions réelles" ci-dessus.
+
+**Ordre suggéré pour la suite (locale ou prochaine session cloud avec credentials)** :
+
+1. Auditer les `curatedTracks` (tâches 1+2) avec `scripts/export-curated-songs-ndjson.mjs`
+   - `curate-songs-cli.ts` — corrige d'un coup les deux tâches les plus incertaines.
+2. Laisser tourner le run quotidien normalement quelques jours pour confirmer que
+   l'idempotence (tâche 5) et le fallback miniature (tâche 9) se comportent bien en
+   prod — rien à faire activement, juste observer.
+3. Finir la config du déclencheur externe (tâche 5, section 3decies du cahier des
+   charges) — 10 minutes côté utilisateur (PAT GitHub + cron-job.org).
+4. Tester `generate-short.ts` sur un épisode déjà publié, d'abord sans `--upload`
+   pour valider le rendu, puis avec `--upload` en privé (tâche 6).
+5. Si le rate-limit Spotify redevient un problème récurrent, créer 2-3 apps
+   supplémentaires et renseigner `SPOTIFY_CLIENT_ID_2`/`_SECRET_2` etc. (tâche 4).
+6. Le volet MusicBrainz (tâche 4) reste à faire de zéro si jugé utile après le point 5
+   — non commencé, seulement documenté comme proposition.
+
+Tout le code de cette session est committé et poussé sur `main-hpf4qz` au fur et à
+mesure (jamais de travail non poussé laissé dans ce sandbox), avec `pnpm build/test/
+lint/typecheck` verts à chaque étape.
