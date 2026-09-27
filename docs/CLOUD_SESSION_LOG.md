@@ -558,3 +558,81 @@ pas, pas exécutée). Tout ce qui suit est soit vérifiable localement sans rés
 (rendu Remotion, tests unitaires, logique pure), soit écrit avec le même soin que la
 session précédente pour du code jamais exécuté en conditions réelles — clairement
 signalé à chaque fois.
+
+## [2026-09-27] Recherche stratégie Shorts 2026 (avant tout code) — TERMINÉ
+
+Recherche web (3 requêtes, résultats agrégés de multiples sources 2026 : air.io,
+metricool.com, shortimize.com, vidiq.com, miraflow.ai, blitzcutai.com, et autres —
+liens complets dans les résultats de recherche de cette session). Les trois points
+demandés :
+
+**a) Fréquence de publication optimale** — pas un chiffre unique, un compromis avec
+rendements décroissants clairement documenté :
+
+- Passer de 1 à 2 Shorts/jour ~triple la croissance d'abonnés observée ; passer de 3 à
+  4+ n'ajoute que ~8% — rendements très décroissants au-delà de 3/jour.
+- **Seuils de pénalité identifiés** : au-delà de 5 Shorts/jour, "signaux de spam"
+  probables et chute de portée par vidéo ; 10+ Shorts en une journée peut déclencher la
+  détection anti-spam de YouTube et réduire la visibilité de la chaîne entière.
+- Plusieurs sources convergent : des Shorts de qualité postés 3-5x/semaine
+  surperforment des Shorts médiocres postés quotidiennement — la régularité compte plus
+  que le volume brut, et la qualité prime sur la fréquence au-delà du minimum viable.
+- **Fourchette recommandée retenue** : 5-7 Shorts/semaine (~1/jour en moyenne, jusqu'à
+  2-3/jour ponctuellement pour des types de contenu différents) — au-dessus du minimum
+  qui bénéficie à la croissance, largement sous les seuils de pénalité.
+- **Décision pour ce projet** : avec 6 types de Shorts distincts prévus (4 famille A +
+  2 famille B), viser ~2 Shorts/jour en moyenne (pas 6/jour tous types confondus —
+  beaucoup trop haut, franchirait la zone de pénalité) en faisant tourner les types sur
+  la semaine plutôt que de tous les publier chaque jour. Détail du calendrier dans la
+  tâche d'automatisation ci-dessous.
+
+**b) Durée optimale et monétisation** :
+
+- La fourchette qui maximise le taux de complétion est **15-30 secondes** pour la
+  plupart des niches (35-58s pour un second pic, mais réservé aux niches "narratives
+  denses" — histoire, finance, débat — pas le format jeu/quiz de ce projet).
+- **Ce qui compte pour l'algorithme, ce n'est pas la durée mais le taux de complétion**
+  : un Short de 20s regardé jusqu'au bout surperforme un Short de 2 minutes avec 15% de
+  décrochage. La limite technique de 180s (relevée d'octobre 2024) ne dit rien sur ce
+  qui performe réellement — confirmé par cette recherche, la limite technique et la
+  durée optimale sont deux choses différentes.
+- **Monétisation — point demandé explicitement à vérifier, CONFIRMÉ** : c'est bien
+  l'éligibilité de la CHAÎNE au Partner Program qui conditionne la monétisation, pas la
+  durée d'une vidéo individuelle. Deux voies d'éligibilité : 1000 abonnés + 10M vues
+  Shorts valides sur 90 jours, OU 1000 abonnés + 4000h de visionnage format long sur 12
+  mois. Une fois éligible, la monétisation Shorts se répartit sur un pool de revenus au
+  niveau de la chaîne (part des vues totales), pas un paiement par vidéo individuelle.
+  RPM Shorts très bas (0,01-0,07$/1000 vues en général, 0,10-0,25$ dans les niches à
+  forte valeur) — la durée d'un Short donné n'entre pas dans ce calcul.
+- **Décision pour ce projet** : recalibrer "devine la chanson" de 5-6 morceaux
+  (~90-105s, décision de la session précédente, jamais vérifiée par cette recherche) à
+  **2-3 morceaux** (~23-58s selon le nombre) — bien mieux aligné avec la fourchette
+  15-30/35-58s qui maximise le taux de complétion. Les autres types (plus courts par
+  nature, un seul morceau ou un fait ponctuel) viseront la même fourchette basse.
+
+**c) Pourquoi la première seconde est déterminante** — confirmé et détaillé :
+
+- Les 0-3 premières secondes sont "la décision de swipe" : 30 à 50% des viewers
+  partent dans cette fenêtre en moyenne. L'algorithme utilise le taux de swipe-away
+  comme filtre principal de distribution — si trop de viewers swipent dans les 2
+  premières secondes, la distribution s'arrête, indépendamment de la qualité du reste.
+  Benchmark cité : rester sous 40% de "Swiped Away" dans YouTube Studio, viser 75%+ de
+  "Viewed vs Swiped Away".
+- Ce qui tue un hook, nommément identifié par la recherche : un plan large qui plante
+  le décor, une accroche du type "Dans cette vidéo je vais vous montrer...", un appel à
+  s'abonner en ouverture — tout ce qui retarde l'action réelle. Implication explicite :
+  **pas d'intro/logo qui retarde l'accroche, cut direct sur l'élément le plus fort**.
+- **Conséquence concrète pour ce projet** : l'actuel `ShortIntro.tsx` (2,5s plein écran
+  de texte statique "🎧 BLIND TEST · {thème} · 12s chrono") est exactement le type
+  d'ouverture que cette recherche identifie comme sous-performante — un "context dump"
+  statique avant que le jeu commence. **Décision** : remplacer cette séquence bloquante
+  par un bandeau non-bloquant (theme label en petit, en haut du cadre) superposé
+  DIRECTEMENT sur l'anneau de compte à rebours du premier morceau, qui démarre dès la
+  frame 0 — l'action (l'anneau qui tourne, déjà l'élément le plus dynamique visuellement
+  de toute la composition) est visible immédiatement, rien ne bloque avant elle. Détail
+  dans la tâche du correctif visuel ci-dessous.
+
+Sources (liens complets retournés par les 3 recherches de cette session) : air.io,
+metricool.com, shortimize.com, sendshort.ai, flowshorts.app, vidiq.com, miraflow.ai,
+blitzcutai.com, socialync.io, toptal.com, et autres agrégateurs 2026 convergents sur
+ces points.
