@@ -1174,3 +1174,88 @@ intact en live) :
    conséquence (ex. "pépite méconnue" devient "un morceau plus confidentiel de
    l'épisode" sans ordre de tri garanti, "top artiste" redevient un tirage parmi
    l'historique sans classement).
+
+## [2026-09-27] Cas "Un deux trois allons dans les bois" (Claude Lombard) — CAUSE RÉELLE : épisode publié AVANT le correctif qualité, pas un problème de discoveryQuery
+
+**Creusé avec `git log`/l'historique de `channels/blindtest-fr.json` et la base
+SQLite réelle (`data/blindtest.sqlite`, présente dans ce sandbox depuis le dernier
+pull) — pas supposé, vérifié.**
+
+**Chronologie exacte reconstituée** :
+
+- L'épisode "Génériques" testé (`e81a9fc8-dcde-4224-b9e5-abe1e69c157f`) a été créé à
+  `2026-09-27T10:06:15.909Z` (colonne `created_at` de la table `videos`) — les deux
+  morceaux crédités à Claude Lombard ("Un deux trois allons dans les bois" et "Petit
+  Papa Noël") ont été enregistrés dans `tracks_used` à `10:06:19.801Z`/`.803Z`, donc
+  au moment même de la génération de cet épisode.
+- Le commit `e26d088` ("feat(pipeline): morceaux curatés pour les thèmes où la
+  recherche par artiste échoue") — celui qui **retire Claude Lombard (et 9 autres
+  chanteurs pour enfants : Chantal Goya, Henri Dès, Anne Sylvestre, Amanda Lear, Les
+  Musclés, Corynne Charby, Jean-Pierre Cassel, Datcha Mandala, Annie Cordy, Les
+  Poppys) des `seedArtists` du thème "Génériques"**, les remplace par de vrais
+  compositeurs de BO (Bruno Coulais, Alexandre Desplat, Éric Serra, en gardant
+  Bernard Minet), et ajoute les 63 `curatedTracks` + `discoveryQuery: "bande
+originale film celebre"` — a été committé à `2026-09-27T15:19:50+02:00` soit
+  `13:19:50 UTC`.
+- **L'épisode testé a donc été généré ~3h avant que ce correctif qualité n'existe.**
+  À ce moment-là, Claude Lombard était encore un `seedArtist` direct et légitime du
+  thème (présent depuis la toute première version du channel config, commit
+  `fb07459`) — ses morceaux ont été trouvés par une recherche directe par nom
+  d'artiste (`collectCandidateTracks`/`searchTracksByArtist`), **pas par
+  `discoveryQuery`/`discoverNewArtists`, qui n'existait même pas encore pour ce
+  thème à cet instant précis**.
+
+**Conclusion — l'hypothèse initiale (découverte automatique qui déterre de vieilles
+chansons pour enfants) ne s'applique PAS à ce cas précis** : aucun mécanisme de
+découverte automatique n'a tourné pour produire cet épisode ; c'est simplement du
+contenu généré avec l'ancienne liste d'artistes, avant sa propre correction. **Rien
+à corriger dans le code pour ce cas précis** — regénérer un nouvel épisode
+"Génériques" avec la config actuelle (déjà committée) suffit à ne plus voir Claude
+Lombard, puisqu'il n'est plus dans `seedArtists` ni dans les 63 `curatedTracks`.
+
+**Cela dit, la préoccupation plus large sur `discoveryQuery` reste légitime et
+mérite d'être creusée pour l'avenir** — analyse chiffrée du risque réel que ce
+fallback se déclenche un jour pour ce thème précis :
+
+- Le thème tourne une fois par semaine (`"day": "sunday"`), demande 60 morceaux par
+  épisode (`DEFAULT_TRACKS_PER_EPISODE`), et `REUSE_COOLDOWN_DAYS = 14` — soit un
+  cooldown de 2 semaines pour un thème hebdomadaire. **Un morceau utilisé cette
+  semaine reste donc bloqué la semaine prochaine, libéré seulement la semaine
+  d'après.**
+- Avec seulement 63 `curatedTracks` fixes pour couvrir 60 morceaux/semaine, **la
+  marge est très mince** : si ~60 des 63 curatedTracks sont utilisés une semaine
+  donnée, il n'en reste que ~3 disponibles (hors cooldown) la semaine suivante — le
+  reste du quota doit venir des 4 `seedArtists` (`collectCandidateTracks`,
+  `CANDIDATES_PER_ARTIST = 20` chacun, soit jusqu'à 80 candidats supplémentaires,
+  mais un compositeur de BO n'a pas forcément 20 morceaux distincts identifiables
+  sur Spotify, et ce vivier lui-même s'épuise avec le même cooldown).
+- **Verdict : `discoveryQuery` n'est pas un filet de sécurité théorique jamais
+  utilisé pour ce thème — les chiffres suggèrent qu'il a une chance réelle de se
+  déclencher régulièrement**, dès que le cycle de rotation des 63 curatedTracks +
+  4 artistes tombe à court un dimanche donné. Le risque de qualité que l'utilisateur
+  soupçonne (des résultats `searchArtists("bande originale film celebre", ...)` peu
+  pertinents — pseudo-artistes/compilations, chansons génériques datées plutôt que
+  de vraies BO modernes reconnaissables) reste donc pertinent à traiter, même s'il
+  ne s'est pas encore matérialisé dans l'épisode testé.
+
+**Deux pistes proposées (non implémentées, comme demandé)** :
+
+1. **Affiner `discoveryQuery`** — remplacer "bande originale film celebre" par
+   quelque chose de plus spécifique (ex. cibler des compositeurs/franchises précis
+   plutôt qu'une requête générique susceptible de remonter des pseudo-artistes de
+   compilation) ; `searchArtists` est un texte libre sur le NOM d'artiste, pas un
+   filtre de genre fiable (déjà documenté dans son propre commentaire de doc dans
+   `packages/integrations/spotify/src/types.ts` : "also surfaces the occasional
+   compilation/pseudo-artist entry").
+2. **Augmenter le nombre de `curatedTracks`** (63 → par exemple 120-150) pour ce
+   thème précis, ce qui réduit mécaniquement la fréquence à laquelle `discoveryQuery`
+   doit se déclencher, sans toucher à la logique de découverte elle-même — cohérent
+   avec le pattern déjà utilisé par ce même commit `e26d088` pour ce thème.
+3. (Option de repli, plus radicale) **Désactiver `discoveryQuery`** pour ce thème
+   maintenant qu'il a des `curatedTracks` — accepte le risque qu'un dimanche
+   ponctuel tombe à court (`InsufficientTracksError`, l'épisode de ce jour-là
+   échouerait/serait sauté) plutôt que de risquer une découverte non fiable qui
+   dégraderait la qualité déjà corrigée.
+
+Aucune décision prise, aucune implémentation faite — l'utilisateur vérifiera
+localement et choisira.
