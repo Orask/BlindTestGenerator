@@ -885,3 +885,73 @@ restreindre davantage selon le changelog de février 2026 — aucune action requ
 maintenant, mais si `searchArtists`/`searchTracksByArtist` devenaient
 indisponibles, ce ne serait pas seulement la famille B qui casserait, mais tout le
 pipeline existant.
+
+## [2026-09-27] Automatisation quotidienne multi-Shorts (dry-run par défaut)
+
+Implémentation demandée explicitement par l'utilisateur en remplacement de la
+décision "script manuel" de la session précédente : génération ET publication
+AUTOMATIQUE et QUOTIDIENNE, mais calibrée sur la recherche de l'étape 1
+(fréquence), pas sur un chiffre arbitraire.
+
+**`apps/pipeline/src/shorts/weekly-rotation.ts`** — table de rotation hebdomadaire
+pure (testée, 9 tests) :
+
+| Jour     | Types lancés                            |
+| -------- | --------------------------------------- |
+| Lundi    | devine-la-chanson + nouveauté-genre     |
+| Mardi    | pépite-méconnue + nouveauté-genre       |
+| Mercredi | devine-la-chanson + top-artiste         |
+| Jeudi    | pépite-méconnue + nouveauté-genre       |
+| Vendredi | devine-la-chanson + anniversaire-sortie |
+| Samedi   | top-artiste + nouveauté-genre           |
+| Dimanche | pépite-méconnue + anniversaire-sortie   |
+
+Directement calibré sur la décision déjà loguée dans la recherche stratégie
+Shorts 2026 : **~2 Shorts/jour en moyenne** (pas 6/jour tous types confondus —
+"seuils de pénalité" identifiés au-delà de 5/jour, rendements décroissants au-delà
+de 3/jour), en faisant tourner les 6 types sur la semaine plutôt que de tous les
+publier chaque jour. Le nombre réel publié un jour donné peut être inférieur à 2
+(anniversaire-sortie et nouveauté-genre s'arrêtent proprement sans rien publier
+quand rien ne correspond ce jour-là) — jamais supérieur, ce qui reste du bon côté
+des seuils identifiés par la recherche.
+
+`genreForDate`/`artistForDate` font tourner le genre (nouveauté) et l'artiste
+(top-artiste) d'un jour calendaire à l'autre, pour qu'un créneau hebdomadaire fixe
+(ex. "tous les mercredis") ne mette pas en avant systématiquement le même artiste
+semaine après semaine.
+
+**`apps/pipeline/src/generate-shorts-daily.ts`** — orchestrateur qui exécute la
+rotation du jour en un seul run : pour chaque type prévu aujourd'hui, appelle
+directement le sélecteur + le template + `publishShort` déjà testés (familles A et
+B), capture les échecs par type sans arrêter les autres (même philosophie que
+`runWeeklyBatch` dans `pipeline.ts`), logue combien de Shorts ont réellement été
+générés. Ajoute `getLatestUploadedVideoForTheme` à `packages/db` (4 nouveaux
+tests) — nécessaire pour que devine-la-chanson/pépite-méconnue retrouvent
+l'épisode long du jour sans qu'on leur passe son id à la main.
+
+**Dry-run demandé explicitement** : pas de flag séparé — même convention que tous
+les scripts `generate-short*.ts` déjà existants, rendu local par défaut, `--upload`
+pour publier réellement. C'est délibéré : ajouter un `--dry-run` distinct aurait
+introduit deux façons différentes d'exprimer la même chose dans ce projet.
+
+**`.github/workflows/daily-shorts.yml`** — nouveau workflow dédié (pas une
+extension de `daily-pipeline.yml`, pour ne pas coupler leurs échecs/timeouts) :
+
+- Cron à 5h UTC, 2h après le run quotidien long (3h UTC) pour laisser le temps à
+  l'épisode du jour d'être publié et commité avant que les Shorts le cherchent.
+- `workflow_dispatch` avec une case à cocher "upload" — pour valider manuellement
+  en dry-run (décochée) puis en publication réelle (cochée) avant d'activer
+  l'automatisation complète.
+- Le run planifié (cron) reste en dry-run tant que la variable de repo
+  `SHORTS_AUTO_UPLOAD` n'est pas mise à `"true"` — bascule explicite, à faire une
+  fois les rendus dry-run vérifiés (voir tâche suivante, validation end-to-end).
+- Même pattern de persistance DB que `daily-pipeline.yml` (commit de
+  `data/blindtest.sqlite` après le run, aucun disque persistant entre les runs
+  Actions).
+
+**Validation** : `pnpm build/test/lint/typecheck` verts pour `@blindtest/pipeline`
+(129 tests, 111+9 rotation+... ) et `@blindtest/db` (38 tests, +4 nouveaux) ; YAML
+du nouveau workflow validé avec `python3 -c "import yaml; yaml.safe_load(...)"`.
+Pas de test end-to-end réel du workflow lui-même (nécessiterait des credentials
+GitHub Actions + Spotify/YouTube réels, indisponibles dans ce sandbox — voir tâche
+suivante).

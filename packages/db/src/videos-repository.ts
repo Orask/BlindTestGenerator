@@ -43,6 +43,37 @@ export function markVideoFailed(db: Database.Database, videoId: string): void {
   db.prepare("UPDATE videos SET status = 'failed' WHERE id = ?").run(videoId);
 }
 
+export interface LatestUploadedVideo {
+  readonly id: string;
+  readonly channelId: string;
+  readonly visibility: string;
+}
+
+/**
+ * The most recently published video for a theme (default format: the
+ * long-form episode) — what a Family A "devine-la-chanson"/"pepite-
+ * meconnue" Short teases (see apps/pipeline/src/generate-shorts-daily.ts).
+ * `undefined` when nothing has published for this theme yet, which the
+ * caller treats as "nothing to tease today", not an error.
+ */
+export function getLatestUploadedVideoForTheme(
+  db: Database.Database,
+  themeId: string,
+  format: VideoFormat = "long",
+): LatestUploadedVideo | undefined {
+  const row = db
+    .prepare<[string, string], { id: string; channel_id: string; visibility: string }>(
+      `SELECT id, channel_id, visibility FROM videos
+       WHERE theme_id = ? AND format = ? AND status = 'uploaded'
+       ORDER BY created_at DESC LIMIT 1`,
+    )
+    .get(themeId, format);
+  if (!row) {
+    return undefined;
+  }
+  return { id: row.id, channelId: row.channel_id, visibility: row.visibility };
+}
+
 /** Used to number episodes in the video title (e.g. "Ép. 12"). */
 export function countVideosForTheme(db: Database.Database, themeId: string): number {
   const row = db

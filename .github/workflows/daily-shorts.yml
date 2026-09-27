@@ -1,0 +1,100 @@
+name: Daily Shorts
+
+on:
+  schedule:
+    # 5:00 UTC — 2h after daily-pipeline.yml's 3:00 UTC long-episode run, so
+    # today's episode has had time to finish, upload and land in the
+    # committed DB before devine-la-chanson/pepite-meconnue look for it
+    # (see getLatestUploadedVideoForTheme in generate-shorts-daily.ts).
+    - cron: "0 5 * * *"
+  workflow_dispatch:
+    inputs:
+      upload:
+        description: "Publier sur YouTube (décoché = dry run, rendu local uniquement)"
+        type: boolean
+        default: false
+
+concurrency:
+  group: daily-shorts
+  cancel-in-progress: false
+
+jobs:
+  run-shorts:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Remotion's headless Chromium needs these on a bare Ubuntu runner —
+      # not all are preinstalled on ubuntu-latest.
+      - name: Install Chromium runtime dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libnss3 libdbus-1-3 libatk1.0-0 libgbm1 libasound2t64 \
+            libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 \
+            libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2
+
+      # Real publication stays OFF by default for the scheduled run — flip
+      # the repo variable SHORTS_AUTO_UPLOAD to "true" (Settings > Secrets
+      # and variables > Actions > Variables) only once dry-run renders from
+      # a few manual workflow_dispatch runs (tick the "upload" input) have
+      # actually been reviewed. This is the dry-run mode requested for this
+      # automation — see docs/CLOUD_SESSION_LOG.md, "Automatisation
+      # quotidienne" — not a separate flag: --upload is the same opt-in
+      # every other generate-short*.ts script in this project already uses.
+      - name: Determine upload mode
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            UPLOAD="${{ inputs.upload }}"
+          else
+            UPLOAD="${{ vars.SHORTS_AUTO_UPLOAD }}"
+          fi
+          if [ "$UPLOAD" = "true" ]; then
+            echo "flag=--upload" >> "$GITHUB_OUTPUT"
+          else
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run today's Shorts rotation
+        working-directory: apps/pipeline
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_CLIENT_ID_2: ${{ secrets.SPOTIFY_CLIENT_ID_2 }}
+          SPOTIFY_CLIENT_SECRET_2: ${{ secrets.SPOTIFY_CLIENT_SECRET_2 }}
+          SPOTIFY_CLIENT_ID_3: ${{ secrets.SPOTIFY_CLIENT_ID_3 }}
+          SPOTIFY_CLIENT_SECRET_3: ${{ secrets.SPOTIFY_CLIENT_SECRET_3 }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node dist/generate-shorts-daily.js ../../channels/blindtest-fr.json ${{ steps.mode.outputs.flag }}
+
+      # Same reasoning as daily-pipeline.yml: no persistent disk between
+      # runs, so the committed DB file is the anti-repeat history (which
+      # tracks_used rows a Short already teased, tracks_used exclusions for
+      # nouveaute-genre, ...) across days.
+      - name: Persist database state
+        if: always()
+        working-directory: apps/pipeline
+        run: |
+          node -e "require('better-sqlite3')('../../data/blindtest.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add ../../data/blindtest.sqlite
+          git diff --cached --quiet || git commit -m "chore(data): mise à jour de la base après les shorts du $(date -u +%Y-%m-%d)"
+          git push

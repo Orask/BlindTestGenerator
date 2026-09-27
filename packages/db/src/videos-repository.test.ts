@@ -5,6 +5,7 @@ import { SCHEMA_SQL } from "./schema.js";
 import {
   countVideosForTheme,
   createVideo,
+  getLatestUploadedVideoForTheme,
   hasUploadedVideoForThemeToday,
   markVideoFailed,
   markVideoUploaded,
@@ -204,6 +205,76 @@ describe("videos repository", () => {
           new Date("2026-09-27T09:00:00Z"),
         ),
       ).toBe(false);
+    });
+  });
+
+  describe("getLatestUploadedVideoForTheme", () => {
+    it("returns undefined when the theme has no uploaded video yet", () => {
+      expect(getLatestUploadedVideoForTheme(db, "annees-80")).toBeUndefined();
+    });
+
+    it("ignores a draft/failed row that never reached uploaded", () => {
+      createVideo(db, {
+        id: "video-1",
+        channelId: "blindtest-fr",
+        themeId: "annees-80",
+        createdAt: new Date("2026-09-27T09:00:00Z"),
+        filePath: "/tmp/episode.mp4",
+        visibility: "public",
+        format: "long",
+      });
+      markVideoFailed(db, "video-1");
+
+      expect(getLatestUploadedVideoForTheme(db, "annees-80")).toBeUndefined();
+    });
+
+    it("returns the most recently uploaded video for the theme", () => {
+      createVideo(db, {
+        id: "video-1",
+        channelId: "blindtest-fr",
+        themeId: "annees-80",
+        createdAt: new Date("2026-09-20T09:00:00Z"),
+        filePath: "/tmp/episode-1.mp4",
+        visibility: "public",
+        format: "long",
+      });
+      markVideoUploaded(db, "video-1", "yt-old");
+      createVideo(db, {
+        id: "video-2",
+        channelId: "blindtest-fr",
+        themeId: "annees-80",
+        createdAt: new Date("2026-09-27T09:00:00Z"),
+        filePath: "/tmp/episode-2.mp4",
+        visibility: "public",
+        format: "long",
+      });
+      markVideoUploaded(db, "video-2", "yt-new");
+
+      expect(getLatestUploadedVideoForTheme(db, "annees-80")).toEqual({
+        id: "video-2",
+        channelId: "blindtest-fr",
+        visibility: "public",
+      });
+    });
+
+    it("only considers the requested format", () => {
+      createVideo(db, {
+        id: "video-1",
+        channelId: "blindtest-fr",
+        themeId: "annees-80",
+        createdAt: new Date("2026-09-27T09:00:00Z"),
+        filePath: "/tmp/short.mp4",
+        visibility: "public",
+        format: "short",
+      });
+      markVideoUploaded(db, "video-1", "yt-short");
+
+      expect(getLatestUploadedVideoForTheme(db, "annees-80")).toBeUndefined();
+      expect(getLatestUploadedVideoForTheme(db, "annees-80", "short")).toEqual({
+        id: "video-1",
+        channelId: "blindtest-fr",
+        visibility: "public",
+      });
     });
   });
 });

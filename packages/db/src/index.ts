@@ -24,9 +24,11 @@ export {
   markVideoFailed,
   countVideosForTheme,
   hasUploadedVideoForThemeToday,
+  getLatestUploadedVideoForTheme,
   type CreateVideoParams,
   type VideoStatus,
   type VideoFormat,
+  type LatestUploadedVideo,
 } from "./videos-repository.js";
 export { getCooldownUntil, setCooldownUntil } from "./service-cooldowns-repository.js";
 export {
