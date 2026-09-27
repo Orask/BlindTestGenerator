@@ -1905,3 +1905,78 @@ implicitement par la contrainte réseau de ce sandbox** :
 **Validation** : `pnpm --filter @blindtest/pipeline test -- load-channel-config`
 vert (6 tests, y compris le check anti-doublon et la couverture des 7 jours) ;
 `pnpm build/test/lint/typecheck` revérifiés verts pour tout le workspace.
+
+## [2026-09-27] Étape 2 — propositions de nouveaux thèmes (documentation seule, PAS ajouté au calendrier)
+
+**Rappel du blocage volontaire** : les 7 jours de la semaine ont chacun déjà un
+thème assigné dans `channels/blindtest-fr.json` (vérifié — lundi à dimanche tous
+occupés). Ajouter un 8e thème demande une vraie décision produit (remplacer un
+thème existant ? rotation bi-hebdomadaire sur un jour donné ? autre mécanisme ?)
+qui revient à l'utilisateur. **Rien ci-dessous n'est ajouté au fichier de
+configuration ni au calendrier — juste une proposition de contenu à évaluer.**
+
+### 1. "Toutes générations" — l'idée suggérée par l'utilisateur
+
+Mélange volontairement décennies ET genres — l'angle "tube ultra-reconnaissable,
+peu importe l'époque ou le style" plutôt qu'une cohérence thématique. Piocherait
+dans TOUS les `seedArtists`/`curatedTracks` déjà constitués pour les 7 thèmes
+existants (aucune nouvelle recherche d'artiste nécessaire) en ne gardant que les
+titres les plus universellement connus de chaque liste — un "best of du best of".
+Exemple de sélection (10 titres, piochés dans les listes déjà en place) :
+Ella, elle l'a (France Gall) · Voyage voyage (Desireless) · Désenchantée (Mylène
+Farmer) · Je t'aime (Lara Fabian) · En apesanteur (Calogero) · Djadja (Aya
+Nakamura) · Non, je ne regrette rien (Édith Piaf) · La Vie en rose (Édith Piaf) ·
+Formidable (Stromae) · Balance ton quoi (Angèle).
+**Intérêt** : format le plus "grand public" possible, aucune barrière de niche —
+risque le plus faible de perdre un spectateur qui ne connaît pas un genre précis.
+**Limite à trancher par l'utilisateur** : nécessite de définir une règle de
+non-répétition avec les autres thèmes (un morceau déjà dans `tracks_used` pour un
+autre thème doit-il être ré-éligible ici ? le cooldown actuel est par chaîne, pas
+par thème, donc ce serait déjà géré par la logique existante — mais le choix éditorial
+de "piocher dans du déjà-vu" reste une question produit, pas technique).
+
+### 2. "Comédies musicales françaises"
+
+Notre-Dame de Paris, Starmania, Les Dix Commandements, Roméo et Juliette, Mozart
+l'Opéra Rock — un genre avec un catalogue de titres extrêmement connus et un
+public de fans engagé (bon signal pour les commentaires/l'engagement). Plusieurs
+titres déjà ajoutés cette session dans `annees-90`/`classiques-fr` en montrent la
+richesse (Belle, Le Temps des cathédrales). Exemple de sélection (8 titres) :
+Belle (Garou, Daniel Lévi & Patrick Fiori) · Le Temps des cathédrales (Bruno
+Pelletier) · Vivre (Isabelle Boulay, Daniel Lévi & Patrick Fiori) · Les Rois du
+monde (Damien Sargue, Grégori Baquet & Jérôme Collet, Roméo et Juliette) · SOS
+d'un terrien en détresse (Starmania, plusieurs versions dont France Gall) · Le
+Monde est stone (Starmania, Fabienne Thibeault) · L'Envie d'aimer (Daniel Lévi) ·
+Tatoue-moi (Mozart l'Opéra Rock, Mikelangelo Loconte).
+**Intérêt** : genre distinct des 7 thèmes existants, catalogue riche, `seedArtists`
+naturel (Garou, Daniel Lévi, Bruno Pelletier, Mikelangelo Loconte...).
+
+### 3. "Duos & Reprises"
+
+Angle format plutôt que genre/époque : les duos français les plus connus, souvent
+déjà parmi les tubes les plus reconnaissables tous publics confondus. Plusieurs
+exemples déjà ajoutés cette session (Vitaa & Slimane, Garou/Daniel Lévi/Patrick
+Fiori, Céline Dion & Jean-Jacques Goldman, Renaud & Axelle Red, Garou & Céline
+Dion) montrent que ce catalogue existe déjà en grande partie dans les listes
+actuelles — un thème dédié permettrait de les regrouper plutôt que de les
+disperser par décennie. Exemple de sélection (8 titres, dont certains déjà
+ajoutés ailleurs cette session — un même morceau pourrait migrer de thème plutôt
+que d'être dupliqué, décision éditoriale à trancher) : Petite sœur (Vitaa &
+Slimane) · J'irai où tu iras (Céline Dion & Jean-Jacques Goldman) · Sous le vent
+(Garou & Céline Dion) · Manhattan-Kaboul (Renaud & Axelle Red) · La Musique
+(Anggun & Christophe Willem) · On s'attache (Christophe Maé) — solo, à exclure,
+juste vérifier la cohérence du concept.
+**Intérêt** : format immédiatement identifiable pour le spectateur ("2 voix qui
+se répondent"), bonne accroche visuelle pour un Short (2 photos de couverture qui
+alternent). **Limite** : catalogue plus restreint que les 2 autres propositions —
+probablement le meilleur candidat pour une rotation ponctuelle (1 fois/mois) plutôt
+qu'un thème hebdomadaire fixe, à cause du risque d'épuiser le vivier de vrais duos
+connus plus vite qu'un thème générationnel classique.
+
+### Non retenu explicitement
+
+Un thème "hits internationaux" (titres anglophones connus en France) a été
+envisagé puis écarté de cette liste de propositions : il changerait l'identité
+100% francophone actuelle de la chaîne, une décision de positionnement plus
+lourde qu'un simple ajout de thème — mentionné ici seulement pour mémoire, pas
+recommandé sans discussion explicite avec l'utilisateur.
