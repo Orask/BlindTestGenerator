@@ -3,9 +3,11 @@ import type { ChannelConfig, ChannelTheme } from "@blindtest/core";
 import { openDatabase } from "@blindtest/db";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { publishShort } from "./shorts/publish-short.js";
 import { selectTopArtisteTracks } from "./shorts/top-artiste.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildTopArtisteMetadata } from "./youtube-metadata.js";
 
 // Family A, type 3: the channel's best tracks *of one specific artist*,
@@ -85,6 +87,13 @@ const outputPath = `${outputDir}${channel.id}-top-artiste-${runId}.mp4`;
 
 const metadata = buildTopArtisteMetadata(artistName, tracks);
 
+// Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+// public/ at bundle time, so anything downloaded afterward 404s from the
+// bundled server (same fix as pipeline.ts — see its comment).
+await resolvePublicCoverUrls(
+  tracks.map((track) => track.albumCoverUrl),
+  PUBLIC_COVERS_DIR,
+);
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,

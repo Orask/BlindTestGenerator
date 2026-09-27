@@ -2,10 +2,12 @@ import { fileURLToPath } from "node:url";
 import { openDatabase } from "@blindtest/db";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { publishShort } from "./shorts/publish-short.js";
 import { selectDevineLaChansonTracks } from "./shorts/devine-la-chanson.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildShortMetadata } from "./youtube-metadata.js";
 
 // One-off / cron-able: cuts a vertical YouTube Short from an already-
@@ -99,6 +101,13 @@ const metadata = buildShortMetadata(
   fullEpisodeTrackCountRow.count,
 );
 
+// Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+// public/ at bundle time, so anything downloaded afterward 404s from the
+// bundled server (same fix as pipeline.ts — see its comment).
+await resolvePublicCoverUrls(
+  tracks.map((track) => track.albumCoverUrl),
+  PUBLIC_COVERS_DIR,
+);
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,

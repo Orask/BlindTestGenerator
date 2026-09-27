@@ -8,6 +8,7 @@ import type { YoutubeClient } from "@blindtest/youtube";
 import type Database from "better-sqlite3";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { findAnniversaryMatches, hydrateAnniversaryTrack } from "./shorts/anniversaire-sortie.js";
 import { selectDevineLaChansonTracks } from "./shorts/devine-la-chanson.js";
@@ -21,6 +22,7 @@ import {
   shortTypesForDay,
   type ShortTypeId,
 } from "./shorts/weekly-rotation.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import {
   buildAnniversaireSortieMetadata,
   buildNouveauteMetadata,
@@ -54,10 +56,22 @@ interface Ctx {
   readonly spotify: SpotifyClient;
   readonly itunes: ItunesClient;
   readonly youtube: YoutubeClient;
-  readonly serveUrl: string;
   readonly outputDir: string;
   readonly upload: boolean;
   readonly now: Date;
+}
+
+// Each attempt resolves its OWN covers then bundles right before rendering,
+// rather than sharing one serveUrl bundled up front for the whole run: which
+// tracks (and therefore which cover URLs) a type needs isn't known until
+// that type's selector has run, and Remotion's bundler snapshots public/ at
+// bundle time — bundling before covers exist 404s every render (same fix as
+// pipeline.ts/generate-short.ts — see their comments). Bundling per
+// successful attempt (at most ~2-3/day, see weekly-rotation.ts) costs a bit
+// more than a single shared bundle but is the only way to get this right.
+async function resolveCoversAndBundle(coverUrls: readonly string[]): Promise<string> {
+  await resolvePublicCoverUrls(coverUrls, PUBLIC_COVERS_DIR);
+  return bundleVideoRenderer();
 }
 
 function todaysTheme(ctx: Ctx): ChannelTheme {
@@ -101,9 +115,10 @@ async function attemptDevineLaChanson(ctx: Ctx): Promise<boolean> {
     fullEpisodeTrackCountRow.count,
   );
 
+  const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
-    serveUrl: ctx.serveUrl,
+    serveUrl,
     themeLabel: theme.label,
     tracks,
     fullEpisodeTrackCount: fullEpisodeTrackCountRow.count,
@@ -139,9 +154,10 @@ async function attemptPepiteMeconnue(ctx: Ctx): Promise<boolean> {
   }
 
   const metadata = buildPepiteMeconnueMetadata(theme, tracks);
+  const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
-    serveUrl: ctx.serveUrl,
+    serveUrl,
     themeLabel: theme.label,
     tracks,
     outputPath: outputPathFor(ctx.outputDir, ctx.channel.id, `${theme.id}-pepite-meconnue`),
@@ -179,9 +195,10 @@ async function attemptTopArtiste(ctx: Ctx): Promise<boolean> {
   }
 
   const metadata = buildTopArtisteMetadata(artistName, tracks);
+  const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
-    serveUrl: ctx.serveUrl,
+    serveUrl,
     themeLabel: artistName,
     tracks,
     outputPath: outputPathFor(ctx.outputDir, ctx.channel.id, "top-artiste"),
@@ -224,9 +241,10 @@ async function attemptAnniversaireSortie(ctx: Ctx): Promise<boolean> {
     artist: match.artist,
     yearsAgo: match.yearsAgo,
   });
+  const serveUrl = await resolveCoversAndBundle([track.albumCoverUrl]);
   await publishShort({
     db: ctx.db,
-    serveUrl: ctx.serveUrl,
+    serveUrl,
     themeLabel: `${match.yearsAgo} ans déjà`,
     tracks: [track],
     outputPath: outputPathFor(ctx.outputDir, ctx.channel.id, "anniversaire-sortie"),
@@ -265,9 +283,10 @@ async function attemptNouveauteGenre(ctx: Ctx): Promise<boolean> {
   }
 
   const metadata = buildNouveauteMetadata(genreQuery, tracks);
+  const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
-    serveUrl: ctx.serveUrl,
+    serveUrl,
     themeLabel: `Nouveautés ${genreQuery}`,
     tracks,
     outputPath: outputPathFor(ctx.outputDir, ctx.channel.id, "nouveaute-genre"),
@@ -306,11 +325,10 @@ const dbPath = fileURLToPath(new URL("../../../data/blindtest.sqlite", import.me
 const db = openDatabase(dbPath);
 const channel = await loadChannelConfig(channelConfigPath);
 const { spotify, itunes, youtube } = createClientsFromEnv();
-const serveUrl = await bundleVideoRenderer();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
 
 const now = new Date();
-const ctx: Ctx = { db, channel, spotify, itunes, youtube, serveUrl, outputDir, upload, now };
+const ctx: Ctx = { db, channel, spotify, itunes, youtube, outputDir, upload, now };
 const todaysTypes = shortTypesForDay(weekdayFromDate(now));
 
 console.log(

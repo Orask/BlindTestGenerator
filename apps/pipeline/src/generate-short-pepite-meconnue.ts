@@ -2,10 +2,12 @@ import { fileURLToPath } from "node:url";
 import { openDatabase } from "@blindtest/db";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { selectPepiteMeconnueTracks } from "./shorts/pepite-meconnue.js";
 import { publishShort } from "./shorts/publish-short.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildPepiteMeconnueMetadata } from "./youtube-metadata.js";
 
 // Family A, type 2: same already-published episode as generate-short.ts,
@@ -74,6 +76,13 @@ const outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-pepite-meconn
 
 const metadata = buildPepiteMeconnueMetadata(theme, tracks);
 
+// Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+// public/ at bundle time, so anything downloaded afterward 404s from the
+// bundled server (same fix as pipeline.ts — see its comment).
+await resolvePublicCoverUrls(
+  tracks.map((track) => track.albumCoverUrl),
+  PUBLIC_COVERS_DIR,
+);
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,

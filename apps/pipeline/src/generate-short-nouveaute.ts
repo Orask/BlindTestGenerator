@@ -2,9 +2,11 @@ import { fileURLToPath } from "node:url";
 import { openDatabase } from "@blindtest/db";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { titleArtistKey, selectNewReleaseTracks } from "./shorts/nouveaute-genre.js";
 import { publishShort } from "./shorts/publish-short.js";
+import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildNouveauteMetadata } from "./youtube-metadata.js";
 
 // Family B, types 5/6: pure traffic generation, one run per genre (see
@@ -79,6 +81,13 @@ const outputPath = `${outputDir}${channel.id}-nouveaute-${runId}.mp4`;
 
 const metadata = buildNouveauteMetadata(genreLabel!, tracks);
 
+// Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
+// public/ at bundle time, so anything downloaded afterward 404s from the
+// bundled server (same fix as pipeline.ts — see its comment).
+await resolvePublicCoverUrls(
+  tracks.map((track) => track.albumCoverUrl),
+  PUBLIC_COVERS_DIR,
+);
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,
