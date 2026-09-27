@@ -671,3 +671,40 @@ renderer` et `@blindtest/pipeline` (aucun test unitaire cassé — `Short.tsx`/
 `CountdownRing.tsx`/`RevealCard.tsx`/`TrackSegment.tsx` n'ont pas de tests unitaires
 dédiés dans ce projet, cohérent avec le reste des composants React de
 `video-renderer`, vérification visuelle étant la méthode établie ici).
+
+## [2026-09-27] Conception abstraction "type de Short" — recherche source de données famille B
+
+**Avant tout code** (comme demandé) : recherché si `GET /v1/browse/new-releases` ou
+`search?q=tag:new` sont des options viables pour la famille B, étant donné les
+restrictions déjà connues de cette app Spotify (recommendations/playlist/artist-
+top-tracks fermés pour les nouvelles apps, voir CAHIER_DES_CHARGES 3bis).
+
+- **`/v1/browse/new-releases` : CONFIRMÉ SUPPRIMÉ** — changelog officiel Spotify
+  for Developers de février 2026 : l'endpoint "Get New Releases" a été retiré dans
+  le cadre des changements "Developer Mode". Option écartée, sans ambiguïté.
+- **`search?q=tag:new` : écarté aussi**, pour deux raisons trouvées dans la
+  documentation officielle et les retours de la communauté Spotify : (1) ce filtre
+  ne s'applique qu'à la recherche **d'albums**, jamais de morceaux directement,
+  obligeant un second aller-retour album→morceaux ; (2) historique documenté
+  d'instabilité — plusieurs signalements communautaires du filtre qui cesse de
+  fonctionner sans préavis. Trop fragile pour une automatisation quotidienne sans
+  possibilité de le tester en direct dans ce sandbox.
+- **Point plus large et important, à surveiller** : le changelog Spotify de février
+  2026 indique aussi un éloignement du flow Client Credentials pour les endpoints
+  de métadonnées, et un Developer Mode désormais limité à 5 utilisateurs par app et
+  nécessitant un compte Premium. Ce projet utilise déjà Client Credentials pour
+  tout le pipeline existant (confirmé fonctionnel via le run du 2026-09-27, tâche 3
+  de la session précédente) — pas d'action requise maintenant, mais **à surveiller** :
+  si Spotify restreint encore Client Credentials, tout le pipeline (pas seulement
+  les Shorts) serait affecté. Noté dans les points ouverts en fin de session.
+
+**Solution retenue — n'utilise QUE des endpoints déjà vérifiés fonctionnels dans ce
+projet**, zéro nouveau risque d'endpoint non testé : combiner `searchArtists`
+(déjà utilisé par `discover-artists.ts` pour découvrir des artistes par requête de
+genre, ex. "rap francais") avec `searchTracksByArtist` (déjà le cœur de la
+sélection de morceaux du pipeline principal), puis trier les résultats
+côté client par `album.release_date` (nouveau champ ajouté au client Spotify, voir
+plus bas) pour ne garder que les plus récents. Aucun nouvel endpoint, aucune
+supposition non vérifiée sur la forme des données — uniquement de la composition
+de deux méthodes déjà testées et déjà en production. Détail dans la tâche famille B
+ci-dessous.
