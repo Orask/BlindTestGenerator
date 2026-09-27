@@ -1259,3 +1259,173 @@ fallback se déclenche un jour pour ce thème précis :
 
 Aucune décision prise, aucune implémentation faite — l'utilisateur vérifiera
 localement et choisira.
+
+## [2026-09-27] Recherche business — contraintes réelles des plateformes pour ~20 chaînes multi-plateformes (Instagram/TikTok/Snapchat/Facebook)
+
+**Recherche documentaire uniquement (pas de credentials nécessaires), comme
+demandé, avant toute décision sur l'objectif 3-4 mois** de ~20 chaînes sur
+YouTube/Instagram/TikTok/Snapchat/Facebook avec un site centralisant les stats.
+Sources : documentation officielle des plateformes quand accessible directement,
+sinon agrégateurs/guides développeurs 2026 qui la citent (même méthode que pour les
+recherches Spotify de cette session — accès direct à `developers.facebook.com`/
+`developers.tiktok.com`/`developer.spotify.com` non testé, pas nécessaire ici
+puisqu'aucun de ces hosts n'est dans le scope réseau de ce projet).
+
+### Instagram (Meta Graph API / "Instagram API with Instagram Login")
+
+- **Compte requis** : compte Instagram **Professionnel** (Business ou Creator) —
+  un compte personnel n'est éligible à AUCUNE API officielle, plus du tout depuis
+  les dernières dépréciations.
+- **Deux chemins d'implémentation en 2026** : l'ancien ("Instagram API with
+  Facebook Login") exige de lier chaque compte Instagram à une Page Facebook ; le
+  plus récent ("Instagram API with Instagram Login", lancé juillet 2024, chemin
+  recommandé par Meta en 2026) **ne demande plus de Page Facebook liée** —
+  simplifie nettement la mise en place pour 20 comptes (pas besoin de créer 20
+  Pages Facebook juste pour satisfaire l'ancienne exigence).
+- **Publication programmatique** : oui, `instagram_content_publish` — permission
+  soumise à App Review.
+- **Stats exposées via API** : oui, largement — vues, reach, likes, commentaires,
+  saves, shares, visites de profil, followers (Instagram Graph API Insights).
+- **Strikes/blocages** : **PAS exposés via l'API officielle** — uniquement visibles
+  dans le tableau de bord humain "Compte Status" (Meta Business Suite / app
+  Instagram elle-même). Aucune source trouvée ne documente un endpoint retournant
+  cette information.
+- **Délai d'approbation** : App Review standard ~2-4 semaines (une source cite "de
+  quelques jours à plusieurs semaines", un rejet relance le délai) ; **vérification
+  d'entreprise (Meta Business Manager) séparée, jusqu'à 4 semaines**. Les scopes
+  sensibles (`instagram_content_publish` inclus) sont "souvent rejetés en première
+  soumission".
+- **Scaling à 20 comptes** : la review d'app et la vérification d'entreprise sont
+  **au niveau de l'app/de la Business Manager, pas par compte** — une fois
+  approuvées, elles couvrent toutes les Pages/comptes Instagram rattachés à la même
+  Business Manager. Le coût de review ne se multiplie donc pas par 20, seulement le
+  travail de connexion de chaque compte à la Business Manager.
+
+### Facebook (Graph API — Pages, Reels)
+
+- **Compte requis** : une **Page Facebook** (jamais un profil personnel ni un
+  groupe) pour publier des vidéos/Reels.
+- **Publication programmatique** : oui (`pages_manage_posts`, `pages_manage_engagement`
+  pour les Reels) — Reels : MP4, 9:16, 3-90s, 720p minimum. Publier un Reel sur
+  Facebook ne le republie PAS automatiquement sur Instagram (deux appels séparés).
+- **Stats exposées via API** : oui, Graph API Insights (vues, reach, engagement).
+- **Strikes/blocages** : même limite qu'Instagram — visibles uniquement dans le
+  Centre de transparence Meta / tableau de bord humain, pas via API documentée.
+- **Délai d'approbation** : même processus App Review que Instagram (`pages_show_list`,
+  `pages_read_engagement`, `pages_manage_posts`) — quelques jours à quelques
+  semaines, au niveau de l'app comme ci-dessus.
+
+### TikTok (Content Posting API)
+
+- **Compte requis** : Creator OU Business account (les deux fonctionnent) — pas de
+  compte personnel/perso non converti.
+- **Publication programmatique** : oui, Content Posting API — **mais toute
+  publication reste EN PRIVÉ TANT QUE L'APP N'A PAS PASSÉ UN AUDIT** séparé de
+  l'inscription initiale, qui vérifie la conformité aux conditions TikTok. Sans cet
+  audit, impossible de publier en public via l'API, quel que soit le nombre de
+  comptes connectés.
+- **Stats exposées via API** : oui — vues, likes, commentaires, partages, durée,
+  date de publication par vidéo ; abonnés/likes totaux/nombre de vidéos au niveau
+  du profil créateur.
+- **Strikes/blocages** : pas d'endpoint documenté trouvé — uniquement visible dans
+  l'app TikTok elle-même ("Account status").
+- **Délai d'approbation** : estimations très variables selon les sources — de
+  "3-5 jours ouvrés pour les cas les mieux préparés" à "2-6 semaines", un rejet
+  relance le délai de 1-2 semaines à chaque fois. **L'audit est une étape séparée
+  de l'inscription de l'app**, à faire une fois le flow testé bout-à-bout — donc un
+  second aller-retour après le premier enregistrement, pas un délai unique.
+- **Scaling à 20 comptes** : l'audit est **au niveau de l'app, pas par compte** —
+  une fois passé, tous les comptes connectés peuvent publier en public. Mais
+  chaque compte doit individuellement s'authentifier via OAuth (pas de jeton
+  "agence" couvrant plusieurs comptes) — jetons à gérer/rafraîchir par compte
+  (24h d'expiration selon une source), et un plafond de ~15 posts/jour PAR COMPTE
+  côté TikTok (largement au-dessus du volume prévu pour ce projet, pas un problème
+  réel ici).
+
+### Snapchat — **AUCUNE API officielle de publication organique trouvée**
+
+- **Le "Marketing API" de Snapchat est une API PUBLICITAIRE** (campagnes payantes,
+  attribution, gestion d'audience) — ouverte à tous depuis 2018, sans review ni
+  audit, mais **ne sert pas à publier du contenu organique** sur un compte Snapchat
+  (Stories/Spotlight).
+- **"Creative Kit"** (partie de Snap Kit) permet de partager du contenu VERS
+  Snapchat depuis une app tierce, mais via **le bouton de partage natif déclenché
+  par un utilisateur humain** — pas une automatisation serveur-à-serveur sans
+  interaction, et pas conçu pour poster sur le compte propre d'une chaîne de façon
+  planifiée.
+- **Confirmé par plusieurs sources indépendantes (2026)** : "Snapchat has no
+  documented public API for core organic publishing, including posting Snaps,
+  Stories, or Spotlight content programmatically." Les services tiers qui
+  prétendent le faire (Ayrshare, Mallary, etc.) sont des **contournements non
+  officiels**, pas une API Snapchat elle-même — risque réel de ToS/bannissement à
+  publier ainsi à l'échelle de 20 chaînes automatisées.
+- **Conséquence directe pour l'objectif 3-4 mois** : Snapchat n'est probablement
+  **pas automatisable de façon fiable/officielle** avec la même approche que les 4
+  autres plateformes. À traiter à part (poster manuellement en dernier recours, ou
+  écarter Snapchat du plan d'automatisation, ou accepter le risque d'un
+  contournement tiers — à décider par l'utilisateur, pas une décision technique).
+
+### Rappel — YouTube (déjà en place dans ce projet) a une contrainte du même type, pas encore un problème mais à anticiper pour 20 chaînes
+
+Recherché en comparaison, car directement pertinent pour le passage à 20 chaînes :
+le **quota par défaut de l'API YouTube Data est de 10 000 unités/jour, PAR PROJET
+Google Cloud, pas par chaîne**. Un upload coûte ~1600 unités (déjà documenté dans
+`pipeline.ts`, confirmé en conditions réelles cette session : "plus de ~6 uploads
+par jour commenceront à échouer"). Avec 1 épisode long + jusqu'à 2 Shorts/jour par
+chaîne (~4800 unités/chaîne/jour), **20 chaînes sous un même projet Google Cloud
+dépasseraient largement le quota par défaut** (besoin réel ~96 000 unités/jour vs
+10 000 disponibles). Deux options, ni codées ni décidées ici :
+
+1. Demander une extension de quota via le formulaire d'audit YouTube — **délai non
+   garanti**, plusieurs semaines, et les cas "usage à grande échelle" sont
+   fréquemment rejetés selon les sources trouvées.
+2. **Créer un projet Google Cloud (et des credentials OAuth) séparé par chaîne ou
+   par petit groupe de chaînes**, chacun restant sous son propre quota par défaut
+   de 10 000 — évite complètement le processus d'audit incertain. Rejoint le
+   pattern déjà construit dans ce projet pour Spotify (`rotating-client.ts`,
+   `SPOTIFY_CLIENT_ID_2`/`_3`...) — voir la tâche suivante sur la réutilisabilité.
+
+### Synthèse — est-ce le vrai goulot d'étranglement pour l'objectif 3-4 mois ?
+
+**Oui, clairement, pour Instagram/Facebook/TikTok** — pas parce que le délai est
+énorme en soi (2-6 semaines selon la plateforme), mais parce que :
+
+- C'est un **délai externe, non compressible par plus de travail ou plus de
+  budget cloud** — contrairement à écrire du code, attendre une review humaine
+  chez Meta/TikTok ne s'accélère pas en y consacrant plus de sessions.
+- **Chaque rejet relance le délai complet** (confirmé pour les deux plateformes) —
+  soumettre tard et découvrir un problème de conformité repousse d'autant le
+  lancement.
+- La review est heureusement **au niveau de l'app/Business Manager, pas par
+  chaîne** — donc ce n'est PAS 20× le délai, c'est un délai fixe une fois, à
+  condition de démarrer le processus avec UNE SEULE app/Business Manager pensée
+  dès le départ pour héberger les 20 chaînes (pas 20 apps séparées, ce qui serait
+  20× le risque de rejet et de délai).
+
+**Ce qu'il faudrait démarrer dès maintenant côté ADMINISTRATIF (pas de code)**,
+sans attendre que la qualité vidéo soit jugée suffisante pour publier réellement —
+ces démarches sont gratuites, réversibles (rien n'oblige à publier tant que
+l'approbation n'a pas eu lieu), et leur délai tourne "en arrière-plan" pendant que
+le travail de qualité continue :
+
+1. Créer les comptes développeur (Meta for Developers, TikTok for Developers) et
+   UNE app par plateforme pensée dès le départ pour héberger 20 chaînes/comptes.
+2. Démarrer la vérification d'entreprise Meta Business Manager (jusqu'à 4 semaines
+   à elle seule, indépendante de l'app review).
+3. Soumettre l'app review Meta (`instagram_content_publish`, `pages_manage_posts`,
+   etc.) avec un cas d'usage et une démo dès qu'un flow minimal de test existe (pas
+   besoin d'attendre que le contenu soit publiable en vrai — un compte de test
+   suffit pour la review).
+4. Enregistrer l'app TikTok, tester le flow bout-à-bout en privé (obligatoire avant
+   l'audit), puis soumettre l'audit dès que ce test privé fonctionne.
+5. Décider du sort de Snapchat maintenant que l'absence d'API organique officielle
+   est confirmée (l'écarter du plan, ou accepter un contournement tiers en toute
+   connaissance du risque).
+6. Anticiper le choix d'architecture quota YouTube (1 projet GCP par chaîne, ou par
+   petit groupe) AVANT de créer les 20 chaînes YouTube, pour ne pas avoir à tout
+   migrer plus tard.
+
+**Ce qui peut clairement attendre** : le code de publication multi-plateforme
+lui-même (personne ne peut rien publier avant l'approbation de toute façon), et le
+site de centralisation des stats (voir tâche suivante) — les deux dépendent d'API
+dont l'accès n'existera pas avant plusieurs semaines au mieux.
