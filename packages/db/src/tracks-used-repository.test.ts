@@ -5,6 +5,7 @@ import {
   getRecentTracksForTheme,
   getUsedTrackIds,
   getUsedTrackIdsSince,
+  getUsedTracksForChannel,
   recordTrackUsage,
 } from "./tracks-used-repository.js";
 
@@ -132,5 +133,70 @@ describe("getRecentTracksForTheme", () => {
     const result = getRecentTracksForTheme(db, "annees-80", new Date("2026-07-01T00:00:00Z"));
 
     expect(result).toEqual([]);
+  });
+});
+
+describe("getUsedTracksForChannel", () => {
+  it("returns every distinct track used across every theme for the channel", () => {
+    db.prepare(
+      "INSERT INTO channel_themes (id, channel_id, day, label, youtube_playlist_id) VALUES (?, ?, ?, ?, ?)",
+    ).run("rap-fr", "blindtest-fr", "thursday", "Rap FR", null);
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "track-1",
+      title: "Title 1",
+      artist: "Artist 1",
+      videoId: null,
+      usedAt: new Date("2026-08-07T00:00:00Z"),
+    });
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "rap-fr",
+      spotifyTrackId: "track-2",
+      title: "Title 2",
+      artist: "Artist 2",
+      videoId: null,
+      usedAt: new Date("2026-08-08T00:00:00Z"),
+    });
+
+    const result = getUsedTracksForChannel(db, "blindtest-fr");
+
+    expect(result).toEqual(
+      expect.arrayContaining([
+        { spotifyTrackId: "track-1", title: "Title 1", artist: "Artist 1" },
+        { spotifyTrackId: "track-2", title: "Title 2", artist: "Artist 2" },
+      ]),
+    );
+    expect(result).toHaveLength(2);
+  });
+
+  it("de-duplicates a track reused across multiple episodes", () => {
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "track-1",
+      title: "Title 1",
+      artist: "Artist 1",
+      videoId: null,
+      usedAt: new Date("2026-08-07T00:00:00Z"),
+    });
+    recordTrackUsage(db, {
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      spotifyTrackId: "track-1",
+      title: "Title 1",
+      artist: "Artist 1",
+      videoId: null,
+      usedAt: new Date("2026-09-01T00:00:00Z"),
+    });
+
+    expect(getUsedTracksForChannel(db, "blindtest-fr")).toEqual([
+      { spotifyTrackId: "track-1", title: "Title 1", artist: "Artist 1" },
+    ]);
+  });
+
+  it("returns an empty array for a channel with no history", () => {
+    expect(getUsedTracksForChannel(db, "blindtest-fr")).toEqual([]);
   });
 });

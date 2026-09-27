@@ -4,9 +4,11 @@ export {
   getUsedTrackIds,
   getUsedTrackIdsSince,
   getRecentTracksForTheme,
+  getUsedTracksForChannel,
   recordTrackUsage,
   type RecentTrack,
   type RecordTrackUsageParams,
+  type UsedTrack,
 } from "./tracks-used-repository.js";
 export {
   upsertChannel,

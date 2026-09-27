@@ -51,6 +51,34 @@ export function getRecentTracksForTheme(
     .all(themeId, sinceDate.toISOString());
 }
 
+export interface UsedTrack {
+  readonly spotifyTrackId: string;
+  readonly title: string;
+  readonly artist: string;
+}
+
+/**
+ * Every distinct track this channel has ever used, across every theme and
+ * episode — the candidate pool for Short types that mine the channel's own
+ * history (e.g. "top tracks of an artist we've featured", "anniversary of
+ * a track's release", see apps/pipeline/src/shorts/) rather than a single
+ * episode's tracks_used rows. Small enough in practice (low hundreds of
+ * rows) to filter client-side (by artist name, release date, ...) instead
+ * of adding a query per filter shape.
+ */
+export function getUsedTracksForChannel(db: Database.Database, channelId: string): UsedTrack[] {
+  return db
+    .prepare<[string], { spotify_track_id: string; title: string; artist: string }>(
+      "SELECT DISTINCT spotify_track_id, title, artist FROM tracks_used WHERE channel_id = ?",
+    )
+    .all(channelId)
+    .map((row) => ({
+      spotifyTrackId: row.spotify_track_id,
+      title: row.title,
+      artist: row.artist,
+    }));
+}
+
 export function recordTrackUsage(db: Database.Database, params: RecordTrackUsageParams): void {
   db.prepare(
     `INSERT INTO tracks_used (channel_id, theme_id, spotify_track_id, title, artist, used_at, video_id)

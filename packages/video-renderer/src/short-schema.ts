@@ -11,8 +11,10 @@ export const shortSchema = z.object({
   tracks: z.array(trackSchema).min(1),
   // The full episode's track count, shown in the outro CTA ("la suite sur
   // la chaîne, 40 morceaux") — distinct from tracks.length, which is only
-  // the short's own subset.
-  fullEpisodeTrackCount: z.number().int().positive(),
+  // the short's own subset. Omitted for a Short that doesn't tease a
+  // specific episode (see apps/pipeline/src/shorts/ "traffic" types),
+  // which gets a generic "nouveau chaque jour" outro instead.
+  fullEpisodeTrackCount: z.number().int().positive().optional(),
   accentColors: z
     .array(zColor())
     .min(1)

@@ -59,8 +59,8 @@ export function Short({
 
         <Series.Sequence durationInFrames={SHORT_OUTRO_FRAMES}>
           <ShortOutro
-            fullEpisodeTrackCount={fullEpisodeTrackCount}
             accentColor={firstAccentColor}
+            {...(fullEpisodeTrackCount !== undefined ? { fullEpisodeTrackCount } : {})}
           />
         </Series.Sequence>
       </Series>

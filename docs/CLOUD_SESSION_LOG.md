@@ -708,3 +708,71 @@ plus bas) pour ne garder que les plus récents. Aucun nouvel endpoint, aucune
 supposition non vérifiée sur la forme des données — uniquement de la composition
 de deux méthodes déjà testées et déjà en production. Détail dans la tâche famille B
 ci-dessous.
+
+## [2026-09-27] Famille A — les 4 types de Short liés à un épisode
+
+Implémentation des 4 types "famille A" (lien vers la chaîne, réutilisent des
+morceaux déjà en base) dans un nouveau dossier `apps/pipeline/src/shorts/` — un
+fichier par type, dans le style déjà établi du projet (pas d'abstraction générique
+de "stratégie" : les entrées de chaque type diffèrent trop, seule la sortie
+(`ShortCandidateTrack`, dans `types.ts`) est partagée) :
+
+1. **`devine-la-chanson.ts`** — extrait de la logique déjà existante dans
+   `generate-short.ts` (les N premières lignes `tracks_used` de l'épisode, dans
+   l'ordre où `buildOpeningHook` les avait classées). Comportement inchangé,
+   simplement déplacé dans son propre module réutilisable.
+2. **`pepite-meconnue.ts`** — même épisode, mais les morceaux les **moins**
+   populaires (vraie `popularity` Spotify, pas `popularityRank`). Coût : un appel
+   `getTrackById` par morceau de l'épisode (~40-60), documenté en commentaire
+   comme acceptable pour un usage occasionnel, pas gratuit.
+3. **`top-artiste.ts`** — construit uniquement à partir de
+   `getUsedTracksForChannel` (l'historique déjà connu de la chaîne), jamais d'appel
+   à un endpoint "top morceaux d'un artiste" (fermé sur ce tier d'app Spotify).
+   Filtre par correspondance de sous-chaîne normalisée (diacritiques/casse) sur le
+   champ `artist` (qui peut contenir plusieurs artistes crédités, ex.
+   "Vitaa, Slimane"), trie par popularité réelle décroissante.
+4. **`anniversaire-sortie.ts`** — scanne tout l'historique de la chaîne, parse
+   `release_date` (précision variable : année seule, année-mois, ou date
+   complète — un mois/jour absent est traité comme le 1er, au mieux), calcule les
+   correspondances "sorti il y a N ans, ce jour-ci" avec une fenêtre `windowDays`
+   optionnelle pour planifier à l'avance sans forcément rendre tout de suite.
+
+Ajout à `packages/db/src/tracks-used-repository.ts` : `getUsedTracksForChannel`
+(tous les morceaux distincts jamais utilisés par une chaîne, toutes thématiques/
+épisodes confondus) — nécessaire pour les types 3 et 4 qui ne se limitent pas à un
+seul épisode. 3 nouveaux tests (multi-thème, dédoublonnage, historique vide).
+
+**`fullEpisodeTrackCount` rendu optionnel** dans `short-schema.ts`, `ShortOutro.tsx`
+et `render-short.ts` (`RenderShortParams`) : les types "pépite méconnue" et
+"top artiste" n'ont pas de notion propre de "l'épisode complet fait N morceaux" à
+afficher dans l'outro (pépite méconnue vient bien d'un épisode mais ce n'est pas
+son angle marketing ; top artiste n'est même pas rattaché à un seul épisode) —
+`ShortOutro` affiche un message générique de marque ("Un nouveau Blind Test chaque
+jour") quand ce champ est absent, au lieu d'exiger une valeur qui n'a pas de sens
+pour ces types.
+
+**Tests** : 4 nouveaux fichiers de test (`devine-la-chanson.test.ts`,
+`pepite-meconnue.test.ts`, `top-artiste.test.ts`, `anniversaire-sortie.test.ts`),
+18 tests au total, avec une vraie base SQLite en mémoire (pas de mock du schéma —
+suit le pattern déjà établi dans `tracks-used-repository.test.ts`) et des clients
+Spotify/iTunes factices (pattern déjà établi dans `discover-artists.test.ts`/
+`verify-curated-songs.test.ts`). Aucun fichier de test partagé créé exprès — les
+fakes sont dupliqués par fichier, cohérent avec la convention déjà en place dans ce
+projet plutôt que d'introduire un nouveau helper centralisé.
+
+**Non fait dans cette tâche, à faire avant que ces types soient réellement
+utilisables en pipeline** : les templates `youtube-metadata.ts` (titre/description)
+pour "pépite méconnue", "top artiste" et "anniversaire de sortie" — seul "devine la
+chanson" a un template aujourd'hui. `top-artiste.ts` référence déjà en commentaire
+une future `buildTopArtisteMetadata` avec un choix de formulation assumé : le
+Short ne montre que `count` morceaux (2-3, pour la durée), donc le titre ne doit
+pas promettre littéralement "Top 5" si `count` est plus petit — reste à écrire.
+Un script CLI d'appel (comme `generate-short.ts` pour le type 1) manque aussi pour
+chacun des 3 nouveaux types — prévu dans la suite de cette tâche/la tâche
+automatisation (voir plus loin dans ce log).
+
+**Validation** : `pnpm build/test/lint/typecheck` verts pour `@blindtest/pipeline`
+(103 tests, dont les 18 nouveaux) et `@blindtest/db` (34 tests, dont les 3
+nouveaux) ; `@blindtest/spotify` et `@blindtest/video-renderer` revérifiés verts en
+même temps (aucune régression des changements des tâches précédentes de cette
+session, qui n'avaient pas encore été confirmés ensemble).

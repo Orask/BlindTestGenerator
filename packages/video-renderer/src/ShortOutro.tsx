@@ -5,7 +5,13 @@ import { baloo2FontFamily, poppinsFontFamily } from "./fonts";
 export const SHORT_OUTRO_FRAMES = 120; // 4s at 30fps.
 
 export interface ShortOutroProps {
-  readonly fullEpisodeTrackCount: number;
+  /**
+   * Omitted for a Short that doesn't tease a specific already-published
+   * episode (see apps/pipeline/src/shorts/ — the "traffic" Short types
+   * pick a track that was never used in any episode, so there's no "full
+   * episode" to point to).
+   */
+  readonly fullEpisodeTrackCount?: number;
   readonly accentColor: string;
 }
 
@@ -26,10 +32,17 @@ export function ShortOutro({ fullEpisodeTrackCount, accentColor }: ShortOutroPro
       }}
     >
       <Audio src={staticFile("audio/intro-outro-music.mp3")} volume={0.7} />
-      <div style={{ ...textStyle, fontFamily: baloo2FontFamily, fontSize: 64, fontWeight: 800 }}>
-        L'épisode complet
-        <div style={{ color: accentColor, marginTop: 8 }}>{fullEpisodeTrackCount} morceaux</div>
-      </div>
+      {fullEpisodeTrackCount !== undefined ? (
+        <div style={{ ...textStyle, fontFamily: baloo2FontFamily, fontSize: 64, fontWeight: 800 }}>
+          L'épisode complet
+          <div style={{ color: accentColor, marginTop: 8 }}>{fullEpisodeTrackCount} morceaux</div>
+        </div>
+      ) : (
+        <div style={{ ...textStyle, fontFamily: baloo2FontFamily, fontSize: 60, fontWeight: 800 }}>
+          Un nouveau
+          <div style={{ color: accentColor, marginTop: 8 }}>Blind Test chaque jour</div>
+        </div>
+      )}
       <div style={{ ...textStyle, fontSize: 48, fontWeight: 700, marginTop: 48 }}>
         👉 sur la chaîne
       </div>

@@ -13,7 +13,8 @@ export interface RenderShortParams {
   readonly serveUrl: string;
   readonly themeLabel: string;
   readonly tracks: readonly RenderShortTrack[];
-  readonly fullEpisodeTrackCount: number;
+  /** Omitted for a Short that doesn't tease a specific episode — see ShortOutro's own doc comment. */
+  readonly fullEpisodeTrackCount?: number;
   readonly outputPath: string;
   /** See renderEpisode's own doc comment — same reasoning applies here. */
   readonly concurrency?: number;
