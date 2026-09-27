@@ -1,5 +1,7 @@
 import type { ReactElement } from "react";
 import { Composition, Still } from "remotion";
+import { CHANNEL_BANNER_HEIGHT, CHANNEL_BANNER_WIDTH, ChannelBanner } from "./ChannelBanner";
+import { CHANNEL_PROFILE_SIZE, ChannelProfilePicture } from "./ChannelProfilePicture";
 import { FPS, INTRO_FRAMES, OUTRO_FRAMES, SEGMENT_FRAMES } from "./constants";
 import { Episode } from "./Episode";
 import { episodeSchema } from "./episode-schema";
@@ -67,6 +69,20 @@ export function RemotionRoot(): ReactElement {
           ],
           accentColor: "#ff5f6d",
         }}
+      />
+
+      <Still
+        id="ChannelBanner"
+        component={ChannelBanner}
+        width={CHANNEL_BANNER_WIDTH}
+        height={CHANNEL_BANNER_HEIGHT}
+      />
+
+      <Still
+        id="ChannelProfilePicture"
+        component={ChannelProfilePicture}
+        width={CHANNEL_PROFILE_SIZE}
+        height={CHANNEL_PROFILE_SIZE}
       />
     </>
   );
