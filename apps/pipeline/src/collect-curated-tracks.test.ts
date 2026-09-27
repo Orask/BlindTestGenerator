@@ -10,6 +10,8 @@ function track(title: string, artist: string): SpotifyTrackMetadata {
     artistNames: [artist],
     albumCoverUrl: `https://example.com/${title}.jpg`,
     popularityRank: 0,
+    popularity: 50,
+    releaseDate: "2014-01-20",
   };
 }
 

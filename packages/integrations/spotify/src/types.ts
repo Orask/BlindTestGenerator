@@ -8,6 +8,10 @@ export interface SpotifyTrackMetadata {
   readonly albumCoverUrl: string;
   /** This artist's rank among their own search results (0 = most relevant). */
   readonly popularityRank: number;
+  /** Spotify's own 0-100 popularity score for this track — unlike popularityRank, comparable across different artists/searches. */
+  readonly popularity: number;
+  /** The track's album release date, as Spotify returns it — "YYYY", "YYYY-MM" or "YYYY-MM-DD" depending on release_date_precision. */
+  readonly releaseDate: string;
 }
 
 export interface SpotifyClient {

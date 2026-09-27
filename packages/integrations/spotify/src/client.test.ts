@@ -10,7 +10,8 @@ interface RawSpotifyTrackFixture {
   id: string;
   name: string;
   artists: { name: string }[];
-  album: { images: { url: string }[] };
+  album: { images: { url: string }[]; release_date: string };
+  popularity: number;
 }
 
 function fakeTokenProvider(): TokenProvider {
@@ -22,7 +23,8 @@ function rawTrack(overrides: Partial<RawSpotifyTrackFixture> = {}): RawSpotifyTr
     id: "id-1",
     name: "Dernière danse",
     artists: [{ name: "Indila" }],
-    album: { images: [{ url: "https://example.com/cover.jpg" }] },
+    album: { images: [{ url: "https://example.com/cover.jpg" }], release_date: "2014-01-20" },
+    popularity: 72,
     ...overrides,
   };
 }
@@ -261,6 +263,8 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         artistNames: ["Indila"],
         albumCoverUrl: "https://example.com/cover.jpg",
         popularityRank: 0,
+        popularity: 72,
+        releaseDate: "2014-01-20",
       },
     ]);
   });
@@ -286,6 +290,8 @@ describe("createSpotifyClient.searchTracksByArtist", () => {
         artistNames: ["Indila"],
         albumCoverUrl: "https://example.com/cover.jpg",
         popularityRank: 0,
+        popularity: 72,
+        releaseDate: "2014-01-20",
       },
     ]);
   });
@@ -548,6 +554,8 @@ describe("createSpotifyClient.searchTrackByTitleAndArtist", () => {
       artistNames: ["Indila"],
       albumCoverUrl: "https://example.com/cover.jpg",
       popularityRank: 0,
+      popularity: 72,
+      releaseDate: "2014-01-20",
     });
   });
 
@@ -631,6 +639,8 @@ describe("createSpotifyClient.getTrackById", () => {
       artistNames: ["Indila"],
       albumCoverUrl: "https://example.com/cover.jpg",
       popularityRank: 0,
+      popularity: 72,
+      releaseDate: "2014-01-20",
     });
   });
 
