@@ -3,6 +3,7 @@ import { getPlaylistId, markVideoUploaded, openDatabase, setPlaylistId } from "@
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { spreadOutArtists } from "./diversify-artists.js";
+import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
@@ -55,10 +56,7 @@ if (trackRows.length === 0) {
 }
 
 const channel = await loadChannelConfig(channelConfigPath);
-const theme = channel.themes.find((candidate) => candidate.id === videoRow.theme_id);
-if (!theme) {
-  throw new Error(`Theme ${videoRow.theme_id} not found in channel config`);
-}
+const theme = findThemeOrThrow(channel, videoRow.theme_id);
 
 const { spotify, itunes, youtube } = createClientsFromEnv();
 

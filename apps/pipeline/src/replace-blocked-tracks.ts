@@ -17,7 +17,9 @@ import { collectCuratedTracks } from "./collect-curated-tracks.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { spreadOutArtists } from "./diversify-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
+import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
+import { matchBlockedTrackRows } from "./match-blocked-track-rows.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail } from "./render-thumbnail.js";
 import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
@@ -39,11 +41,6 @@ const MAX_TRACKS_PER_ARTIST = 2;
 
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-const COMBINING_DIACRITICS = /[̀-ͯ]/g;
-function normalize(value: string): string {
-  return value.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
 }
 
 const args = process.argv.slice(2);
@@ -98,19 +95,7 @@ if (trackRows.length === 0) {
   throw new Error(`No tracks_used rows found for video ${videoRowId}`);
 }
 
-const blockedRows = blockSpecs.map((spec) => {
-  const matches = trackRows.filter(
-    (row) =>
-      normalize(row.title) === normalize(spec.title) &&
-      normalize(row.artist).includes(normalize(spec.artist)),
-  );
-  if (matches.length !== 1) {
-    throw new Error(
-      `${matches.length} correspondance(s) pour "${spec.title}" — ${spec.artist} (attendu : exactement 1)`,
-    );
-  }
-  return matches[0]!;
-});
+const blockedRows = matchBlockedTrackRows(trackRows, blockSpecs);
 
 const blockedAt = new Date();
 for (const row of blockedRows) {
@@ -129,10 +114,7 @@ const blockedIds = new Set(blockedRows.map((row) => row.spotify_track_id));
 const remainingRows = trackRows.filter((row) => !blockedIds.has(row.spotify_track_id));
 
 const channel = await loadChannelConfig(channelConfigPath);
-const theme = channel.themes.find((candidate) => candidate.id === videoRow.theme_id);
-if (!theme) {
-  throw new Error(`Theme ${videoRow.theme_id} not found in channel config`);
-}
+const theme = findThemeOrThrow(channel, videoRow.theme_id);
 
 const { spotify, itunes, youtube } = createClientsFromEnv();
 

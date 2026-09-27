@@ -285,3 +285,51 @@ typecheck` tous verts. **Migration réellement exécutée contre le vrai
 existantes backfillées à `'blindtest-fr'`, tous les compteurs de lignes de toutes les
 tables identiques avant/après (vérifié par script), donc committée telle quelle — la
 prochaine fois que le pipeline tournera (CI ou local), la migration sera un no-op.
+
+---
+
+## [2026-09-27] Tâche 7 — Tests pour scripts CLI à 0% couverture — TERMINÉ (approche adaptée)
+
+**Constat** : `replace-blocked-tracks.ts`, `recut-episode.ts`, `reupload-video.ts` et
+`set-thumbnail.ts` sont des scripts CLI "top-level" au sens strict (parsing de
+`process.argv`, effets de bord exécutés dès l'import — DB, réseau, filesystem — sur le
+modèle exact de `index.ts`), pas des modules exportant des fonctions. Les
+importer directement dans un test exécuterait tout le script. Ce n'est pas un oubli :
+c'est le même schéma que tous les autres fichiers de ce dossier qui ont 100% de
+logique testable ailleurs (`discover-artists.ts`, `persist-discovered-artists.ts`,
+`youtube-metadata.ts`, etc.) — ces 4 scripts sont simplement les seuls qui n'avaient
+jamais eu leur logique non-triviale extraite.
+
+**Ce qui a été fait** : les 4 scripts partageaient deux blocs de logique dupliqués,
+mot pour mot ou presque :
+
+1. "Retrouver le thème correspondant à `videoRow.theme_id` dans la config de chaîne,
+   ou lever une erreur descriptive" — présent identique dans les 4 scripts. Extrait en
+   `apps/pipeline/src/find-theme-by-id.ts` (`findThemeOrThrow`), 2 tests.
+2. Dans `replace-blocked-tracks.ts` seulement : le rapprochement des paires
+   titre/artiste fournies en ligne de commande (lues à la main sur YouTube Studio) avec
+   les lignes `tracks_used` réelles de l'épisode (normalisation diacritiques/casse,
+   artiste en sous-chaîne, erreur si ce n'est pas exactement 1 correspondance — la
+   logique la plus délicate et la plus risquée des 4 scripts, puisqu'une mauvaise
+   correspondance bloquerait le mauvais morceau). Extrait en
+   `apps/pipeline/src/match-blocked-track-rows.ts` (`matchBlockedTrackRows`), 6 tests
+   (correspondance exacte, sous-chaîne d'artiste, insensible aux diacritiques,
+   plusieurs specs, 0 correspondance, correspondances ambiguës).
+
+Les 4 scripts ont été mis à jour pour utiliser ces deux fonctions à la place de leur
+logique dupliquée — en plus d'ajouter des tests, ça élimine une duplication réelle sur
+4 fichiers (pas seulement un prétexte pour écrire des tests).
+
+**Ce qui reste à 0% et pourquoi c'est un choix assumé, pas un oubli** : le reste de ces
+4 scripts (orchestration DB/réseau/rendu vidéo — upload YouTube, rendu Remotion,
+requêtes Spotify/iTunes en direct) n'a pas été testé unitairement. Le faire
+nécessiterait soit des tests d'intégration avec de vraies credentials (impossibles
+dans ce sandbox, cf. blocage noté en tête de journal), soit un mock lourd de
+`createClientsFromEnv`/`openDatabase`/`bundleVideoRenderer` qui testerait surtout la
+plomberie de mock elle-même plutôt que d'apporter une vraie confiance — non fait, pour
+rester cohérent avec la façon dont le reste du projet teste déjà ce genre de code
+(voir `packages/integrations/*/src/*.test.ts` : mock au niveau du client HTTP, jamais
+au niveau du script CLI entier).
+
+**Validation faite** : 8 nouveaux tests (82 tests pipeline au total, avant 74),
+`pnpm build/test/lint/typecheck` tous verts.
