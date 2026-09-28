@@ -92,7 +92,10 @@ function CoverGridFallback({
   coverImageUrls,
 }: {
   coverImageUrls: readonly string[];
-}): ReactElement {
+}): ReactElement | null {
+  if (coverImageUrls.length === 0) {
+    return null;
+  }
   const cells = Array.from({ length: GRID_COLS * GRID_ROWS }, (_, index) => index);
   return (
     <AbsoluteFill
@@ -190,7 +193,16 @@ export function Thumbnail({
   artistImageUrls,
   accentColor,
 }: ThumbnailProps): ReactElement {
-  const hasHeroes = artistImageUrls.length > 0;
+  // Real artist faces are the strongest hook and always win when available.
+  // Themes where most/all credited artists have no Spotify portrait
+  // (composer/orchestra credits, common on the "generiques" theme) used to
+  // fall back to a dim, mostly-empty cover grid instead — a handful of
+  // distinct album covers laid out through the exact same hero-collage
+  // slots reads far better than that grid ever did, and needs no new
+  // layout code. A theme with zero images of either kind (pathological,
+  // shouldn't happen in practice) falls through to the plain background.
+  const distinctCoverUrls = [...new Set(coverImageUrls)];
+  const heroImageUrls = artistImageUrls.length > 0 ? artistImageUrls : distinctCoverUrls;
 
   return (
     <AbsoluteFill style={{ backgroundColor: "#0b0b10" }}>
@@ -202,9 +214,8 @@ export function Thumbnail({
         }}
       />
 
-      {hasHeroes ? (
-        <HeroCollage imageUrls={artistImageUrls} accentColor={accentColor} />
-      ) : (
+      <HeroCollage imageUrls={heroImageUrls} accentColor={accentColor} />
+      {heroImageUrls.length === 0 && (
         <>
           <CoverGridFallback coverImageUrls={coverImageUrls} />
           <AbsoluteFill

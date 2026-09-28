@@ -11,6 +11,8 @@ function verified(): SpotifyTrackMetadata[] {
       artistNames: ["Some Artist"],
       albumCoverUrl: "",
       popularityRank: 0,
+      popularity: 50,
+      releaseDate: "2014-01-20",
     },
   ];
 }

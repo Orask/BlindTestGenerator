@@ -9,7 +9,8 @@ interface RawSpotifyTrack {
   readonly id: string;
   readonly name: string;
   readonly artists: readonly { name: string }[];
-  readonly album: { images: readonly { url: string }[] };
+  readonly album: { images: readonly { url: string }[]; release_date: string };
+  readonly popularity: number;
 }
 
 // Spotify no longer exposes recommendations, playlist tracks, or artist
@@ -249,6 +250,8 @@ export function createSpotifyClient(
             artistNames: track.artists.map((a) => a.name),
             albumCoverUrl: track.album.images[0]?.url ?? "",
             popularityRank: results.length,
+            popularity: track.popularity,
+            releaseDate: track.album.release_date,
           });
 
           if (results.length === limit) {
@@ -313,6 +316,8 @@ export function createSpotifyClient(
           artistNames: track.artists.map((a) => a.name),
           albumCoverUrl: track.album.images[0]?.url ?? "",
           popularityRank: 0,
+          popularity: track.popularity,
+          releaseDate: track.album.release_date,
         };
       }
 
@@ -388,6 +393,8 @@ export function createSpotifyClient(
         artistNames: track.artists.map((a) => a.name),
         albumCoverUrl: track.album.images[0]?.url ?? "",
         popularityRank: 0,
+        popularity: track.popularity,
+        releaseDate: track.album.release_date,
       };
     },
   };

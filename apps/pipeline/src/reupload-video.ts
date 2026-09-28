@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { getPlaylistId, markVideoUploaded, openDatabase, setPlaylistId } from "@blindtest/db";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
+import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { renderThumbnailFromCache } from "./render-thumbnail.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
@@ -35,10 +36,7 @@ if (trackRows.length === 0) {
 }
 
 const channel = await loadChannelConfig(channelConfigPath);
-const theme = channel.themes.find((candidate) => candidate.id === videoRow.theme_id);
-if (!theme) {
-  throw new Error(`Theme ${videoRow.theme_id} not found in channel config`);
-}
+const theme = findThemeOrThrow(channel, videoRow.theme_id);
 
 const episodeNumberRow = db
   .prepare(

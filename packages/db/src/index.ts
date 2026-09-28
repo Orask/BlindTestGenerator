@@ -4,9 +4,11 @@ export {
   getUsedTrackIds,
   getUsedTrackIdsSince,
   getRecentTracksForTheme,
+  getUsedTracksForChannel,
   recordTrackUsage,
   type RecentTrack,
   type RecordTrackUsageParams,
+  type UsedTrack,
 } from "./tracks-used-repository.js";
 export {
   upsertChannel,
@@ -21,9 +23,12 @@ export {
   markVideoUploaded,
   markVideoFailed,
   countVideosForTheme,
+  hasUploadedVideoForThemeToday,
+  getLatestUploadedVideoForTheme,
   type CreateVideoParams,
   type VideoStatus,
   type VideoFormat,
+  type LatestUploadedVideo,
 } from "./videos-repository.js";
 export { getCooldownUntil, setCooldownUntil } from "./service-cooldowns-repository.js";
 export {

@@ -49,3 +49,142 @@ export function buildYoutubeMetadata(
 
   return { title, description, tags };
 }
+
+// Same template family as buildYoutubeMetadata, tuned for a short teaser cut
+// from an already-published episode (see generate-short.ts) rather than the
+// full episode itself: the title/description point at the full episode
+// instead of listing every track (there are only a handful here, not the
+// full 40-60), and #shorts is included since that hashtag still helps
+// discovery even though classification itself is purely aspect-ratio/
+// duration-based.
+export function buildShortMetadata(
+  theme: ChannelTheme,
+  episodeNumber: number,
+  shortTrackCount: number,
+  fullEpisodeTrackCount: number,
+): YoutubeMetadata {
+  const themeHashtag = theme.id.replace(/-/g, "");
+
+  const title = `${shortTrackCount} extraits ${theme.label} en ${SECONDS_PER_TRACK}s chrono 🎧 #Shorts`;
+
+  const description = [
+    `Un avant-goût de l'épisode "${theme.label}" (Ép. ${episodeNumber}) — ${fullEpisodeTrackCount} morceaux à deviner en entier sur la chaîne !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #blindtest #quizmusical #${themeHashtag}`,
+  ].join("\n");
+
+  const tags = ["blind test", "quiz musical", theme.label, "shorts"];
+
+  return { title, description, tags };
+}
+
+// Family A, type 2 (pepite-meconnue.ts): same episode as buildShortMetadata,
+// but framed as "songs you probably missed" instead of "guess these songs"
+// — the angle is the hook here, not a countdown-style challenge.
+export function buildPepiteMeconnueMetadata(
+  theme: ChannelTheme,
+  tracks: readonly YoutubeMetadataTrack[],
+): YoutubeMetadata {
+  const themeHashtag = theme.id.replace(/-/g, "");
+  const trackList = tracks.map((track) => `${track.title} — ${track.artist}`).join("\n");
+
+  const title = `Tu connais ces pépites ${theme.label} ? 🎧 #Shorts`;
+
+  const description = [
+    `Des morceaux ${theme.label} que tu as peut-être ratés — écoute jusqu'au bout !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #blindtest #pepite #${themeHashtag}`,
+    "",
+    trackList,
+  ].join("\n");
+
+  const tags = ["blind test", "pepite meconnue", theme.label, "shorts"];
+
+  return { title, description, tags };
+}
+
+// Family A, type 3 (top-artiste.ts): honestly framed as "our selection"
+// rather than a literal "Top N" — the Short only shows `tracks.length`
+// tracks (2-3, for completion rate, see docs/CLOUD_SESSION_LOG.md), which
+// won't always be the artist's true best N, just the best N *of what this
+// channel has already featured*.
+export function buildTopArtisteMetadata(
+  artistName: string,
+  tracks: readonly YoutubeMetadataTrack[],
+): YoutubeMetadata {
+  const artistHashtag = artistName.replace(/[^a-zA-Z0-9]/g, "");
+  const trackList = tracks.map((track) => `${track.title} — ${track.artist}`).join("\n");
+
+  const title = `${tracks.length} pépites de ${artistName} 🎧 #Shorts`;
+
+  const description = [
+    `Une sélection de titres de ${artistName} déjà passés sur la chaîne !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #blindtest #${artistHashtag}`,
+    "",
+    trackList,
+  ].join("\n");
+
+  const tags = ["blind test", artistName, "shorts"];
+
+  return { title, description, tags };
+}
+
+export interface AnniversaryMetadataTrack extends YoutubeMetadataTrack {
+  readonly yearsAgo: number;
+}
+
+// Family A, type 4 (anniversaire-sortie.ts): a single-track "this came out
+// N years ago today" Short — no episode to point back to, so the CTA stays
+// generic (channel-level, like buildPepiteMeconnueMetadata's "un nouveau
+// thème chaque jour" framing) rather than naming a specific episode.
+export function buildAnniversaireSortieMetadata(track: AnniversaryMetadataTrack): YoutubeMetadata {
+  const title = `"${track.title}" est sorti il y a ${track.yearsAgo} ans 🎂🎧 #Shorts`;
+
+  const description = [
+    `${track.artist} — "${track.title}" fête ses ${track.yearsAgo} ans aujourd'hui !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    "#shorts #blindtest #anniversaire",
+  ].join("\n");
+
+  const tags = ["blind test", track.artist, "anniversaire", "shorts"];
+
+  return { title, description, tags };
+}
+
+// Family B, types 5/6 (nouveaute-genre.ts): pure traffic generation, no
+// episode to point back to — the CTA is channel-level, same as
+// buildAnniversaireSortieMetadata. `genreLabel` is a human-readable display
+// name (e.g. "Rap FR", "House") distinct from the raw Spotify search query
+// used to find the tracks (e.g. "rap francais").
+export function buildNouveauteMetadata(
+  genreLabel: string,
+  tracks: readonly YoutubeMetadataTrack[],
+): YoutubeMetadata {
+  const genreHashtag = genreLabel.replace(/[^a-zA-Z0-9]/g, "");
+  const trackList = tracks.map((track) => `${track.title} — ${track.artist}`).join("\n");
+
+  const title = `Nouveautés ${genreLabel} de la semaine 🎧 #Shorts`;
+
+  const description = [
+    `Les sorties ${genreLabel} du moment à connaître avant tout le monde !`,
+    "",
+    "🔔 Abonne-toi pour ne rater aucun épisode — un nouveau thème chaque jour !",
+    "",
+    `#shorts #nouveautes #${genreHashtag}`,
+    "",
+    trackList,
+  ].join("\n");
+
+  const tags = ["nouveautes", genreLabel, "shorts"];
+
+  return { title, description, tags };
+}

@@ -18,6 +18,7 @@ import {
   getUsedTrackIds,
   getUsedTrackIdsSince,
   getPlaylistId,
+  hasUploadedVideoForThemeToday,
   markVideoFailed,
   markVideoUploaded,
   openDatabase,
@@ -40,10 +41,10 @@ import { discoverNewArtists } from "./discover-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
 import { renderEpisode } from "./render-episode.js";
-import { renderThumbnail } from "./render-thumbnail.js";
+import { renderThumbnail, resolveHeroArtistImages } from "./render-thumbnail.js";
 import { reviewEpisode } from "./review-episode.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
-import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
+import { PUBLIC_ARTISTS_DIR, PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 const DEFAULT_TRACKS_PER_EPISODE = 60;
@@ -255,11 +256,18 @@ async function generateAndPublishEpisode(
   // Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
   // public/ at bundle time, so anything downloaded afterward 404s from the
   // bundled server (confirmed live — this order used to be backwards and
-  // broke every fresh cover in a batch run).
+  // broke every fresh cover in a batch run). The thumbnail's hero artist
+  // photos hit the exact same gotcha — renderThumbnail() used to fetch and
+  // download them internally, but it only runs after the bundle below, so
+  // on a fresh checkout (no pre-existing public/artists/ cache, e.g. CI)
+  // every one of them 404'd from the bundled server and crashed the render
+  // with an uncaught CancelledError (see docs/CLOUD_SESSION_LOG.md).
   await resolvePublicCoverUrls(
     tracks.map((track) => track.albumCoverUrl),
     PUBLIC_COVERS_DIR,
   );
+  const artistImageUrls = await resolveHeroArtistImages(deps.spotify, tracks);
+  await resolvePublicCoverUrls(artistImageUrls, PUBLIC_ARTISTS_DIR, "artists");
   const serveUrl = await bundleVideoRenderer();
 
   const runId = Date.now();
@@ -369,7 +377,24 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
   const db = openDatabase(deps.dbPath);
   syncChannelToDb(db, channel);
 
-  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(new Date()));
+  const now = new Date();
+  const theme = resolveThemeForDay(channel.themes, weekdayFromDate(now));
+
+  // Makes a day's run idempotent when it can fire more than once for the
+  // same calendar day — the native GitHub Actions `schedule` trigger is
+  // deliberately kept as a fallback alongside an external, on-time trigger
+  // (see docs/CAHIER_DES_CHARGES.md), so both firing the same day is
+  // expected, not a bug. Only an already-*uploaded* episode short-circuits
+  // — a `draft`/`failed` row from an earlier attempt today must still be
+  // retried, same as the manual workflow_dispatch retries this already
+  // relied on before either trigger existed.
+  if (hasUploadedVideoForThemeToday(db, channel.id, theme.id, now)) {
+    console.log(
+      `Épisode "${theme.label}" déjà publié aujourd'hui pour "${channel.id}", run ignoré (déclenché deux fois le même jour).`,
+    );
+    return;
+  }
+
   await generateAndPublishEpisode(db, channel, theme, deps, undefined);
 }
 

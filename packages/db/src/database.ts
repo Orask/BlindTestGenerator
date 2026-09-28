@@ -25,11 +25,25 @@ function migrateTracksUsedPrimaryKey(db: Database.Database): void {
   })();
 }
 
+// One-time migration for databases created before blocked_tracks gained a
+// channel_id column (see schema.ts) — SQLite can ADD COLUMN in place here
+// (unlike the tracks_used case above) since this one only adds a NOT NULL
+// column with a default, no primary key involved. Every row blocked before
+// this migration existed came from this project's only channel so far.
+function migrateBlockedTracksChannelId(db: Database.Database): void {
+  const columns = db.prepare("PRAGMA table_info(blocked_tracks)").all() as { name: string }[];
+  if (columns.some((column) => column.name === "channel_id")) {
+    return;
+  }
+  db.exec("ALTER TABLE blocked_tracks ADD COLUMN channel_id TEXT NOT NULL DEFAULT 'blindtest-fr'");
+}
+
 export function openDatabase(path: string): Database.Database {
   const db = new Database(path);
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
   db.exec(SCHEMA_SQL);
   migrateTracksUsedPrimaryKey(db);
+  migrateBlockedTracksChannelId(db);
   return db;
 }

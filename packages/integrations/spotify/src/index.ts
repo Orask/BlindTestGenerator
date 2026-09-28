@@ -7,6 +7,7 @@ export {
   type SpotifyClientOptions,
   type TokenProvider,
 } from "./client.js";
+export { createRotatingSpotifyClient } from "./rotating-client.js";
 export {
   fetchClientCredentialsToken,
   SpotifyTokenProvider,

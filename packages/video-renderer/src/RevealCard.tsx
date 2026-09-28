@@ -1,11 +1,21 @@
 import type { ReactElement } from "react";
 import { AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig } from "remotion";
 
+// Tuned for the 16:9 Episode composition. The vertical Short composition
+// passes a larger `coverSize` so the reveal fills more of its taller
+// canvas — title/artist font sizes scale with it (ratios below match this
+// default), same reasoning as CountdownRing's `size` prop.
+const DEFAULT_COVER_SIZE = 360;
+const TITLE_FONT_RATIO = 48 / DEFAULT_COVER_SIZE;
+const ARTIST_FONT_RATIO = 32 / DEFAULT_COVER_SIZE;
+
 export interface RevealCardProps {
   readonly title: string;
   readonly artist: string;
   readonly albumCoverUrl: string;
   readonly accentColor: string;
+  /** Album cover side length in px — defaults to the long-form Episode's size, unchanged. */
+  readonly coverSize?: number;
 }
 
 const FLASH_FRAMES = 8;
@@ -15,6 +25,7 @@ export function RevealCard({
   artist,
   albumCoverUrl,
   accentColor,
+  coverSize = DEFAULT_COVER_SIZE,
 }: RevealCardProps): ReactElement {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -46,8 +57,8 @@ export function RevealCard({
     >
       <div
         style={{
-          width: 360,
-          height: 360,
+          width: coverSize,
+          height: coverSize,
           borderRadius: 24,
           overflow: "hidden",
           transform: `scale(${coverScale})`,
@@ -64,10 +75,24 @@ export function RevealCard({
           transform: `translateY(${textY}px)`,
         }}
       >
-        <div style={{ fontSize: 48, fontWeight: 700, color: "white", fontFamily: "sans-serif" }}>
+        <div
+          style={{
+            fontSize: coverSize * TITLE_FONT_RATIO,
+            fontWeight: 700,
+            color: "white",
+            fontFamily: "sans-serif",
+          }}
+        >
           {title}
         </div>
-        <div style={{ fontSize: 32, color: accentColor, fontFamily: "sans-serif", marginTop: 8 }}>
+        <div
+          style={{
+            fontSize: coverSize * ARTIST_FONT_RATIO,
+            color: accentColor,
+            fontFamily: "sans-serif",
+            marginTop: 8,
+          }}
+        >
           {artist}
         </div>
       </div>

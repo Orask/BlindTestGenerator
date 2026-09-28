@@ -12,6 +12,9 @@ export interface TrackSegmentProps {
   readonly accentColor: string;
   readonly trackNumber: number;
   readonly totalTracks: number;
+  /** Passed straight through to CountdownRing/RevealCard — undefined keeps their own (long-form Episode) defaults. */
+  readonly ringSize?: number;
+  readonly coverSize?: number;
 }
 
 export function TrackSegment({
@@ -21,12 +24,18 @@ export function TrackSegment({
   accentColor,
   trackNumber,
   totalTracks,
+  ringSize,
+  coverSize,
 }: TrackSegmentProps): ReactElement {
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d0d0d" }}>
       <Sequence durationInFrames={COUNTDOWN_FRAMES}>
         <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
-          <CountdownRing durationInFrames={COUNTDOWN_FRAMES} accentColor={accentColor} />
+          <CountdownRing
+            durationInFrames={COUNTDOWN_FRAMES}
+            accentColor={accentColor}
+            {...(ringSize !== undefined ? { size: ringSize } : {})}
+          />
         </AbsoluteFill>
       </Sequence>
       <Sequence from={COUNTDOWN_FRAMES} durationInFrames={REVEAL_FRAMES}>
@@ -35,6 +44,7 @@ export function TrackSegment({
           artist={artist}
           albumCoverUrl={albumCoverUrl}
           accentColor={accentColor}
+          {...(coverSize !== undefined ? { coverSize } : {})}
         />
       </Sequence>
       {/* Rendered last so it stacks above the reveal card's opaque background. */}

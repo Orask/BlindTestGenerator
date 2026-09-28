@@ -5,11 +5,25 @@ on:
     # 3:00 UTC — deliberately earlier than the ~8h Swiss target (5:00 UTC in
     # summer / 7:00 in winter). GitHub's scheduler doesn't guarantee the
     # nominal time: a 6:00 UTC cron (= 8:00 CEST on paper) was observed
-    # actually firing around 13:00 Swiss time, a ~5h delay, likely from this
-    # repo having little scheduled-workflow history yet. Firing earlier is a
-    # compensating guess, not a guarantee — revisit if the delay pattern
-    # changes once GitHub treats this job as "established".
+    # actually firing around 13:00 Swiss time, a ~5h delay, and a later run
+    # fired at 09:06 instead of 03:00, a ~6h delay — GitHub Actions'
+    # `schedule` is simply never on-time for a low-traffic repo like this
+    # one. Kept as a pure fallback, not the primary trigger: see the
+    # `repository_dispatch` type below for the on-time path, and
+    # docs/CAHIER_DES_CHARGES.md for the external scheduler setup. Both
+    # firing the same day is expected and handled (see
+    # hasUploadedVideoForThemeToday in runPipeline) rather than something
+    # this schedule needs to avoid.
     - cron: "0 3 * * *"
+  # Fired by an external scheduler (see docs/CAHIER_DES_CHARGES.md, section
+  # "Déclenchement fiable du run quotidien") hitting GitHub's
+  # `POST /repos/{owner}/{repo}/dispatches` REST API at the actual target
+  # time — unlike `schedule` above, a repository_dispatch fires immediately,
+  # since it's a direct API call rather than a queued cron slot GitHub
+  # schedules best-effort. `event_type` is arbitrary but must match exactly
+  # what the external scheduler sends.
+  repository_dispatch:
+    types: [daily-pipeline-trigger]
   workflow_dispatch: {}
 
 concurrency:
@@ -51,6 +65,15 @@ jobs:
         env:
           SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          # Optional extra Spotify apps for rate-limit failover (see
+          # .env.example and packages/integrations/spotify/src/rotating-client.ts).
+          # An unset repo secret resolves to an empty string, which the
+          # pipeline treats the same as not configuring it — safe to leave
+          # these two lines in place even before any extra app exists.
+          SPOTIFY_CLIENT_ID_2: ${{ secrets.SPOTIFY_CLIENT_ID_2 }}
+          SPOTIFY_CLIENT_SECRET_2: ${{ secrets.SPOTIFY_CLIENT_SECRET_2 }}
+          SPOTIFY_CLIENT_ID_3: ${{ secrets.SPOTIFY_CLIENT_ID_3 }}
+          SPOTIFY_CLIENT_SECRET_3: ${{ secrets.SPOTIFY_CLIENT_SECRET_3 }}
           YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
           YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
           YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}

@@ -67,6 +67,12 @@ CREATE TABLE IF NOT EXISTS service_cooldowns (
 -- table is just the permanent memory of that manual finding.
 CREATE TABLE IF NOT EXISTS blocked_tracks (
   spotify_track_id TEXT PRIMARY KEY,
+  -- Which channel's video the claim was actually found on — audit trail for
+  -- a future multi-channel setup, not a scoping key: getBlockedTrackIds()
+  -- deliberately stays unscoped (see the comment above this table), since
+  -- the claim is on the recording itself and a second channel uploading the
+  -- same track would risk it just as much.
+  channel_id TEXT NOT NULL REFERENCES channels(id),
   title TEXT NOT NULL,
   artist TEXT NOT NULL,
   reason TEXT NOT NULL,

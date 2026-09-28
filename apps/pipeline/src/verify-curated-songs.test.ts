@@ -10,6 +10,8 @@ function fakeTrack(overrides: Partial<SpotifyTrackMetadata> = {}): SpotifyTrackM
     artistNames: ["Indila"],
     albumCoverUrl: "",
     popularityRank: 0,
+    popularity: 50,
+    releaseDate: "2014-01-20",
     ...overrides,
   };
 }

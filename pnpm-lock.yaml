@@ -56,6 +56,9 @@ importers:
       '@blindtest/db':
         specifier: workspace:*
         version: link:../../packages/db
+      '@blindtest/deezer':
+        specifier: workspace:*
+        version: link:../../packages/integrations/deezer
       '@blindtest/itunes':
         specifier: workspace:*
         version: link:../../packages/integrations/itunes
@@ -103,6 +106,8 @@ importers:
       '@types/node':
         specifier: 24.13.3
         version: 24.13.3
+
+  packages/integrations/deezer: {}
 
   packages/integrations/itunes: {}
 
