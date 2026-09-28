@@ -76,7 +76,7 @@ export interface RenderThumbnailParams {
  * Spotify portrait (common for orchestras/composer credits) is skipped
  * rather than leaving a gap in the thumbnail.
  */
-async function resolveHeroArtistImages(
+export async function resolveHeroArtistImages(
   spotify: SpotifyClient,
   tracks: readonly EpisodeTrack[],
 ): Promise<string[]> {

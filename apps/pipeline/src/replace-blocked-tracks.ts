@@ -21,8 +21,8 @@ import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { matchBlockedTrackRows } from "./match-blocked-track-rows.js";
 import { renderEpisode } from "./render-episode.js";
-import { renderThumbnail } from "./render-thumbnail.js";
-import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
+import { renderThumbnail, resolveHeroArtistImages } from "./render-thumbnail.js";
+import { PUBLIC_ARTISTS_DIR, PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 // One-off: a track that got a YouTube Content ID claim serious enough to
@@ -199,10 +199,14 @@ const finalTracks = spreadOutArtists([...keptTracks, ...replacements]);
 // public/ at bundle time, so anything downloaded afterward 404s from the
 // bundled server (same gotcha as pipeline.ts — this script starts from a
 // clean checkout, so even the *kept* tracks' covers aren't on disk yet).
+// The thumbnail's hero artist photos hit the exact same gotcha — see
+// pipeline.ts and docs/CLOUD_SESSION_LOG.md.
 await resolvePublicCoverUrls(
   finalTracks.map((track) => track.albumCoverUrl),
   PUBLIC_COVERS_DIR,
 );
+const artistImageUrls = await resolveHeroArtistImages(spotify, finalTracks);
+await resolvePublicCoverUrls(artistImageUrls, PUBLIC_ARTISTS_DIR, "artists");
 
 const runId = Date.now();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));

@@ -3,10 +3,12 @@ import { getPlaylistId, markVideoUploaded, openDatabase, setPlaylistId } from "@
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
 import { createClientsFromEnv } from "./create-clients.js";
 import { spreadOutArtists } from "./diversify-artists.js";
+import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { findThemeOrThrow } from "./find-theme-by-id.js";
 import { loadChannelConfig } from "./load-channel-config.js";
 import { renderEpisode } from "./render-episode.js";
-import { renderThumbnail } from "./render-thumbnail.js";
+import { renderThumbnail, resolveHeroArtistImages } from "./render-thumbnail.js";
+import { PUBLIC_ARTISTS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 // One-off: re-renders and re-uploads an already-published episode using the
@@ -113,6 +115,11 @@ if (existingRenderPath && existingThumbnailPath) {
   outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-recut.mp4`;
   thumbnailPath = `${outputDir}${channel.id}-${theme.id}-${runId}-recut-thumbnail.jpg`;
 
+  // Artist photos must land on disk BEFORE bundling, same gotcha as covers
+  // (see pipeline.ts) — renderThumbnail() only re-resolves them afterward,
+  // it doesn't download fresh ones from scratch.
+  const artistImageUrls = await resolveHeroArtistImages(spotify, correctedTracks);
+  await resolvePublicCoverUrls(artistImageUrls, PUBLIC_ARTISTS_DIR, "artists");
   const serveUrl = await bundleVideoRenderer();
   await renderEpisode({ serveUrl, themeLabel: theme.label, tracks: correctedTracks, outputPath });
   console.log(`Vidéo rendue : ${outputPath}`);

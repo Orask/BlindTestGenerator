@@ -41,10 +41,10 @@ import { discoverNewArtists } from "./discover-artists.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
 import { renderEpisode } from "./render-episode.js";
-import { renderThumbnail } from "./render-thumbnail.js";
+import { renderThumbnail, resolveHeroArtistImages } from "./render-thumbnail.js";
 import { reviewEpisode } from "./review-episode.js";
 import { syncChannelToDb } from "./sync-channel-to-db.js";
-import { PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
+import { PUBLIC_ARTISTS_DIR, PUBLIC_COVERS_DIR } from "./video-renderer-paths.js";
 import { buildYoutubeMetadata } from "./youtube-metadata.js";
 
 const DEFAULT_TRACKS_PER_EPISODE = 60;
@@ -256,11 +256,18 @@ async function generateAndPublishEpisode(
   // Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
   // public/ at bundle time, so anything downloaded afterward 404s from the
   // bundled server (confirmed live — this order used to be backwards and
-  // broke every fresh cover in a batch run).
+  // broke every fresh cover in a batch run). The thumbnail's hero artist
+  // photos hit the exact same gotcha — renderThumbnail() used to fetch and
+  // download them internally, but it only runs after the bundle below, so
+  // on a fresh checkout (no pre-existing public/artists/ cache, e.g. CI)
+  // every one of them 404'd from the bundled server and crashed the render
+  // with an uncaught CancelledError (see docs/CLOUD_SESSION_LOG.md).
   await resolvePublicCoverUrls(
     tracks.map((track) => track.albumCoverUrl),
     PUBLIC_COVERS_DIR,
   );
+  const artistImageUrls = await resolveHeroArtistImages(deps.spotify, tracks);
+  await resolvePublicCoverUrls(artistImageUrls, PUBLIC_ARTISTS_DIR, "artists");
   const serveUrl = await bundleVideoRenderer();
 
   const runId = Date.now();

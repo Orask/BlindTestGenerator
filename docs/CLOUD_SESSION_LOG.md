@@ -2095,3 +2095,69 @@ tous poussés sur `main-hpf4qz`, arbre de travail propre à la clôture.
 3. Décider du sort des 3 propositions de thèmes (remplacer un thème existant ? rotation ? les écarter ?).
 4. Si l'option B est retenue : vérifier d'abord si Deezer expose un signal par artiste (`nb_fan` sur l'objet Artist ou équivalent), puis implémenter le remplacement ciblé de `catalogDepth` dans `build-episode-tracks.ts` (~30 appels, pas un reclassement complet du vivier).
 5. Envisager (si l'option B avance) la piste de cache dans `tracks_used` pour amortir le coût Deezer dans le temps — nécessite une migration de schéma, à ne pas faire à la légère.
+
+## [2026-09-28] Bug — run quotidien planté (404 sur les photos d'artistes de la miniature)
+
+**Symptôme** (run CI du 2026-09-28, thème Années 80) : l'épisode long se
+rend intégralement (30210/30210 frames, upload jamais atteint), puis le
+rendu de la miniature échoue immédiatement — 6 requêtes
+`http://localhost:3000/public/artists/<hash>.jpg` retournent 404,
+Remotion lève `EncodingError: The source image cannot be decoded` puis
+`CancelledError`, non rattrapée → `Process completed with exit code 1`.
+Le run entier échoue, aucune vidéo n'est uploadée ce jour-là.
+
+**Cause racine** : exactement le même piège déjà documenté et corrigé pour
+les pochettes d'album (commentaire existant dans `pipeline.ts`, "Covers
+must land on disk BEFORE bundling"), mais jamais étendu aux photos
+d'artistes de la miniature quand cette fonctionnalité a été ajoutée (tâche
+#9, session précédente). Le bundler Remotion (`@remotion/bundler`) fige
+le contenu de `public/` au moment de `bundle()` — tout fichier écrit après
+coup dans ce dossier n'est jamais servi par le serveur bundlé, il 404.
+Or `renderThumbnail()` (`render-thumbnail.ts`) télécharge lui-même les
+photos d'artistes vers `PUBLIC_ARTISTS_DIR`, mais il n'est appelé qu'APRÈS
+`bundleVideoRenderer()` dans les 3 points d'entrée qui l'utilisent
+(`pipeline.ts`, `recut-episode.ts`, `replace-blocked-tracks.ts`) — sur un
+checkout propre (CI, ou tout dossier sans `public/artists/` déjà peuplé
+par un run précédent), ces fichiers n'existent tout simplement pas encore
+au moment du snapshot.
+
+Pourquoi c'est resté invisible jusqu'ici : probablement resté silencieux
+sur un poste de dev où `packages/video-renderer/public/artists/` restait
+peuplé d'un run précédent (le nommage par hash SHA1 de l'URL rend le
+fichier immédiatement réutilisable). En CI (checkout Git frais à chaque
+run), le dossier est systématiquement vide — donc le bug est
+déterministe dans ce contexte, pas un flake.
+
+**Correctif** : appliqué le même remède déjà en place pour les
+pochettes — résoudre et télécharger les photos d'artistes AVANT
+`bundleVideoRenderer()`, pas seulement dans `renderThumbnail()` (qui
+continue de fonctionner ensuite, en re-résolvant juste le mapping
+d'URLs, sans retélécharger puisque les fichiers sont déjà sur disque).
+
+- `render-thumbnail.ts` : `resolveHeroArtistImages` exportée (était
+  interne).
+- `pipeline.ts` (le run quotidien réel) : ajout de
+  `resolveHeroArtistImages(deps.spotify, tracks)` +
+  `resolvePublicCoverUrls(artistImageUrls, PUBLIC_ARTISTS_DIR, "artists")`
+  avant `bundleVideoRenderer()`, à côté de l'appel équivalent déjà présent
+  pour les covers.
+- `recut-episode.ts` et `replace-blocked-tracks.ts` (scripts de
+  récupération manuels utilisant le même `renderThumbnail()` après le
+  même `bundleVideoRenderer()`) : même correctif appliqué par cohérence —
+  ce sont exactement le même point de défaillance, juste jamais déclenché
+  jusqu'ici faute d'avoir été exécutés sur un checkout propre.
+
+`pnpm typecheck/lint/test` verts sur tout le workspace après le correctif
+(131 tests pipeline, aucune régression). Aucun test dédié ajouté — le bug
+est un problème d'ordonnancement d'effets de bord (écriture disque avant
+snapshot du bundler), pas testable unitairement sans mocker
+`@remotion/bundler` lui-même ; la garantie réelle est le
+run CI du lendemain.
+
+**Non traité, hors scope de ce correctif** : `recut-episode.ts` ne
+télécharge toujours pas les pochettes AVANT le bundle (contrairement à
+`pipeline.ts` et `replace-blocked-tracks.ts`, qui le font explicitement) —
+un gap pré-existant, distinct de ce bug, qui ne s'est simplement jamais
+manifesté parce que ce script est toujours lancé à la main sur un poste
+avec un cache `public/covers/` déjà chaud. À corriger si ce script est un
+jour exécuté sur un checkout frais.
