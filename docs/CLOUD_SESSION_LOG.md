@@ -2161,3 +2161,22 @@ un gap pré-existant, distinct de ce bug, qui ne s'est simplement jamais
 manifesté parce que ce script est toujours lancé à la main sur un poste
 avec un cache `public/covers/` déjà chaud. À corriger si ce script est un
 jour exécuté sur un checkout frais.
+
+**Pendant ce correctif** : `git push` a été rejeté (le remote avait avancé
+pendant cette session) — `git fetch` a révélé le commit `c6f8bc7`, poussé
+en dehors de ce sandbox, qui **lève la principale réserve de la session
+précédente** : la syntaxe de recherche par champ Deezer
+(`artist:"X" track:"Y"`) ne renvoie AUCUN résultat sur l'API réelle, même
+pour des morceaux évidents ("Papaoutai" de Stromae) — confirmé en direct,
+pas un problème d'encodage/guillemets. Remplacée par une recherche texte
+simple (`"${title} ${artist}"`, `limit` relevé de 1 à 5), avec
+`isPlausibleMatch` comme filtre du bruit supplémentaire que ce type de
+recherche renvoie. Re-vérifié en direct sur plusieurs morceaux
+(Papaoutai/Stromae, Conan l'aventurier/Bernard Minet, Dernière
+danse/Indila) : tous renvoient un `rank` réel désormais. Rebase local
+propre sur ce commit (aucun conflit, fichiers disjoints),
+`pnpm typecheck/lint/test` revérifiés verts après. **L'implémentation
+Deezer de cette session est donc maintenant confirmée fonctionner en
+conditions réelles** — la limite documentée dans le FIN DE SESSION
+précédent ("rien n'a pu être vérifié en conditions réseau réelles") est
+levée.
