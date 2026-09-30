@@ -56,6 +56,42 @@ describe("buildEpisodeTracks", () => {
     expect(result.map((t) => t.id)).toEqual(["2", "3"]);
   });
 
+  it("never picks the same song twice under two different Spotify track ids", async () => {
+    // Confirmed live: "Pour que tu m'aimes encore" (Céline Dion) had two
+    // distinct Spotify catalog ids (a remaster/re-release), both picked in
+    // the same episode — a viewer noticed and commented on YouTube. Same
+    // title/artist, different id, different diacritics/case on the title
+    // to confirm the comparison is genuinely normalized, not a string fluke.
+    const original: Track = {
+      id: "track-a",
+      title: "Pour que tu m'aimes encore",
+      artist: "Céline Dion",
+      artistNames: ["Céline Dion"],
+      albumCoverUrl: "https://example.com/a.jpg",
+      popularityRank: 0,
+    };
+    const rerelease: Track = {
+      id: "track-b",
+      title: "POUR QUE TU M'AIMES ENCORE",
+      artist: "celine dion",
+      artistNames: ["celine dion"],
+      albumCoverUrl: "https://example.com/b.jpg",
+      popularityRank: 1,
+    };
+    const other = track("other");
+
+    const result = await buildEpisodeTracks(
+      [original, rerelease, other],
+      new Set(),
+      new Set(),
+      itunesThatFindsAllPreviews(),
+      2,
+      0,
+    );
+
+    expect(result.map((t) => t.id)).toEqual(["track-a", "other"]);
+  });
+
   it("skips a candidate with no available preview and moves to the next one", async () => {
     const itunes: ItunesClient = {
       findPreviewByTitleAndArtist: vi

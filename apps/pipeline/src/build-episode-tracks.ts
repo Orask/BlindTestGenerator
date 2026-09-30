@@ -9,6 +9,21 @@ export interface EpisodeTrack extends Track {
 const MAX_TRACKS_PER_ARTIST = 2;
 const OPENING_HOOK_SIZE = 5;
 
+const COMBINING_DIACRITICS = /[̀-ͯ]/g;
+
+// Spotify's catalog often has the same song under multiple distinct track
+// IDs (a remaster, a compilation re-release, a different regional edition —
+// confirmed live: "Pour que tu m'aimes encore" and "Je t'aime" each showed
+// up twice in the same "Années 90" episode this way, a viewer noticed and
+// commented on YouTube). Deduping on track.id alone lets both through since
+// they're technically different IDs; this compares the actual (title,
+// artist) a viewer hears instead.
+function titleArtistKey(title: string, artist: string): string {
+  const normalize = (value: string): string =>
+    value.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
+  return `${normalize(title)}|${normalize(artist)}`;
+}
+
 // Last-resort valve for when fresh + cooldown-reuse still aren't enough: a
 // small share of the episode's most mainstream artists (by how deep their
 // catalog ran in this theme's raw candidate pool — the closest proxy
@@ -82,12 +97,16 @@ export async function buildEpisodeTracks(
   lookupDelayMs: number = ITUNES_LOOKUP_DELAY_MS,
 ): Promise<EpisodeTrack[]> {
   const seenIds = new Set<string>();
+  const seenTitleArtistKeys = new Set<string>();
   const artistCounts = new Map<string, number>();
   const result: EpisodeTrack[] = [];
   let reusedCount = 0;
 
   async function tryAdd(track: Track, allowReuse: boolean): Promise<void> {
     if (recentlyUsedTrackIds.has(track.id) || seenIds.has(track.id)) {
+      return;
+    }
+    if (seenTitleArtistKeys.has(titleArtistKey(track.title, track.artist))) {
       return;
     }
     const isReuse = allTimeUsedTrackIds.has(track.id);
@@ -105,6 +124,7 @@ export async function buildEpisodeTracks(
       return;
     }
     seenIds.add(track.id);
+    seenTitleArtistKeys.add(titleArtistKey(track.title, track.artist));
 
     const preview = await safeFindPreview(itunes, track.title, track.artist);
     await sleep(lookupDelayMs);
@@ -169,12 +189,14 @@ export async function buildEpisodeTracks(
       if (
         recentlyUsedTrackIds.has(track.id) ||
         seenIds.has(track.id) ||
-        allTimeUsedTrackIds.has(track.id)
+        allTimeUsedTrackIds.has(track.id) ||
+        seenTitleArtistKeys.has(titleArtistKey(track.title, track.artist))
       ) {
         continue;
       }
 
       seenIds.add(track.id);
+      seenTitleArtistKeys.add(titleArtistKey(track.title, track.artist));
       const preview = await safeFindPreview(itunes, track.title, track.artist);
       await sleep(lookupDelayMs);
       if (!preview) {
