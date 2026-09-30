@@ -14,7 +14,10 @@ const HERO_LAYOUTS: Record<
   number,
   { left: number; bottom: number; size: number; rotate: number }[]
 > = {
-  1: [{ left: 50, bottom: 0, size: 460, rotate: 0 }],
+  // size capped at 360 (was 460): any taller and a single hero photo's top
+  // edge climbs into the theme-label text above it (confirmed by a real
+  // render — see docs/CLOUD_SESSION_LOG.md).
+  1: [{ left: 50, bottom: 0, size: 360, rotate: 0 }],
   2: [
     { left: 27, bottom: 0, size: 380, rotate: -4 },
     { left: 73, bottom: 0, size: 380, rotate: 4 },
@@ -226,14 +229,6 @@ export function Thumbnail({
           />
         </>
       )}
-
-      {/* Darkens the lower band so hero photos never fight the text above them for contrast. */}
-      <AbsoluteFill
-        style={{
-          background:
-            "linear-gradient(180deg, rgba(11,11,16,0) 0%, rgba(11,11,16,0.55) 62%, rgba(11,11,16,0.92) 100%)",
-        }}
-      />
 
       <AbsoluteFill
         style={{
