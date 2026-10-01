@@ -2180,3 +2180,77 @@ Deezer de cette session est donc maintenant confirmée fonctionner en
 conditions réelles** — la limite documentée dans le FIN DE SESSION
 précédent ("rien n'a pu être vérifié en conditions réseau réelles") est
 levée.
+
+## [2026-09-30] Miniatures trop sombres — dégradé sur HeroCollage confirmé et corrigé
+
+**Diagnostic de l'utilisateur, vérifié plutôt que supposé** : un dégradé de
+fond (`packages/video-renderer/src/Thumbnail.tsx`, ex-lignes 230-236)
+peint par-dessus toute la composition — y compris `HeroCollage` (les
+photos d'artistes) — sous couvert de "protéger la lisibilité du texte".
+Or le texte ("BLIND TEST" + thème) est en HAUT (`justifyContent:
+"flex-start"`, `paddingTop: 96`), le badge "N morceaux" a son propre
+fond en pastille indépendant du dégradé, et les photos d'artistes sont en
+BAS (`HERO_LAYOUTS`, `bottom: 0` à `8`) — exactement la zone où le
+dégradé atteint 92% de noir.
+
+**Vérifié par un vrai rendu (pas une lecture de code seule)** : même
+méthode que les itérations précédentes de ce composant —
+`bundleVideoRenderer()`/`renderStill` pointés sur
+`chromium_headless_shell` (`browserExecutable`, **paramètre de premier
+niveau de `selectComposition`/`renderStill`, pas dans `chromiumOptions`**
+— piège rencontré en écrivant le script de test : Remotion tentait de
+télécharger sa propre version de Chromium et échouait sur l'hôte bloqué
+`remotion.media` tant que `browserExecutable` restait imbriqué à tort
+dans `chromiumOptions`), `ignoreCertificateErrors: true`, images de test
+en couleurs unies générées localement (aucune bibliothèque d'image
+disponible, PNG écrits à la main via `zlib`, servies depuis
+`packages/video-renderer/public/artists/` — gitignoré, nettoyé après
+usage). 3 scénarios rendus AVANT/APRÈS (3 photos ton moyen, 5 photos avec
+une quasi-blanche au centre, 1 photo quasi-blanche) + 1 rendu du layout à
+6 photos pour vérifier l'absence de régression.
+
+**Hypothèse confirmée, et plus sévèrement que prévu** : des carrés de test
+ton moyen (`rgb(196,150,120)` etc.) ressortaient quasiment NOIRS avec le
+dégradé en place ; un carré quasi-blanc (`rgb(245,238,225)`, la couleur
+même une photo "claire/lumineuse") ressortait gris moyen. Retiré
+entièrement (pas juste réduit — l'utilisateur avait raison, il ne protège
+plus aucun texte).
+
+**Trouvaille additionnelle pendant la vérification** (pas dans l'hypothèse
+de départ, mais directement dans le périmètre du "vérifie que le texte du
+haut reste lisible sur une photo claire") : le layout à **1 seule photo**
+(`HERO_LAYOUTS[1]`, `size: 460`) a un vrai chevauchement — son bord
+supérieur (`bottom:0` + 460px de haut dans un cadre de 720px = sommet à
+y=260) remonte physiquement dans le texte du thème (qui se termine vers
+y≈318). C'était déjà visible AVANT ce correctif (le dégradé assombrissait
+juste assez le haut de la photo pour rendre le chevauchement moins
+choquant à l'œil) — retirer le dégradé le rendait nettement pire (texte
+du thème lisiblement tronqué par une photo maintenant quasi-blanche).
+**Corrigé** : taille réduite à 360px (bord supérieur remonte à y=360,
+marge confirmée par rendu). Les layouts à 2-6 photos (déjà plus petits,
+`bottom: 4` à `8`) n'ont jamais montré ce problème — revérifiés sans
+régression après coup.
+
+**`CoverGridFallback`** (`filter: brightness(0.5)`, ligne ~118) : relu
+en détail comme demandé, mais laissé tel quel — en re-suivant la logique
+(`heroImageUrls = artistImageUrls.length > 0 ? artistImageUrls :
+distinctCoverUrls`), ce composant n'est atteint que si `heroImageUrls`
+est vide, ce qui exige `coverImageUrls` lui-même vide — impossible en
+pratique puisque `thumbnailSchema` impose `coverImageUrls: z.array(...).
+min(1)`. Code mort dans les faits (déjà noté "pathologique" dans un
+commentaire existant), donc pas le bon endroit pour investir du temps
+comme l'utilisateur l'avait anticipé.
+
+**Résultat, avec le dégradé retiré et OutlinedText seul (halo coloré +
+contour noir) pour la lisibilité** : confirmé visuellement sur les 4
+scénarios rendus que le texte du haut reste parfaitement lisible, y
+compris directement au-dessus d'une photo quasi-blanche — la conception
+d'`OutlinedText` suffisait déjà, comme l'utilisateur le pensait, une fois
+le vrai problème de collision de layout réglé séparément.
+
+**Validation faite** : `pnpm build/lint/typecheck/test` verts pour tout le
+workspace (aucun test unitaire pour `Thumbnail.tsx`, cohérent avec le
+reste des composants React de `video-renderer` — vérification visuelle
+la méthode établie ici). Captures avant/après (3 scénarios, + le layout à
+6 photos) envoyées à l'utilisateur. Scripts de rendu de test et images
+placeholder non committés (nettoyés après usage).
