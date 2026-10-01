@@ -95,6 +95,52 @@ describe("createItunesClient.findPreviewByTitleAndArtist", () => {
     vi.useRealTimers();
   });
 
+  it("retries after a network-level failure (not just a non-ok HTTP response) and succeeds", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValueOnce(new TypeError("fetch failed", { cause: new Error("ECONNRESET") }))
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            resultCount: 1,
+            results: [
+              {
+                trackName: "Dernière danse",
+                artistName: "Indila",
+                previewUrl: "https://example.com/preview.m4a",
+              },
+            ],
+          }),
+      }) as unknown as typeof fetch;
+    const client = createItunesClient(fetchImpl);
+
+    const resultPromise = client.findPreviewByTitleAndArtist("Dernière danse", "Indila");
+    await vi.runAllTimersAsync();
+    const result = await resultPromise;
+
+    expect(result).toEqual({ previewUrl: "https://example.com/preview.m4a" });
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    vi.useRealTimers();
+  });
+
+  it("throws a descriptive error after repeated network-level failures, not the raw fetch exception", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi
+      .fn()
+      .mockRejectedValue(new TypeError("fetch failed", { cause: new Error("ECONNRESET") }));
+    const client = createItunesClient(fetchImpl);
+
+    const resultPromise = client.findPreviewByTitleAndArtist("Title", "Artist");
+    const expectation = expect(resultPromise).rejects.toThrow("iTunes search failed");
+    await vi.runAllTimersAsync();
+    await expectation;
+
+    expect(fetchImpl).toHaveBeenCalledTimes(8);
+    vi.useRealTimers();
+  });
+
   it("retries after a non-2xx status other than 403/429 too — iTunes never legitimately signals no-match this way", async () => {
     vi.useFakeTimers();
     const fetchImpl = vi

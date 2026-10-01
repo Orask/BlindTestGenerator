@@ -72,7 +72,26 @@ export function createItunesClient(fetchImpl: typeof fetch = fetch): ItunesClien
 
       let lastError: Error | undefined;
       for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        const response = await fetchImpl(url);
+        let response: Response;
+        try {
+          response = await fetchImpl(url);
+        } catch (error) {
+          // A network-level failure (confirmed live: ECONNRESET mid-run,
+          // twice in the same session) throws before any Response exists,
+          // so it never reaches the response.ok check below — unlike a
+          // non-ok HTTP response, this used to propagate uncaught and crash
+          // the whole run instead of being retried like every other
+          // transient failure this function already handles.
+          lastError = new Error(
+            `iTunes search failed for "${artist} - ${title}": ${(error as Error).message}`,
+            { cause: error },
+          );
+          if (attempt < MAX_ATTEMPTS) {
+            await sleep(Math.min(BASE_RETRY_DELAY_MS * attempt, MAX_RETRY_DELAY_MS));
+            continue;
+          }
+          break;
+        }
 
         if (response.ok) {
           const body = (await response.json()) as ItunesSearchResponse;
