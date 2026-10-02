@@ -55,44 +55,158 @@
         "Alain Chamfort"
       ],
       "curatedTracks": [
-        { "title": "Comme toi", "artist": "Jean-Jacques Goldman" },
-        { "title": "Envole-moi", "artist": "Jean-Jacques Goldman" },
-        { "title": "Ella, elle l'a", "artist": "France Gall" },
-        { "title": "Tombé pour la France", "artist": "Étienne Daho" },
-        { "title": "L'Aventurier", "artist": "Indochine" },
-        { "title": "Un autre monde", "artist": "Téléphone" },
-        { "title": "Mistral gagnant", "artist": "Renaud" },
-        { "title": "Chanter pour ceux qui sont loin de chez eux", "artist": "Michel Berger" },
-        { "title": "Libertine", "artist": "Mylène Farmer" },
-        { "title": "Les Démons de minuit", "artist": "Images" },
-        { "title": "Femme libérée", "artist": "Cookie Dingler" },
-        { "title": "L'Amour à la plage", "artist": "Niagara" },
-        { "title": "Marcia Baïla", "artist": "Les Rita Mitsouko" },
-        { "title": "Les Lacs du Connemara", "artist": "Michel Sardou" },
-        { "title": "L'Aziza", "artist": "Daniel Balavoine" },
-        { "title": "Voyage voyage", "artist": "Desireless" },
-        { "title": "Plus près des étoiles", "artist": "Gold" },
-        { "title": "Toute première fois", "artist": "Jeanne Mas" },
-        { "title": "Chacun fait (c'qui lui plaît)", "artist": "Chagrin d'Amour" },
-        { "title": "Un homme heureux", "artist": "William Sheller" },
-        { "title": "Nuit de folie", "artist": "Début de Soirée" },
-        { "title": "Macumba", "artist": "Jean-Pierre Mader" },
-        { "title": "Elle a les yeux revolver", "artist": "Marc Lavoine" },
-        { "title": "Gaby oh Gaby", "artist": "Alain Bashung" },
-        { "title": "Antisocial", "artist": "Trust" },
-        { "title": "Il est libre Max", "artist": "Hervé Cristiani" },
-        { "title": "On va s'aimer", "artist": "Gilbert Montagné" },
-        { "title": "Cendrillon", "artist": "Téléphone" },
-        { "title": "Banana Split", "artist": "Lio" },
-        { "title": "Amoureux solitaires", "artist": "Lio" },
-        { "title": "New York avec toi", "artist": "Taxi Girl" },
-        { "title": "Douce France", "artist": "Carte de Séjour" },
-        { "title": "Africa", "artist": "Rose Laurens" },
-        { "title": "Encore un matin", "artist": "Jean-Jacques Goldman" },
-        { "title": "Sauver l'amour", "artist": "Daniel Balavoine" },
-        { "title": "T'en va pas", "artist": "Elsa" },
-        { "title": "Blue jean bleu", "artist": "Renaud" },
-        { "title": "Capitaine abandonné", "artist": "Alain Bashung" }
+        {
+          "title": "Comme toi",
+          "artist": "Jean-Jacques Goldman"
+        },
+        {
+          "title": "Envole-moi",
+          "artist": "Jean-Jacques Goldman"
+        },
+        {
+          "title": "Ella, elle l'a",
+          "artist": "France Gall"
+        },
+        {
+          "title": "Tombé pour la France",
+          "artist": "Étienne Daho"
+        },
+        {
+          "title": "L'Aventurier",
+          "artist": "Indochine"
+        },
+        {
+          "title": "Un autre monde",
+          "artist": "Téléphone"
+        },
+        {
+          "title": "Mistral gagnant",
+          "artist": "Renaud"
+        },
+        {
+          "title": "Chanter pour ceux qui sont loin de chez eux",
+          "artist": "Michel Berger"
+        },
+        {
+          "title": "Libertine",
+          "artist": "Mylène Farmer"
+        },
+        {
+          "title": "Les Démons de minuit",
+          "artist": "Images"
+        },
+        {
+          "title": "Femme libérée",
+          "artist": "Cookie Dingler"
+        },
+        {
+          "title": "L'Amour à la plage",
+          "artist": "Niagara"
+        },
+        {
+          "title": "Marcia Baïla",
+          "artist": "Les Rita Mitsouko"
+        },
+        {
+          "title": "Les Lacs du Connemara",
+          "artist": "Michel Sardou"
+        },
+        {
+          "title": "L'Aziza",
+          "artist": "Daniel Balavoine"
+        },
+        {
+          "title": "Voyage voyage",
+          "artist": "Desireless"
+        },
+        {
+          "title": "Plus près des étoiles",
+          "artist": "Gold"
+        },
+        {
+          "title": "Toute première fois",
+          "artist": "Jeanne Mas"
+        },
+        {
+          "title": "Chacun fait (c'qui lui plaît)",
+          "artist": "Chagrin d'Amour"
+        },
+        {
+          "title": "Un homme heureux",
+          "artist": "William Sheller"
+        },
+        {
+          "title": "Nuit de folie",
+          "artist": "Début de Soirée"
+        },
+        {
+          "title": "Macumba",
+          "artist": "Jean-Pierre Mader"
+        },
+        {
+          "title": "Elle a les yeux revolver",
+          "artist": "Marc Lavoine"
+        },
+        {
+          "title": "Gaby oh Gaby",
+          "artist": "Alain Bashung"
+        },
+        {
+          "title": "Antisocial",
+          "artist": "Trust"
+        },
+        {
+          "title": "Il est libre Max",
+          "artist": "Hervé Cristiani"
+        },
+        {
+          "title": "On va s'aimer",
+          "artist": "Gilbert Montagné"
+        },
+        {
+          "title": "Cendrillon",
+          "artist": "Téléphone"
+        },
+        {
+          "title": "Banana Split",
+          "artist": "Lio"
+        },
+        {
+          "title": "Amoureux solitaires",
+          "artist": "Lio"
+        },
+        {
+          "title": "New York avec toi",
+          "artist": "Taxi Girl"
+        },
+        {
+          "title": "Douce France",
+          "artist": "Carte de Séjour"
+        },
+        {
+          "title": "Africa",
+          "artist": "Rose Laurens"
+        },
+        {
+          "title": "Encore un matin",
+          "artist": "Jean-Jacques Goldman"
+        },
+        {
+          "title": "Sauver l'amour",
+          "artist": "Daniel Balavoine"
+        },
+        {
+          "title": "T'en va pas",
+          "artist": "Elsa"
+        },
+        {
+          "title": "Blue jean bleu",
+          "artist": "Renaud"
+        },
+        {
+          "title": "Capitaine abandonné",
+          "artist": "Alain Bashung"
+        }
       ],
       "discoveryQuery": "chanson francaise annees 80",
       "youtubePlaylistId": null
@@ -146,42 +260,150 @@
         "Étienne Daho"
       ],
       "curatedTracks": [
-        { "title": "Désenchantée", "artist": "Mylène Farmer" },
-        { "title": "Je danse le Mia", "artist": "IAM" },
-        { "title": "Caroline", "artist": "MC Solaar" },
-        { "title": "Nouveau western", "artist": "MC Solaar" },
-        { "title": "Place des grands hommes", "artist": "Patrick Bruel" },
-        { "title": "Respect", "artist": "Alliance Ethnik" },
-        { "title": "Tomber la chemise", "artist": "Zebda" },
-        { "title": "Tellement je t'aime", "artist": "Faudel" },
-        { "title": "Je t'aime", "artist": "Lara Fabian" },
-        { "title": "Dieu m'a donné la foi", "artist": "Ophélie Winter" },
-        { "title": "Mon mec à moi", "artist": "Patricia Kaas" },
-        { "title": "Aïcha", "artist": "Khaled" },
-        { "title": "Zen", "artist": "Zazie" },
-        { "title": "Homme Sweet Homme", "artist": "Zazie" },
-        { "title": "Savoir aimer", "artist": "Florent Pagny" },
-        { "title": "Be My Baby", "artist": "Vanessa Paradis" },
-        { "title": "Laisse pas traîner ton fils", "artist": "Suprême NTM" },
-        { "title": "Sensualité", "artist": "Axelle Red" },
-        { "title": "La Corrida", "artist": "Francis Cabrel" },
-        { "title": "Juste quelqu'un de bien", "artist": "Enzo Enzo" },
-        { "title": "Maldon", "artist": "Zouk Machine" },
-        { "title": "Je zappe et je mate", "artist": "Passi" },
-        { "title": "Pour que tu m'aimes encore", "artist": "Céline Dion" },
-        { "title": "Hélène", "artist": "Roch Voisine" },
-        { "title": "Allumer le feu", "artist": "Johnny Hallyday" },
-        { "title": "Foule sentimentale", "artist": "Alain Souchon" },
-        { "title": "Le petit train", "artist": "Les Rita Mitsouko" },
-        { "title": "Comme un boomerang", "artist": "Étienne Daho" },
-        { "title": "J'irai où tu iras", "artist": "Céline Dion & Jean-Jacques Goldman" },
-        { "title": "Sexy Boy", "artist": "Air" },
-        { "title": "Da Funk", "artist": "Daft Punk" },
-        { "title": "Around the World", "artist": "Daft Punk" },
-        { "title": "L'Envie d'aimer", "artist": "Daniel Lévi" },
-        { "title": "Belle", "artist": "Garou, Daniel Lévi & Patrick Fiori" },
-        { "title": "Le Temps des cathédrales", "artist": "Bruno Pelletier" },
-        { "title": "La Tribu de Dana", "artist": "Manau" }
+        {
+          "title": "Désenchantée",
+          "artist": "Mylène Farmer"
+        },
+        {
+          "title": "Je danse le Mia",
+          "artist": "IAM"
+        },
+        {
+          "title": "Caroline",
+          "artist": "MC Solaar"
+        },
+        {
+          "title": "Nouveau western",
+          "artist": "MC Solaar"
+        },
+        {
+          "title": "Place des grands hommes",
+          "artist": "Patrick Bruel"
+        },
+        {
+          "title": "Respect",
+          "artist": "Alliance Ethnik"
+        },
+        {
+          "title": "Tomber la chemise",
+          "artist": "Zebda"
+        },
+        {
+          "title": "Tellement je t'aime",
+          "artist": "Faudel"
+        },
+        {
+          "title": "Je t'aime",
+          "artist": "Lara Fabian"
+        },
+        {
+          "title": "Dieu m'a donné la foi",
+          "artist": "Ophélie Winter"
+        },
+        {
+          "title": "Mon mec à moi",
+          "artist": "Patricia Kaas"
+        },
+        {
+          "title": "Aïcha",
+          "artist": "Khaled"
+        },
+        {
+          "title": "Zen",
+          "artist": "Zazie"
+        },
+        {
+          "title": "Homme Sweet Homme",
+          "artist": "Zazie"
+        },
+        {
+          "title": "Savoir aimer",
+          "artist": "Florent Pagny"
+        },
+        {
+          "title": "Be My Baby",
+          "artist": "Vanessa Paradis"
+        },
+        {
+          "title": "Laisse pas traîner ton fils",
+          "artist": "Suprême NTM"
+        },
+        {
+          "title": "Sensualité",
+          "artist": "Axelle Red"
+        },
+        {
+          "title": "La Corrida",
+          "artist": "Francis Cabrel"
+        },
+        {
+          "title": "Juste quelqu'un de bien",
+          "artist": "Enzo Enzo"
+        },
+        {
+          "title": "Maldon",
+          "artist": "Zouk Machine"
+        },
+        {
+          "title": "Je zappe et je mate",
+          "artist": "Passi"
+        },
+        {
+          "title": "Pour que tu m'aimes encore",
+          "artist": "Céline Dion"
+        },
+        {
+          "title": "Hélène",
+          "artist": "Roch Voisine"
+        },
+        {
+          "title": "Allumer le feu",
+          "artist": "Johnny Hallyday"
+        },
+        {
+          "title": "Foule sentimentale",
+          "artist": "Alain Souchon"
+        },
+        {
+          "title": "Le petit train",
+          "artist": "Les Rita Mitsouko"
+        },
+        {
+          "title": "Comme un boomerang",
+          "artist": "Étienne Daho"
+        },
+        {
+          "title": "J'irai où tu iras",
+          "artist": "Céline Dion & Jean-Jacques Goldman"
+        },
+        {
+          "title": "Sexy Boy",
+          "artist": "Air"
+        },
+        {
+          "title": "Da Funk",
+          "artist": "Daft Punk"
+        },
+        {
+          "title": "Around the World",
+          "artist": "Daft Punk"
+        },
+        {
+          "title": "L'Envie d'aimer",
+          "artist": "Daniel Lévi"
+        },
+        {
+          "title": "Belle",
+          "artist": "Garou, Daniel Lévi & Patrick Fiori"
+        },
+        {
+          "title": "Le Temps des cathédrales",
+          "artist": "Bruno Pelletier"
+        },
+        {
+          "title": "La Tribu de Dana",
+          "artist": "Manau"
+        }
       ],
       "discoveryQuery": "chanson francaise annees 90",
       "youtubePlaylistId": null
@@ -238,48 +460,174 @@
         "Grégoire Lemarchal"
       ],
       "curatedTracks": [
-        { "title": "Le chemin", "artist": "Kyo" },
-        { "title": "Jeune demoiselle", "artist": "Diam's" },
-        { "title": "En apesanteur", "artist": "Calogero" },
-        { "title": "Je suis un homme", "artist": "Zazie" },
-        { "title": "Tout le bonheur du monde", "artist": "Sinsemilia" },
-        { "title": "On s'attache", "artist": "Christophe Maé" },
-        { "title": "Femme de couleur", "artist": "Shy'm" },
-        { "title": "Ma philosophie", "artist": "Amel Bent" },
-        { "title": "A fleur de toi", "artist": "Vitaa" },
-        { "title": "Marly-Gomont", "artist": "Kamini" },
-        { "title": "Il avait les mots", "artist": "Sheryfa Luna" },
-        { "title": "Comme des enfants", "artist": "Cœur de Pirate" },
-        { "title": "Caravane", "artist": "Raphaël" },
-        { "title": "Le dîner", "artist": "Bénabar" },
-        { "title": "Toi + moi", "artist": "Grégoire" },
-        { "title": "Double je", "artist": "Christophe Willem" },
-        { "title": "Les limites", "artist": "Julien Doré" },
-        { "title": "Ta douleur", "artist": "Camille" },
-        { "title": "Elle m'a dit", "artist": "Cali" },
-        { "title": "Du courage", "artist": "La Grande Sophie" },
-        { "title": "Lalalove you", "artist": "BB Brunes" },
-        { "title": "Song for Jedi", "artist": "Dionysos" },
-        { "title": "Comme un manouche sans guitare", "artist": "Thomas Dutronc" },
-        { "title": "J'traîne des pieds", "artist": "Olivia Ruiz" },
-        { "title": "Entre nous", "artist": "Chimène Badi" },
-        { "title": "Parle-moi", "artist": "Nadiya" },
-        { "title": "Je me perds", "artist": "Jena Lee" },
-        { "title": "Ghost", "artist": "Skip the Use" },
-        { "title": "Je veux te voir", "artist": "Yelle" },
-        { "title": "Radio Song", "artist": "Superbus" },
-        { "title": "Aux arbres citoyens", "artist": "Yannick Noah" },
-        { "title": "Ton invitation", "artist": "Louise Attaque" },
-        { "title": "Wake Up", "artist": "Sliimy" },
-        { "title": "Juste pour me souvenir", "artist": "Nolwenn Leroy" },
-        { "title": "Elle me contrôle", "artist": "M. Pokora" },
-        { "title": "Moi... Lolita", "artist": "Alizée" },
-        { "title": "Alors on danse", "artist": "Stromae" },
-        { "title": "La Boulette", "artist": "Diam's" },
-        { "title": "J'ai demandé à la lune", "artist": "Indochine" },
-        { "title": "Sous le vent", "artist": "Garou & Céline Dion" },
-        { "title": "Manhattan-Kaboul", "artist": "Renaud & Axelle Red" },
-        { "title": "Femme like you", "artist": "K.Maro" }
+        {
+          "title": "Le chemin",
+          "artist": "Kyo"
+        },
+        {
+          "title": "Jeune demoiselle",
+          "artist": "Diam's"
+        },
+        {
+          "title": "En apesanteur",
+          "artist": "Calogero"
+        },
+        {
+          "title": "Je suis un homme",
+          "artist": "Zazie"
+        },
+        {
+          "title": "Tout le bonheur du monde",
+          "artist": "Sinsemilia"
+        },
+        {
+          "title": "On s'attache",
+          "artist": "Christophe Maé"
+        },
+        {
+          "title": "Femme de couleur",
+          "artist": "Shy'm"
+        },
+        {
+          "title": "Ma philosophie",
+          "artist": "Amel Bent"
+        },
+        {
+          "title": "A fleur de toi",
+          "artist": "Vitaa"
+        },
+        {
+          "title": "Marly-Gomont",
+          "artist": "Kamini"
+        },
+        {
+          "title": "Il avait les mots",
+          "artist": "Sheryfa Luna"
+        },
+        {
+          "title": "Comme des enfants",
+          "artist": "Cœur de Pirate"
+        },
+        {
+          "title": "Caravane",
+          "artist": "Raphaël"
+        },
+        {
+          "title": "Le dîner",
+          "artist": "Bénabar"
+        },
+        {
+          "title": "Toi + moi",
+          "artist": "Grégoire"
+        },
+        {
+          "title": "Double je",
+          "artist": "Christophe Willem"
+        },
+        {
+          "title": "Les limites",
+          "artist": "Julien Doré"
+        },
+        {
+          "title": "Ta douleur",
+          "artist": "Camille"
+        },
+        {
+          "title": "Elle m'a dit",
+          "artist": "Cali"
+        },
+        {
+          "title": "Du courage",
+          "artist": "La Grande Sophie"
+        },
+        {
+          "title": "Lalalove you",
+          "artist": "BB Brunes"
+        },
+        {
+          "title": "Song for Jedi",
+          "artist": "Dionysos"
+        },
+        {
+          "title": "Comme un manouche sans guitare",
+          "artist": "Thomas Dutronc"
+        },
+        {
+          "title": "J'traîne des pieds",
+          "artist": "Olivia Ruiz"
+        },
+        {
+          "title": "Entre nous",
+          "artist": "Chimène Badi"
+        },
+        {
+          "title": "Parle-moi",
+          "artist": "Nadiya"
+        },
+        {
+          "title": "Je me perds",
+          "artist": "Jena Lee"
+        },
+        {
+          "title": "Ghost",
+          "artist": "Skip the Use"
+        },
+        {
+          "title": "Je veux te voir",
+          "artist": "Yelle"
+        },
+        {
+          "title": "Radio Song",
+          "artist": "Superbus"
+        },
+        {
+          "title": "Aux arbres citoyens",
+          "artist": "Yannick Noah"
+        },
+        {
+          "title": "Ton invitation",
+          "artist": "Louise Attaque"
+        },
+        {
+          "title": "Wake Up",
+          "artist": "Sliimy"
+        },
+        {
+          "title": "Juste pour me souvenir",
+          "artist": "Nolwenn Leroy"
+        },
+        {
+          "title": "Elle me contrôle",
+          "artist": "M. Pokora"
+        },
+        {
+          "title": "Moi... Lolita",
+          "artist": "Alizée"
+        },
+        {
+          "title": "Alors on danse",
+          "artist": "Stromae"
+        },
+        {
+          "title": "La Boulette",
+          "artist": "Diam's"
+        },
+        {
+          "title": "J'ai demandé à la lune",
+          "artist": "Indochine"
+        },
+        {
+          "title": "Sous le vent",
+          "artist": "Garou & Céline Dion"
+        },
+        {
+          "title": "Manhattan-Kaboul",
+          "artist": "Renaud & Axelle Red"
+        },
+        {
+          "title": "Femme like you",
+          "artist": "K.Maro"
+        }
       ],
       "discoveryQuery": "chanson francaise annees 2000",
       "youtubePlaylistId": null
@@ -369,38 +717,134 @@
         "La Mano 1.9"
       ],
       "curatedTracks": [
-        { "title": "Tonton du bled", "artist": "113" },
-        { "title": "Je danse le Mia", "artist": "IAM" },
-        { "title": "OKLM", "artist": "Booba" },
-        { "title": "On verra", "artist": "Nekfeu" },
-        { "title": "Au DD", "artist": "PNL" },
-        { "title": "Dommage", "artist": "Bigflo & Oli" },
-        { "title": "Basique", "artist": "Orelsan" },
-        { "title": "Wesh alors", "artist": "Jul" },
-        { "title": "Lettre à une femme", "artist": "Ninho" },
-        { "title": "Tchoin", "artist": "Kaaris" },
-        { "title": "Macarena", "artist": "Damso" },
-        { "title": "Réseaux", "artist": "Niska" },
-        { "title": "Désolé", "artist": "Sexion d'Assaut" },
-        { "title": "Cosmo", "artist": "Soprano" },
-        { "title": "Banlieusards", "artist": "Kery James" },
-        { "title": "Nirvana", "artist": "Doc Gynéco" },
-        { "title": "Corleone", "artist": "Lacrim" },
-        { "title": "Liberté", "artist": "Soolking" },
-        { "title": "Art de rue", "artist": "Fonky Family" },
-        { "title": "Mauvais oeil", "artist": "Lunatic" },
-        { "title": "Bella", "artist": "Maître Gims, Dadju, Slimane & Vianney" },
-        { "title": "Ramenez la coupe à la maison", "artist": "Vegedream" },
-        { "title": "Copines", "artist": "Aya Nakamura" },
-        { "title": "Naha", "artist": "PNL" },
-        { "title": "DKR", "artist": "Booba" },
-        { "title": "Tourner dans le vide", "artist": "Nekfeu" },
-        { "title": "Demain", "artist": "Bigflo & Oli" },
-        { "title": "Suicide social", "artist": "Orelsan" },
-        { "title": "Zoo", "artist": "Kaaris" },
-        { "title": "Fresh Prince", "artist": "Soprano" },
-        { "title": "Nés sous la même étoile", "artist": "IAM" },
-        { "title": "Bouge de là", "artist": "MC Solaar" }
+        {
+          "title": "Tonton du bled",
+          "artist": "113"
+        },
+        {
+          "title": "Je danse le Mia",
+          "artist": "IAM"
+        },
+        {
+          "title": "OKLM",
+          "artist": "Booba"
+        },
+        {
+          "title": "On verra",
+          "artist": "Nekfeu"
+        },
+        {
+          "title": "Au DD",
+          "artist": "PNL"
+        },
+        {
+          "title": "Dommage",
+          "artist": "Bigflo & Oli"
+        },
+        {
+          "title": "Basique",
+          "artist": "Orelsan"
+        },
+        {
+          "title": "Wesh alors",
+          "artist": "Jul"
+        },
+        {
+          "title": "Lettre à une femme",
+          "artist": "Ninho"
+        },
+        {
+          "title": "Tchoin",
+          "artist": "Kaaris"
+        },
+        {
+          "title": "Macarena",
+          "artist": "Damso"
+        },
+        {
+          "title": "Réseaux",
+          "artist": "Niska"
+        },
+        {
+          "title": "Désolé",
+          "artist": "Sexion d'Assaut"
+        },
+        {
+          "title": "Cosmo",
+          "artist": "Soprano"
+        },
+        {
+          "title": "Banlieusards",
+          "artist": "Kery James"
+        },
+        {
+          "title": "Nirvana",
+          "artist": "Doc Gynéco"
+        },
+        {
+          "title": "Corleone",
+          "artist": "Lacrim"
+        },
+        {
+          "title": "Liberté",
+          "artist": "Soolking"
+        },
+        {
+          "title": "Art de rue",
+          "artist": "Fonky Family"
+        },
+        {
+          "title": "Mauvais oeil",
+          "artist": "Lunatic"
+        },
+        {
+          "title": "Bella",
+          "artist": "Maître Gims, Dadju, Slimane & Vianney"
+        },
+        {
+          "title": "Ramenez la coupe à la maison",
+          "artist": "Vegedream"
+        },
+        {
+          "title": "Copines",
+          "artist": "Aya Nakamura"
+        },
+        {
+          "title": "Naha",
+          "artist": "PNL"
+        },
+        {
+          "title": "DKR",
+          "artist": "Booba"
+        },
+        {
+          "title": "Tourner dans le vide",
+          "artist": "Nekfeu"
+        },
+        {
+          "title": "Demain",
+          "artist": "Bigflo & Oli"
+        },
+        {
+          "title": "Suicide social",
+          "artist": "Orelsan"
+        },
+        {
+          "title": "Zoo",
+          "artist": "Kaaris"
+        },
+        {
+          "title": "Fresh Prince",
+          "artist": "Soprano"
+        },
+        {
+          "title": "Nés sous la même étoile",
+          "artist": "IAM"
+        },
+        {
+          "title": "Bouge de là",
+          "artist": "MC Solaar"
+        }
       ],
       "discoveryQuery": "rap francais",
       "youtubePlaylistId": null
@@ -453,56 +897,209 @@
         "Juliette Armanet",
         "Aloise Sauvage",
         "Pierre de Maere",
-        "Zaho de Sagazan"
+        "Zaho de Sagazan",
+        "Variété Française",
+        "Indila",
+        "Stromae",
+        "Vendredi sur Mer",
+        "France Gall",
+        "Édith Piaf",
+        "Carla Bruni",
+        "Tayc",
+        "Hits Variété Pop",
+        "Charles Aznavour",
+        "Vanessa Paradis",
+        "Francis Cabrel"
       ],
       "curatedTracks": [
-        { "title": "Balance ton quoi", "artist": "Angèle" },
-        { "title": "La Grenade", "artist": "Clara Luciani" },
-        { "title": "Pas là", "artist": "Vianney" },
-        { "title": "Avenir", "artist": "Louane" },
-        { "title": "Viens on s'aime", "artist": "Slimane" },
-        { "title": "Roméo kiffe Juliette", "artist": "Grand Corps Malade" },
-        { "title": "Je veux", "artist": "Zaz" },
-        { "title": "Color Gitano", "artist": "Kendji Girac" },
-        { "title": "J'ai cherché", "artist": "Amir" },
-        { "title": "On s'attache", "artist": "Christophe Maé" },
-        { "title": "Paris-Seychelles", "artist": "Julien Doré" },
-        { "title": "À fleur de toi", "artist": "Vitaa" },
-        { "title": "On brûlera", "artist": "Pomme" },
-        { "title": "Amour censure", "artist": "Hoshi" },
-        { "title": "T'inquiète", "artist": "Suzane" },
-        { "title": "Kid", "artist": "Eddy de Pretto" },
-        { "title": "Djadja", "artist": "Aya Nakamura" },
-        { "title": "Compliqué", "artist": "Dadju" },
-        { "title": "Sur ma route", "artist": "Black M" },
-        { "title": "On écrit sur les murs", "artist": "Kids United" },
-        { "title": "Parce qu'on vient de loin", "artist": "Corneille" },
-        { "title": "C'est chelou", "artist": "Zaho" },
-        { "title": "Le Sens de la vie", "artist": "Tal" },
-        { "title": "Non non non", "artist": "Camélia Jordana" },
-        { "title": "Au soleil", "artist": "Jenifer" },
-        { "title": "Beau malgré moi", "artist": "Emmanuel Moire" },
-        { "title": "Double je", "artist": "Christophe Willem" },
-        { "title": "À nos actes manqués", "artist": "M. Pokora" },
-        { "title": "Corps", "artist": "Yseult" },
-        { "title": "Roi", "artist": "Bilal Hassani" },
-        { "title": "Un homme debout", "artist": "Claudio Capéo" },
-        { "title": "Homeless", "artist": "Marina Kaye" },
-        { "title": "Flip", "artist": "Lomepal" },
-        { "title": "Ficelle", "artist": "Feu! Chatterton" },
-        { "title": "L'Amour en solitaire", "artist": "Juliette Armanet" },
-        { "title": "Ceux qu'on été", "artist": "Pierre de Maere" },
-        { "title": "La Symphonie des éclairs", "artist": "Zaho de Sagazan" },
-        { "title": "Dernière danse", "artist": "Indila" },
-        { "title": "Formidable", "artist": "Stromae" },
-        { "title": "Tous les mêmes", "artist": "Stromae" },
-        { "title": "On ira", "artist": "Zaz" },
-        { "title": "Andalouse", "artist": "Kendji Girac" },
-        { "title": "Petite sœur", "artist": "Vitaa & Slimane" },
-        { "title": "À nos souvenirs", "artist": "Trois Cafés Gourmands" },
-        { "title": "Encore une fois", "artist": "Vianney" },
-        { "title": "Tout oublier", "artist": "Angèle" },
-        { "title": "On dirait", "artist": "Amir" }
+        {
+          "title": "Balance ton quoi",
+          "artist": "Angèle"
+        },
+        {
+          "title": "La Grenade",
+          "artist": "Clara Luciani"
+        },
+        {
+          "title": "Pas là",
+          "artist": "Vianney"
+        },
+        {
+          "title": "Avenir",
+          "artist": "Louane"
+        },
+        {
+          "title": "Viens on s'aime",
+          "artist": "Slimane"
+        },
+        {
+          "title": "Roméo kiffe Juliette",
+          "artist": "Grand Corps Malade"
+        },
+        {
+          "title": "Je veux",
+          "artist": "Zaz"
+        },
+        {
+          "title": "Color Gitano",
+          "artist": "Kendji Girac"
+        },
+        {
+          "title": "J'ai cherché",
+          "artist": "Amir"
+        },
+        {
+          "title": "On s'attache",
+          "artist": "Christophe Maé"
+        },
+        {
+          "title": "Paris-Seychelles",
+          "artist": "Julien Doré"
+        },
+        {
+          "title": "À fleur de toi",
+          "artist": "Vitaa"
+        },
+        {
+          "title": "On brûlera",
+          "artist": "Pomme"
+        },
+        {
+          "title": "Amour censure",
+          "artist": "Hoshi"
+        },
+        {
+          "title": "T'inquiète",
+          "artist": "Suzane"
+        },
+        {
+          "title": "Kid",
+          "artist": "Eddy de Pretto"
+        },
+        {
+          "title": "Djadja",
+          "artist": "Aya Nakamura"
+        },
+        {
+          "title": "Compliqué",
+          "artist": "Dadju"
+        },
+        {
+          "title": "Sur ma route",
+          "artist": "Black M"
+        },
+        {
+          "title": "On écrit sur les murs",
+          "artist": "Kids United"
+        },
+        {
+          "title": "Parce qu'on vient de loin",
+          "artist": "Corneille"
+        },
+        {
+          "title": "C'est chelou",
+          "artist": "Zaho"
+        },
+        {
+          "title": "Le Sens de la vie",
+          "artist": "Tal"
+        },
+        {
+          "title": "Non non non",
+          "artist": "Camélia Jordana"
+        },
+        {
+          "title": "Au soleil",
+          "artist": "Jenifer"
+        },
+        {
+          "title": "Beau malgré moi",
+          "artist": "Emmanuel Moire"
+        },
+        {
+          "title": "Double je",
+          "artist": "Christophe Willem"
+        },
+        {
+          "title": "À nos actes manqués",
+          "artist": "M. Pokora"
+        },
+        {
+          "title": "Corps",
+          "artist": "Yseult"
+        },
+        {
+          "title": "Roi",
+          "artist": "Bilal Hassani"
+        },
+        {
+          "title": "Un homme debout",
+          "artist": "Claudio Capéo"
+        },
+        {
+          "title": "Homeless",
+          "artist": "Marina Kaye"
+        },
+        {
+          "title": "Flip",
+          "artist": "Lomepal"
+        },
+        {
+          "title": "Ficelle",
+          "artist": "Feu! Chatterton"
+        },
+        {
+          "title": "L'Amour en solitaire",
+          "artist": "Juliette Armanet"
+        },
+        {
+          "title": "Ceux qu'on été",
+          "artist": "Pierre de Maere"
+        },
+        {
+          "title": "La Symphonie des éclairs",
+          "artist": "Zaho de Sagazan"
+        },
+        {
+          "title": "Dernière danse",
+          "artist": "Indila"
+        },
+        {
+          "title": "Formidable",
+          "artist": "Stromae"
+        },
+        {
+          "title": "Tous les mêmes",
+          "artist": "Stromae"
+        },
+        {
+          "title": "On ira",
+          "artist": "Zaz"
+        },
+        {
+          "title": "Andalouse",
+          "artist": "Kendji Girac"
+        },
+        {
+          "title": "Petite sœur",
+          "artist": "Vitaa & Slimane"
+        },
+        {
+          "title": "À nos souvenirs",
+          "artist": "Trois Cafés Gourmands"
+        },
+        {
+          "title": "Encore une fois",
+          "artist": "Vianney"
+        },
+        {
+          "title": "Tout oublier",
+          "artist": "Angèle"
+        },
+        {
+          "title": "On dirait",
+          "artist": "Amir"
+        }
       ],
       "discoveryQuery": "variete francaise actuelle",
       "youtubePlaylistId": null
@@ -559,69 +1156,258 @@
         "Michel Delpech"
       ],
       "curatedTracks": [
-        { "title": "Non, je ne regrette rien", "artist": "Édith Piaf" },
-        { "title": "La Bohème", "artist": "Charles Aznavour" },
-        { "title": "Ne me quitte pas", "artist": "Jacques Brel" },
-        { "title": "Les Copains d'abord", "artist": "Georges Brassens" },
-        { "title": "La Javanaise", "artist": "Serge Gainsbourg" },
-        { "title": "Comme d'habitude", "artist": "Claude François" },
-        { "title": "Que je t'aime", "artist": "Johnny Hallyday" },
-        { "title": "Bambino", "artist": "Dalida" },
-        { "title": "La Maladie d'amour", "artist": "Michel Sardou" },
-        { "title": "L'Aigle noir", "artist": "Barbara" },
-        { "title": "Avec le temps", "artist": "Léo Ferré" },
-        { "title": "La Mer", "artist": "Charles Trenet" },
-        { "title": "Les Feuilles mortes", "artist": "Yves Montand" },
-        { "title": "Nathalie", "artist": "Gilbert Bécaud" },
-        { "title": "Les Filles de mon pays", "artist": "Enrico Macias" },
-        { "title": "La plus belle pour aller danser", "artist": "Sylvie Vartan" },
-        { "title": "La Belle Vie", "artist": "Sacha Distel" },
-        { "title": "Aux Champs-Élysées", "artist": "Joe Dassin" },
-        { "title": "Le Sud", "artist": "Nino Ferrer" },
-        { "title": "La Poupée qui fait non", "artist": "Michel Polnareff" },
-        { "title": "Tous les garçons et les filles", "artist": "Françoise Hardy" },
-        { "title": "Aline", "artist": "Christophe" },
-        { "title": "Il est mort le soleil", "artist": "Nicoletta" },
-        { "title": "Mille colombes", "artist": "Mireille Mathieu" },
-        { "title": "Tombe la neige", "artist": "Salvatore Adamo" },
-        { "title": "Capri, c'est fini", "artist": "Hervé Vilard" },
-        { "title": "Femmes je vous aime", "artist": "Julien Clerc" },
-        { "title": "Mistral gagnant", "artist": "Renaud" },
-        { "title": "Amoureuse", "artist": "Véronique Sanson" },
-        { "title": "Pour le plaisir", "artist": "Herbert Léonard" },
-        { "title": "Le Métèque", "artist": "Georges Moustaki" },
-        { "title": "L'Eau vive", "artist": "Guy Béart" },
-        { "title": "Ma France", "artist": "Jean Ferrat" },
-        { "title": "Salade de fruits", "artist": "Bourvil" },
-        { "title": "Le Déserteur", "artist": "Boris Vian" },
-        { "title": "Déshabillez-moi", "artist": "Juliette Gréco" },
-        { "title": "Ma Pomme", "artist": "Maurice Chevalier" },
-        { "title": "Petit Papa Noël", "artist": "Tino Rossi" },
-        { "title": "Le Chanteur de Mexico", "artist": "Luis Mariano" },
-        { "title": "Viens, viens", "artist": "Marie Laforêt" },
-        { "title": "Le Temps du muguet", "artist": "Nana Mouskouri" },
-        { "title": "Lily", "artist": "Pierre Perret" },
-        { "title": "Santiano", "artist": "Hugues Aufray" },
-        { "title": "Pour un flirt", "artist": "Michel Delpech" },
-        { "title": "Emmenez-moi", "artist": "Charles Aznavour" },
-        { "title": "Que c'est triste Venise", "artist": "Charles Aznavour" },
-        { "title": "Amsterdam", "artist": "Jacques Brel" },
-        { "title": "Le Plat pays", "artist": "Jacques Brel" },
-        { "title": "Chanson pour l'Auvergnat", "artist": "Georges Brassens" },
-        { "title": "La Chanson de Prévert", "artist": "Serge Gainsbourg" },
-        { "title": "Le Poinçonneur des Lilas", "artist": "Serge Gainsbourg" },
-        { "title": "Je t'aime... moi non plus", "artist": "Serge Gainsbourg & Jane Birkin" },
-        { "title": "Ma liberté", "artist": "Georges Moustaki" },
-        { "title": "Le Temps de l'amour", "artist": "Françoise Hardy" },
-        { "title": "La Vie en rose", "artist": "Édith Piaf" },
-        { "title": "Milord", "artist": "Édith Piaf" },
-        { "title": "Que reste-t-il de nos amours", "artist": "Charles Trenet" },
-        { "title": "Douce France", "artist": "Charles Trenet" },
-        { "title": "Ma môme", "artist": "Jean Ferrat" },
-        { "title": "C'est extra", "artist": "Léo Ferré" },
-        { "title": "Syracuse", "artist": "Henri Salvador" },
-        { "title": "L'Important c'est la rose", "artist": "Gilbert Bécaud" },
-        { "title": "La Maritza", "artist": "Sylvie Vartan" }
+        {
+          "title": "Non, je ne regrette rien",
+          "artist": "Édith Piaf"
+        },
+        {
+          "title": "La Bohème",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "Ne me quitte pas",
+          "artist": "Jacques Brel"
+        },
+        {
+          "title": "Les Copains d'abord",
+          "artist": "Georges Brassens"
+        },
+        {
+          "title": "La Javanaise",
+          "artist": "Serge Gainsbourg"
+        },
+        {
+          "title": "Comme d'habitude",
+          "artist": "Claude François"
+        },
+        {
+          "title": "Que je t'aime",
+          "artist": "Johnny Hallyday"
+        },
+        {
+          "title": "Bambino",
+          "artist": "Dalida"
+        },
+        {
+          "title": "La Maladie d'amour",
+          "artist": "Michel Sardou"
+        },
+        {
+          "title": "L'Aigle noir",
+          "artist": "Barbara"
+        },
+        {
+          "title": "Avec le temps",
+          "artist": "Léo Ferré"
+        },
+        {
+          "title": "La Mer",
+          "artist": "Charles Trenet"
+        },
+        {
+          "title": "Les Feuilles mortes",
+          "artist": "Yves Montand"
+        },
+        {
+          "title": "Nathalie",
+          "artist": "Gilbert Bécaud"
+        },
+        {
+          "title": "Les Filles de mon pays",
+          "artist": "Enrico Macias"
+        },
+        {
+          "title": "La plus belle pour aller danser",
+          "artist": "Sylvie Vartan"
+        },
+        {
+          "title": "La Belle Vie",
+          "artist": "Sacha Distel"
+        },
+        {
+          "title": "Aux Champs-Élysées",
+          "artist": "Joe Dassin"
+        },
+        {
+          "title": "Le Sud",
+          "artist": "Nino Ferrer"
+        },
+        {
+          "title": "La Poupée qui fait non",
+          "artist": "Michel Polnareff"
+        },
+        {
+          "title": "Tous les garçons et les filles",
+          "artist": "Françoise Hardy"
+        },
+        {
+          "title": "Aline",
+          "artist": "Christophe"
+        },
+        {
+          "title": "Il est mort le soleil",
+          "artist": "Nicoletta"
+        },
+        {
+          "title": "Mille colombes",
+          "artist": "Mireille Mathieu"
+        },
+        {
+          "title": "Tombe la neige",
+          "artist": "Salvatore Adamo"
+        },
+        {
+          "title": "Capri, c'est fini",
+          "artist": "Hervé Vilard"
+        },
+        {
+          "title": "Femmes je vous aime",
+          "artist": "Julien Clerc"
+        },
+        {
+          "title": "Mistral gagnant",
+          "artist": "Renaud"
+        },
+        {
+          "title": "Amoureuse",
+          "artist": "Véronique Sanson"
+        },
+        {
+          "title": "Pour le plaisir",
+          "artist": "Herbert Léonard"
+        },
+        {
+          "title": "Le Métèque",
+          "artist": "Georges Moustaki"
+        },
+        {
+          "title": "L'Eau vive",
+          "artist": "Guy Béart"
+        },
+        {
+          "title": "Ma France",
+          "artist": "Jean Ferrat"
+        },
+        {
+          "title": "Salade de fruits",
+          "artist": "Bourvil"
+        },
+        {
+          "title": "Le Déserteur",
+          "artist": "Boris Vian"
+        },
+        {
+          "title": "Déshabillez-moi",
+          "artist": "Juliette Gréco"
+        },
+        {
+          "title": "Ma Pomme",
+          "artist": "Maurice Chevalier"
+        },
+        {
+          "title": "Petit Papa Noël",
+          "artist": "Tino Rossi"
+        },
+        {
+          "title": "Le Chanteur de Mexico",
+          "artist": "Luis Mariano"
+        },
+        {
+          "title": "Viens, viens",
+          "artist": "Marie Laforêt"
+        },
+        {
+          "title": "Le Temps du muguet",
+          "artist": "Nana Mouskouri"
+        },
+        {
+          "title": "Lily",
+          "artist": "Pierre Perret"
+        },
+        {
+          "title": "Santiano",
+          "artist": "Hugues Aufray"
+        },
+        {
+          "title": "Pour un flirt",
+          "artist": "Michel Delpech"
+        },
+        {
+          "title": "Emmenez-moi",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "Que c'est triste Venise",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "Amsterdam",
+          "artist": "Jacques Brel"
+        },
+        {
+          "title": "Le Plat pays",
+          "artist": "Jacques Brel"
+        },
+        {
+          "title": "Chanson pour l'Auvergnat",
+          "artist": "Georges Brassens"
+        },
+        {
+          "title": "La Chanson de Prévert",
+          "artist": "Serge Gainsbourg"
+        },
+        {
+          "title": "Le Poinçonneur des Lilas",
+          "artist": "Serge Gainsbourg"
+        },
+        {
+          "title": "Je t'aime... moi non plus",
+          "artist": "Serge Gainsbourg & Jane Birkin"
+        },
+        {
+          "title": "Ma liberté",
+          "artist": "Georges Moustaki"
+        },
+        {
+          "title": "Le Temps de l'amour",
+          "artist": "Françoise Hardy"
+        },
+        {
+          "title": "La Vie en rose",
+          "artist": "Édith Piaf"
+        },
+        {
+          "title": "Milord",
+          "artist": "Édith Piaf"
+        },
+        {
+          "title": "Que reste-t-il de nos amours",
+          "artist": "Charles Trenet"
+        },
+        {
+          "title": "Douce France",
+          "artist": "Charles Trenet"
+        },
+        {
+          "title": "Ma môme",
+          "artist": "Jean Ferrat"
+        },
+        {
+          "title": "C'est extra",
+          "artist": "Léo Ferré"
+        },
+        {
+          "title": "Syracuse",
+          "artist": "Henri Salvador"
+        },
+        {
+          "title": "L'Important c'est la rose",
+          "artist": "Gilbert Bécaud"
+        },
+        {
+          "title": "La Maritza",
+          "artist": "Sylvie Vartan"
+        }
       ],
       "discoveryQuery": "chanson francaise classique",
       "youtubePlaylistId": null
@@ -632,107 +1418,410 @@
       "label": "Génériques dessins animés/films",
       "seedArtists": ["Bernard Minet", "Bruno Coulais", "Alexandre Desplat", "Éric Serra"],
       "curatedTracks": [
-        { "title": "Throne Room and End Title", "artist": "John Williams" },
-        { "title": "Hedwig's Theme", "artist": "John Williams" },
-        { "title": "Main Title", "artist": "Ramin Djawadi" },
-        { "title": "Light of the Seven", "artist": "Ramin Djawadi" },
-        { "title": "Stranger Things", "artist": "Kyle Dixon & Michael Stein" },
-        { "title": "He's a Pirate", "artist": "Klaus Badelt" },
-        { "title": "Concerning Hobbits", "artist": "Howard Shore" },
-        { "title": "Guren no Yumiya", "artist": "Linked Horizon" },
-        { "title": "My Life Is Going On", "artist": "Cecilia Krull" },
-        { "title": "Toss a Coin to Your Witcher", "artist": "Sonya Belousova" },
-        { "title": "Red Right Hand", "artist": "Nick Cave & The Bad Seeds" },
-        { "title": "The Simpsons Theme", "artist": "Danny Elfman" },
-        { "title": "Mission Impossible Theme", "artist": "Lalo Schifrin" },
-        { "title": "Skyfall", "artist": "Adele" },
-        { "title": "Cornfield Chase", "artist": "Hans Zimmer" },
-        { "title": "Time", "artist": "Hans Zimmer" },
-        { "title": "The Avengers", "artist": "Alan Silvestri" },
-        { "title": "The Mandalorian", "artist": "Ludwig Göransson" },
-        { "title": "If I Had a Heart", "artist": "Fever Ray" },
-        { "title": "Twin Peaks Theme", "artist": "Angelo Badalamenti" },
-        { "title": "Super Mario Bros. Theme", "artist": "Koji Kondo" },
-        { "title": "Zelda's Lullaby", "artist": "Koji Kondo" },
-        { "title": "Megalovania", "artist": "Toby Fox" },
-        { "title": "One-Winged Angel", "artist": "Nobuo Uematsu" },
-        { "title": "Married Life", "artist": "Michael Giacchino" },
-        { "title": "A Dream Is a Wish Your Heart Makes", "artist": "Disney" },
-        { "title": "Circle of Life", "artist": "Elton John" },
-        { "title": "You'll Be in My Heart", "artist": "Phil Collins" },
-        { "title": "Vois sur ton chemin", "artist": "Bruno Coulais" },
-        { "title": "Les Chevaliers Du Zodiaque", "artist": "Bernard Minet" },
-        { "title": "Halloween Theme", "artist": "John Carpenter" },
-        { "title": "Gonna Fly Now", "artist": "Bill Conti" },
-        { "title": "The Terminator Theme", "artist": "Brad Fiedel" },
-        { "title": "Comptine d'un autre été, l'après-midi", "artist": "Yann Tiersen" },
-        { "title": "La Valse d'Amélie", "artist": "Yann Tiersen" },
-        { "title": "Ezio's Family", "artist": "Jesper Kyd" },
-        { "title": "Tetris Theme", "artist": "Hirokazu Tanaka" },
-        { "title": "Sweden", "artist": "C418" },
-        { "title": "Pokemon Theme", "artist": "Jason Paige" },
-        { "title": "Unravel", "artist": "TK from Ling Tosite Sigure" },
-        { "title": "Again", "artist": "YUI" },
-        { "title": "Merry-Go-Round of Life", "artist": "Joe Hisaishi" },
-        { "title": "One Summer's Day", "artist": "Joe Hisaishi" },
-        { "title": "Numb", "artist": "Linkin Park" },
-        { "title": "Iridescent", "artist": "Linkin Park" },
-        { "title": "Bloody Stream", "artist": "Coda" },
-        { "title": "Sign", "artist": "FLOW" },
-        { "title": "GO!!!", "artist": "FLOW" },
-        { "title": "The World", "artist": "Nightmare" },
-        { "title": "Where Is My Mind?", "artist": "Pixies" },
-        { "title": "Diamonds Are Forever", "artist": "Shirley Bassey" },
-        { "title": "Goldfinger", "artist": "Shirley Bassey" },
-        { "title": "Chi Mai", "artist": "Ennio Morricone" },
-        { "title": "Deborah's Theme", "artist": "Ennio Morricone" },
-        { "title": "Into the Unknown", "artist": "Idina Menzel" },
-        { "title": "How Far I'll Go", "artist": "Auli'i Cravalho" },
-        { "title": "Friend Like Me", "artist": "Robin Williams" },
-        { "title": "Requiem for a Dream", "artist": "Clint Mansell" },
-        { "title": "Lux Aeterna", "artist": "Clint Mansell" },
-        { "title": "The Blue Danube", "artist": "Johann Strauss II" },
-        { "title": "In the Hall of the Mountain King", "artist": "Edvard Grieg" },
-        { "title": "Ride of the Valkyries", "artist": "Richard Wagner" },
-        { "title": "Also Sprach Zarathustra", "artist": "Deodato" },
-        { "title": "Star Wars Main Title", "artist": "John Williams" },
-        { "title": "Duel of the Fates", "artist": "John Williams" },
-        { "title": "The Imperial March", "artist": "John Williams" },
-        { "title": "Jurassic Park Theme", "artist": "John Williams" },
-        { "title": "Raiders March", "artist": "John Williams" },
-        { "title": "E.T. Theme", "artist": "John Williams" },
-        { "title": "Back to the Future Theme", "artist": "Alan Silvestri" },
-        { "title": "Forrest Gump - Feather Theme", "artist": "Alan Silvestri" },
-        { "title": "The Dark Knight Theme", "artist": "Hans Zimmer" },
-        { "title": "Now We Are Free", "artist": "Hans Zimmer & Lisa Gerrard" },
-        { "title": "Westworld Theme", "artist": "Ramin Djawadi" },
-        { "title": "I'll Be There for You", "artist": "The Rembrandts" },
-        { "title": "Doctor Who Theme", "artist": "Ron Grainer" },
-        { "title": "James Bond Theme", "artist": "Monty Norman" },
-        { "title": "Chariots of Fire", "artist": "Vangelis" },
-        { "title": "My Heart Will Go On", "artist": "Céline Dion" },
-        { "title": "Ghostbusters", "artist": "Ray Parker Jr." },
-        { "title": "Danger Zone", "artist": "Kenny Loggins" },
-        { "title": "Flashdance... What a Feeling", "artist": "Irene Cara" },
-        { "title": "Eye of the Tiger", "artist": "Survivor" },
-        { "title": "A Whole New World", "artist": "Lea Salonga & Brad Kane" },
-        { "title": "Let It Go", "artist": "Idina Menzel" },
-        { "title": "Beauty and the Beast", "artist": "Angela Lansbury" },
-        { "title": "Under the Sea", "artist": "Samuel E. Wright" },
-        { "title": "Hakuna Matata", "artist": "Nathan Lane, Ernie Sabella & Jason Weaver" },
-        { "title": "When You Wish Upon a Star", "artist": "Cliff Edwards" },
-        { "title": "You've Got a Friend in Me", "artist": "Randy Newman" },
-        { "title": "Nandemonaiya", "artist": "RADWIMPS" },
-        { "title": "Blue Bird", "artist": "Ikimono-gakari" },
-        { "title": "We Are!", "artist": "Hiroshi Kitadani" },
-        { "title": "Cha-La Head-Cha-La", "artist": "Hironobu Kageyama" },
-        { "title": "Tank!", "artist": "The Seatbelts" },
-        { "title": "A Cruel Angel's Thesis", "artist": "Yoko Takahashi" },
-        { "title": "Dragonborn", "artist": "Jeremy Soule" },
-        { "title": "Main Theme", "artist": "Koji Kondo" },
-        { "title": "Still Alive", "artist": "Jonathan Coulton" },
-        { "title": "Halo Theme", "artist": "Marty O'Donnell & Michael Salvatori" },
-        { "title": "Green Hill Zone", "artist": "Masato Nakamura" }
+        {
+          "title": "Throne Room and End Title",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Hedwig's Theme",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Main Title",
+          "artist": "Ramin Djawadi"
+        },
+        {
+          "title": "Light of the Seven",
+          "artist": "Ramin Djawadi"
+        },
+        {
+          "title": "Stranger Things",
+          "artist": "Kyle Dixon & Michael Stein"
+        },
+        {
+          "title": "He's a Pirate",
+          "artist": "Klaus Badelt"
+        },
+        {
+          "title": "Concerning Hobbits",
+          "artist": "Howard Shore"
+        },
+        {
+          "title": "Guren no Yumiya",
+          "artist": "Linked Horizon"
+        },
+        {
+          "title": "My Life Is Going On",
+          "artist": "Cecilia Krull"
+        },
+        {
+          "title": "Toss a Coin to Your Witcher",
+          "artist": "Sonya Belousova"
+        },
+        {
+          "title": "Red Right Hand",
+          "artist": "Nick Cave & The Bad Seeds"
+        },
+        {
+          "title": "The Simpsons Theme",
+          "artist": "Danny Elfman"
+        },
+        {
+          "title": "Mission Impossible Theme",
+          "artist": "Lalo Schifrin"
+        },
+        {
+          "title": "Skyfall",
+          "artist": "Adele"
+        },
+        {
+          "title": "Cornfield Chase",
+          "artist": "Hans Zimmer"
+        },
+        {
+          "title": "Time",
+          "artist": "Hans Zimmer"
+        },
+        {
+          "title": "The Avengers",
+          "artist": "Alan Silvestri"
+        },
+        {
+          "title": "The Mandalorian",
+          "artist": "Ludwig Göransson"
+        },
+        {
+          "title": "If I Had a Heart",
+          "artist": "Fever Ray"
+        },
+        {
+          "title": "Twin Peaks Theme",
+          "artist": "Angelo Badalamenti"
+        },
+        {
+          "title": "Super Mario Bros. Theme",
+          "artist": "Koji Kondo"
+        },
+        {
+          "title": "Zelda's Lullaby",
+          "artist": "Koji Kondo"
+        },
+        {
+          "title": "Megalovania",
+          "artist": "Toby Fox"
+        },
+        {
+          "title": "One-Winged Angel",
+          "artist": "Nobuo Uematsu"
+        },
+        {
+          "title": "Married Life",
+          "artist": "Michael Giacchino"
+        },
+        {
+          "title": "A Dream Is a Wish Your Heart Makes",
+          "artist": "Disney"
+        },
+        {
+          "title": "Circle of Life",
+          "artist": "Elton John"
+        },
+        {
+          "title": "You'll Be in My Heart",
+          "artist": "Phil Collins"
+        },
+        {
+          "title": "Vois sur ton chemin",
+          "artist": "Bruno Coulais"
+        },
+        {
+          "title": "Les Chevaliers Du Zodiaque",
+          "artist": "Bernard Minet"
+        },
+        {
+          "title": "Halloween Theme",
+          "artist": "John Carpenter"
+        },
+        {
+          "title": "Gonna Fly Now",
+          "artist": "Bill Conti"
+        },
+        {
+          "title": "The Terminator Theme",
+          "artist": "Brad Fiedel"
+        },
+        {
+          "title": "Comptine d'un autre été, l'après-midi",
+          "artist": "Yann Tiersen"
+        },
+        {
+          "title": "La Valse d'Amélie",
+          "artist": "Yann Tiersen"
+        },
+        {
+          "title": "Ezio's Family",
+          "artist": "Jesper Kyd"
+        },
+        {
+          "title": "Tetris Theme",
+          "artist": "Hirokazu Tanaka"
+        },
+        {
+          "title": "Sweden",
+          "artist": "C418"
+        },
+        {
+          "title": "Pokemon Theme",
+          "artist": "Jason Paige"
+        },
+        {
+          "title": "Unravel",
+          "artist": "TK from Ling Tosite Sigure"
+        },
+        {
+          "title": "Again",
+          "artist": "YUI"
+        },
+        {
+          "title": "Merry-Go-Round of Life",
+          "artist": "Joe Hisaishi"
+        },
+        {
+          "title": "One Summer's Day",
+          "artist": "Joe Hisaishi"
+        },
+        {
+          "title": "Numb",
+          "artist": "Linkin Park"
+        },
+        {
+          "title": "Iridescent",
+          "artist": "Linkin Park"
+        },
+        {
+          "title": "Bloody Stream",
+          "artist": "Coda"
+        },
+        {
+          "title": "Sign",
+          "artist": "FLOW"
+        },
+        {
+          "title": "GO!!!",
+          "artist": "FLOW"
+        },
+        {
+          "title": "The World",
+          "artist": "Nightmare"
+        },
+        {
+          "title": "Where Is My Mind?",
+          "artist": "Pixies"
+        },
+        {
+          "title": "Diamonds Are Forever",
+          "artist": "Shirley Bassey"
+        },
+        {
+          "title": "Goldfinger",
+          "artist": "Shirley Bassey"
+        },
+        {
+          "title": "Chi Mai",
+          "artist": "Ennio Morricone"
+        },
+        {
+          "title": "Deborah's Theme",
+          "artist": "Ennio Morricone"
+        },
+        {
+          "title": "Into the Unknown",
+          "artist": "Idina Menzel"
+        },
+        {
+          "title": "How Far I'll Go",
+          "artist": "Auli'i Cravalho"
+        },
+        {
+          "title": "Friend Like Me",
+          "artist": "Robin Williams"
+        },
+        {
+          "title": "Requiem for a Dream",
+          "artist": "Clint Mansell"
+        },
+        {
+          "title": "Lux Aeterna",
+          "artist": "Clint Mansell"
+        },
+        {
+          "title": "The Blue Danube",
+          "artist": "Johann Strauss II"
+        },
+        {
+          "title": "In the Hall of the Mountain King",
+          "artist": "Edvard Grieg"
+        },
+        {
+          "title": "Ride of the Valkyries",
+          "artist": "Richard Wagner"
+        },
+        {
+          "title": "Also Sprach Zarathustra",
+          "artist": "Deodato"
+        },
+        {
+          "title": "Star Wars Main Title",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Duel of the Fates",
+          "artist": "John Williams"
+        },
+        {
+          "title": "The Imperial March",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Jurassic Park Theme",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Raiders March",
+          "artist": "John Williams"
+        },
+        {
+          "title": "E.T. Theme",
+          "artist": "John Williams"
+        },
+        {
+          "title": "Back to the Future Theme",
+          "artist": "Alan Silvestri"
+        },
+        {
+          "title": "Forrest Gump - Feather Theme",
+          "artist": "Alan Silvestri"
+        },
+        {
+          "title": "The Dark Knight Theme",
+          "artist": "Hans Zimmer"
+        },
+        {
+          "title": "Now We Are Free",
+          "artist": "Hans Zimmer & Lisa Gerrard"
+        },
+        {
+          "title": "Westworld Theme",
+          "artist": "Ramin Djawadi"
+        },
+        {
+          "title": "I'll Be There for You",
+          "artist": "The Rembrandts"
+        },
+        {
+          "title": "Doctor Who Theme",
+          "artist": "Ron Grainer"
+        },
+        {
+          "title": "James Bond Theme",
+          "artist": "Monty Norman"
+        },
+        {
+          "title": "Chariots of Fire",
+          "artist": "Vangelis"
+        },
+        {
+          "title": "My Heart Will Go On",
+          "artist": "Céline Dion"
+        },
+        {
+          "title": "Ghostbusters",
+          "artist": "Ray Parker Jr."
+        },
+        {
+          "title": "Danger Zone",
+          "artist": "Kenny Loggins"
+        },
+        {
+          "title": "Flashdance... What a Feeling",
+          "artist": "Irene Cara"
+        },
+        {
+          "title": "Eye of the Tiger",
+          "artist": "Survivor"
+        },
+        {
+          "title": "A Whole New World",
+          "artist": "Lea Salonga & Brad Kane"
+        },
+        {
+          "title": "Let It Go",
+          "artist": "Idina Menzel"
+        },
+        {
+          "title": "Beauty and the Beast",
+          "artist": "Angela Lansbury"
+        },
+        {
+          "title": "Under the Sea",
+          "artist": "Samuel E. Wright"
+        },
+        {
+          "title": "Hakuna Matata",
+          "artist": "Nathan Lane, Ernie Sabella & Jason Weaver"
+        },
+        {
+          "title": "When You Wish Upon a Star",
+          "artist": "Cliff Edwards"
+        },
+        {
+          "title": "You've Got a Friend in Me",
+          "artist": "Randy Newman"
+        },
+        {
+          "title": "Nandemonaiya",
+          "artist": "RADWIMPS"
+        },
+        {
+          "title": "Blue Bird",
+          "artist": "Ikimono-gakari"
+        },
+        {
+          "title": "We Are!",
+          "artist": "Hiroshi Kitadani"
+        },
+        {
+          "title": "Cha-La Head-Cha-La",
+          "artist": "Hironobu Kageyama"
+        },
+        {
+          "title": "Tank!",
+          "artist": "The Seatbelts"
+        },
+        {
+          "title": "A Cruel Angel's Thesis",
+          "artist": "Yoko Takahashi"
+        },
+        {
+          "title": "Dragonborn",
+          "artist": "Jeremy Soule"
+        },
+        {
+          "title": "Main Theme",
+          "artist": "Koji Kondo"
+        },
+        {
+          "title": "Still Alive",
+          "artist": "Jonathan Coulton"
+        },
+        {
+          "title": "Halo Theme",
+          "artist": "Marty O'Donnell & Michael Salvatori"
+        },
+        {
+          "title": "Green Hill Zone",
+          "artist": "Masato Nakamura"
+        }
       ],
       "discoveryQuery": "bande originale film celebre",
       "youtubePlaylistId": null
