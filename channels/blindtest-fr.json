@@ -1449,7 +1449,24 @@
       "day": "sunday",
       "id": "generiques",
       "label": "Génériques dessins animés/films",
-      "seedArtists": ["Bernard Minet", "Bruno Coulais", "Alexandre Desplat", "Éric Serra"],
+      "seedArtists": [
+        "Bernard Minet",
+        "Bruno Coulais",
+        "Alexandre Desplat",
+        "Éric Serra",
+        "Hans Zimmer",
+        "John Williams",
+        "Ennio Morricone",
+        "Howard Shore",
+        "James Horner",
+        "Danny Elfman",
+        "Alan Silvestri",
+        "Klaus Badelt",
+        "Dario Marianelli",
+        "John Barry",
+        "James Newton Howard",
+        "John Powell"
+      ],
       "curatedTracks": [
         {
           "title": "Throne Room and End Title",
