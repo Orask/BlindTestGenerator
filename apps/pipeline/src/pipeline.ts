@@ -30,6 +30,7 @@ import type Database from "better-sqlite3";
 import type { SpotifyClient } from "@blindtest/spotify";
 import type { YoutubeClient } from "@blindtest/youtube";
 import { bundleVideoRenderer } from "./bundle-video-renderer.js";
+import { createCachingItunesClient } from "./caching-itunes-client.js";
 import {
   buildEpisodeTracks,
   REUSE_COOLDOWN_DAYS,
@@ -380,6 +381,7 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
 
   const db = openDatabase(deps.dbPath);
   syncChannelToDb(db, channel);
+  const cachedDeps = { ...deps, itunes: createCachingItunesClient(db, deps.itunes) };
 
   const now = new Date();
   const theme = resolveThemeForDay(channel.themes, weekdayFromDate(now));
@@ -399,7 +401,7 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
     return;
   }
 
-  await generateAndPublishEpisode(db, channel, theme, deps, undefined);
+  await generateAndPublishEpisode(db, channel, theme, cachedDeps, undefined);
 }
 
 /**
@@ -421,6 +423,7 @@ export async function runWeeklyBatch(
 
   const db = openDatabase(deps.dbPath);
   syncChannelToDb(db, channel);
+  const cachedDeps = { ...deps, itunes: createCachingItunesClient(db, deps.itunes) };
 
   const schedule = channel.themes
     .map((theme) => ({
@@ -432,7 +435,7 @@ export async function runWeeklyBatch(
   const failures: { theme: string; error: unknown }[] = [];
   for (const { theme, publishAt } of schedule) {
     try {
-      await generateAndPublishEpisode(db, channel, theme, deps, publishAt);
+      await generateAndPublishEpisode(db, channel, theme, cachedDeps, publishAt);
     } catch (error) {
       console.error(`Échec pour le thème "${theme.label}" :`, error);
       failures.push({ theme: theme.label, error });

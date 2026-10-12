@@ -81,4 +81,21 @@ CREATE TABLE IF NOT EXISTS blocked_tracks (
 
 CREATE INDEX IF NOT EXISTS idx_tracks_used_channel_track
   ON tracks_used(channel_id, spotify_track_id);
+
+-- iTunes Search has no concept of "this exact recording" the way Spotify
+-- does — only a (title, artist) text search — so the cache key is the
+-- same normalized pair every lookup already uses to match results
+-- (apps/pipeline/src/itunes-preview-cache.ts), not a track id. Not scoped
+-- to a channel: the same song resolves to the same iTunes preview
+-- regardless of which channel is asking, so caching it once benefits every
+-- channel that ever picks that song — the whole point once more than one
+-- channel shares this database (see docs/CAHIER_DES_CHARGES.md's
+-- scalability notes). preview_url is nullable: a confirmed "no preview
+-- found" is cached too, so a track with no preview doesn't get re-queried
+-- by every future episode that happens to try it again.
+CREATE TABLE IF NOT EXISTS itunes_preview_cache (
+  cache_key TEXT PRIMARY KEY,
+  preview_url TEXT,
+  cached_at TEXT NOT NULL
+);
 `;

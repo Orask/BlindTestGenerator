@@ -36,3 +36,8 @@ export {
   getBlockedTrackIds,
   type BlockTrackParams,
 } from "./blocked-tracks-repository.js";
+export {
+  getCachedItunesPreview,
+  setCachedItunesPreview,
+  type CachedPreviewLookup,
+} from "./itunes-preview-cache-repository.js";
