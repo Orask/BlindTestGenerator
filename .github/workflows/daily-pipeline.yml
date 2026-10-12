@@ -60,6 +60,16 @@ jobs:
             libxrandr2 libxkbcommon0 libxfixes3 libxcomposite1 \
             libxdamage1 libatk-bridge2.0-0 libpango-1.0-0 libcairo2 libcups2
 
+      # Needed before "Run pipeline" now, not just at the end: the pipeline
+      # itself commits+pushes right after a successful upload (see
+      # persist-run-state.ts) so a run that times out or crashes afterward
+      # doesn't lose that episode's row — it needs a configured identity to
+      # do that mid-run, not only in the trailing persist step below.
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Run pipeline
         working-directory: apps/pipeline
         env:
@@ -90,13 +100,16 @@ jobs:
       # apps/pipeline/src/persist-discovered-artists.ts) when a theme's
       # seedArtists ran short. Runs even if the pipeline step failed, since
       # a failed run can still leave an informative draft/failed video row.
+      # A successful upload is already committed+pushed by the pipeline
+      # itself (see persist-run-state.ts) — this is now just the backstop
+      # for everything that isn't tied to a successful upload (a draft/
+      # failed row, or discovered-artist writes from a run that didn't get
+      # that far), so it's a no-op most days.
       - name: Persist database state
         if: always()
         working-directory: apps/pipeline
         run: |
           node -e "require('better-sqlite3')('../../data/blindtest.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ../../data/blindtest.sqlite ../../channels/*.json
           git diff --cached --quiet || git commit -m "chore(data): mise à jour de la base après le run du $(date -u +%Y-%m-%d)"
           git push

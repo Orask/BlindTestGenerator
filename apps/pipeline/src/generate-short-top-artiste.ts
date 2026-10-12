@@ -99,6 +99,7 @@ await resolvePublicCoverUrls(
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,
+  dbPath,
   serveUrl,
   themeLabel: artistName,
   tracks,

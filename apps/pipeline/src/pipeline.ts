@@ -42,6 +42,7 @@ import { discoverNewArtists } from "./discover-artists.js";
 import { filterByRecency } from "./filter-by-recency.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
+import { persistRunState } from "./persist-run-state.js";
 import { renderEpisode } from "./render-episode.js";
 import { renderThumbnail, resolveHeroArtistImages } from "./render-thumbnail.js";
 import { reviewEpisode } from "./review-episode.js";
@@ -352,6 +353,12 @@ async function generateAndPublishEpisode(
       usedAt: new Date(),
     });
   }
+  await persistRunState(
+    deps.dbPath,
+    db,
+    `chore(data): enregistre l'épisode "${theme.label}" publié sur YouTube (${youtubeVideoId})`,
+    deps.channelConfigPath,
+  );
 
   try {
     await withYoutubeRetry(() => deps.youtube.setThumbnail(youtubeVideoId, thumbnailPath));

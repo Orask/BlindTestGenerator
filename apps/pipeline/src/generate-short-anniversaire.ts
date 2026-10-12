@@ -82,6 +82,7 @@ await resolvePublicCoverUrls([track.albumCoverUrl], PUBLIC_COVERS_DIR);
 const serveUrl = await bundleVideoRenderer();
 await publishShort({
   db,
+  dbPath,
   serveUrl,
   themeLabel: `${match.yearsAgo} ans déjà`,
   tracks: [track],

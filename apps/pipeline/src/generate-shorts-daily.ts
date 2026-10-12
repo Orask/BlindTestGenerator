@@ -54,6 +54,7 @@ function outputPathFor(outputDir: string, channelId: string, suffix: string): st
 
 interface Ctx {
   readonly db: Database.Database;
+  readonly dbPath: string;
   readonly channel: ChannelConfig;
   readonly spotify: SpotifyClient;
   readonly deezer: DeezerClient;
@@ -124,6 +125,7 @@ async function attemptDevineLaChanson(ctx: Ctx): Promise<boolean> {
   const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
+    dbPath: ctx.dbPath,
     serveUrl,
     themeLabel: theme.label,
     tracks,
@@ -164,6 +166,7 @@ async function attemptPepiteMeconnue(ctx: Ctx): Promise<boolean> {
   const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
+    dbPath: ctx.dbPath,
     serveUrl,
     themeLabel: theme.label,
     tracks,
@@ -206,6 +209,7 @@ async function attemptTopArtiste(ctx: Ctx): Promise<boolean> {
   const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
+    dbPath: ctx.dbPath,
     serveUrl,
     themeLabel: artistName,
     tracks,
@@ -252,6 +256,7 @@ async function attemptAnniversaireSortie(ctx: Ctx): Promise<boolean> {
   const serveUrl = await resolveCoversAndBundle([track.albumCoverUrl]);
   await publishShort({
     db: ctx.db,
+    dbPath: ctx.dbPath,
     serveUrl,
     themeLabel: `${match.yearsAgo} ans déjà`,
     tracks: [track],
@@ -294,6 +299,7 @@ async function attemptNouveauteGenre(ctx: Ctx): Promise<boolean> {
   const serveUrl = await resolveCoversAndBundle(tracks.map((track) => track.albumCoverUrl));
   await publishShort({
     db: ctx.db,
+    dbPath: ctx.dbPath,
     serveUrl,
     themeLabel: `Nouveautés ${genreQuery}`,
     tracks,
@@ -336,7 +342,7 @@ const { spotify, deezer, itunes, youtube } = createClientsFromEnv();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
 
 const now = new Date();
-const ctx: Ctx = { db, channel, spotify, deezer, itunes, youtube, outputDir, upload, now };
+const ctx: Ctx = { db, dbPath, channel, spotify, deezer, itunes, youtube, outputDir, upload, now };
 const todaysTypes = shortTypesForDay(weekdayFromDate(now));
 
 console.log(

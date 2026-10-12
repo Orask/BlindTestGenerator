@@ -2,11 +2,13 @@ import { randomUUID } from "node:crypto";
 import { createVideo, markVideoUploaded } from "@blindtest/db";
 import type { YoutubeClient } from "@blindtest/youtube";
 import type Database from "better-sqlite3";
+import { persistRunState } from "../persist-run-state.js";
 import { renderShort, type RenderShortTrack } from "../render-short.js";
 import type { YoutubeMetadata } from "../youtube-metadata.js";
 
 export interface PublishShortParams {
   readonly db: Database.Database;
+  readonly dbPath: string;
   readonly serveUrl: string;
   readonly themeLabel: string;
   readonly tracks: readonly RenderShortTrack[];
@@ -75,6 +77,11 @@ export async function publishShort(params: PublishShortParams): Promise<PublishS
     format: "short",
   });
   markVideoUploaded(params.db, shortVideoRowId, youtubeVideoId);
+  await persistRunState(
+    params.dbPath,
+    params.db,
+    `chore(data): enregistre le Short "${params.themeLabel}" publié sur YouTube (${youtubeVideoId})`,
+  );
 
   console.log(`Short publié : https://youtube.com/shorts/${youtubeVideoId}`);
   return { outputPath: params.outputPath, youtubeVideoId };

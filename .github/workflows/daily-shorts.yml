@@ -70,6 +70,16 @@ jobs:
             echo "flag=" >> "$GITHUB_OUTPUT"
           fi
 
+      # Needed before the Shorts run now, not just at the end: each
+      # published Short commits+pushes right after upload (see
+      # persist-run-state.ts) so a run that times out or crashes afterward
+      # doesn't lose that Short's row — it needs a configured identity to
+      # do that mid-run, not only in the trailing persist step below.
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
       - name: Run today's Shorts rotation
         working-directory: apps/pipeline
         env:
@@ -87,14 +97,14 @@ jobs:
       # Same reasoning as daily-pipeline.yml: no persistent disk between
       # runs, so the committed DB file is the anti-repeat history (which
       # tracks_used rows a Short already teased, tracks_used exclusions for
-      # nouveaute-genre, ...) across days.
+      # nouveaute-genre, ...) across days. Each successful Short is already
+      # committed+pushed by publishShort itself (see persist-run-state.ts) —
+      # this is now just the backstop for a run that never got that far.
       - name: Persist database state
         if: always()
         working-directory: apps/pipeline
         run: |
           node -e "require('better-sqlite3')('../../data/blindtest.sqlite').pragma('wal_checkpoint(TRUNCATE)')"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
           git add ../../data/blindtest.sqlite
           git diff --cached --quiet || git commit -m "chore(data): mise à jour de la base après les shorts du $(date -u +%Y-%m-%d)"
           git push
