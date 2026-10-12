@@ -49,21 +49,43 @@ describe("discoverNewArtists", () => {
     expect(result).toEqual(["Jul"]);
   });
 
-  it("discards a candidate that fails live verification (e.g. a compilation/pseudo-artist entry)", async () => {
+  it("discards a candidate that fails live verification (e.g. no track at all under that name)", async () => {
     const spotify = fakeSpotify({
       searchArtists: vi
         .fn()
-        .mockResolvedValueOnce(["Tubes des années 90", "Zazie"])
+        .mockResolvedValueOnce(["Someone Unverifiable", "Zazie"])
         .mockResolvedValue([]),
       searchTracksByArtist: vi
         .fn()
-        .mockResolvedValueOnce([]) // "Tubes des années 90" — no exact-match track
+        .mockResolvedValueOnce([]) // "Someone Unverifiable" — no exact-match track
         .mockResolvedValueOnce(verified()), // "Zazie" — verified
     });
 
     const result = await discoverNewArtists(spotify, "chanson francaise annees 90", [], 5);
 
     expect(result).toEqual(["Zazie"]);
+  });
+
+  it("rejects a compilation/pseudo-artist name without even calling searchTracksByArtist", async () => {
+    const searchTracksByArtist = vi.fn().mockResolvedValue(verified());
+    const spotify = fakeSpotify({
+      searchArtists: vi
+        .fn()
+        .mockResolvedValueOnce(["Années 80 Forever", "Le meilleur des années 80", "Zazie"])
+        .mockResolvedValue([]),
+      searchTracksByArtist,
+    });
+
+    const result = await discoverNewArtists(spotify, "chanson francaise annees 80", [], 5);
+
+    expect(result).toEqual(["Zazie"]);
+    // Confirms the rejection happens before the API call, not just that
+    // it would have failed verification too — a compilation curator has
+    // real tracks attributed to it on Spotify, so verification alone
+    // would have let both of these through (confirmed live, see the
+    // comment on looksLikeCompilation).
+    expect(searchTracksByArtist).toHaveBeenCalledTimes(1);
+    expect(searchTracksByArtist).toHaveBeenCalledWith("Zazie", 1);
   });
 
   it("pages through more results when the first page isn't enough", async () => {
