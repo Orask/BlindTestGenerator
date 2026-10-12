@@ -45,7 +45,8 @@ import {
 // flag needed, it's the same default every other Short/episode CLI script
 // already uses. The GitHub Actions workflow only passes --upload once
 // dry-run renders have been checked (see .github/workflows/daily-shorts.yml).
-const SHORT_TRACK_COUNT = 2;
+// See generate-short.ts's comment on this same constant for why 6, not 2.
+const SHORT_TRACK_COUNT = 6;
 
 function outputPathFor(outputDir: string, channelId: string, suffix: string): string {
   return `${outputDir}${channelId}-${suffix}-${Date.now()}.mp4`;

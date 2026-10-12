@@ -19,13 +19,14 @@ import { buildShortMetadata } from "./youtube-metadata.js";
 // this script is now just its CLI wrapper, same shape as the 3 other
 // Family A CLI scripts (generate-short-pepite-meconnue.ts, -top-artiste.ts,
 // -anniversaire.ts).
-// Recalibrated from 5 (session of 2026-09-27, never checked against real
-// retention data) to 2 — 2026 Shorts research says completion rate, not
-// duration, drives distribution, and the sweet spot is 15-30s (secondary
-// peak 35-58s, reserved for narrative-dense niches this quiz format isn't).
-// 2 tracks ≈ 38s including the outro, solidly in that range; 5 tracks was
-// ~94s, well past it. See docs/CLOUD_SESSION_LOG.md for the full research.
-const DEFAULT_SHORT_TRACK_COUNT = 2;
+// Recalibrated again (2026-10-12, real YouTube Analytics this time, not
+// just retention research): 2 tracks at the long-form's 17s/track pacing
+// barely registered any views — viewers expect short-form to be fast, not
+// a slow-motion copy of the long-form guessing game. 6 tracks at the
+// Short-specific 5s/track pacing (constants.ts — 3s countdown + 2s reveal,
+// not the long-form's 12+5) keeps total length similar (~34s with the
+// outro) but far more dynamic: 6 distinct songs instead of 2.
+const DEFAULT_SHORT_TRACK_COUNT = 6;
 
 const args = process.argv.slice(2);
 const [channelConfigPath, longVideoRowId] = args;

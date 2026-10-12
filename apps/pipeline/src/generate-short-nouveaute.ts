@@ -16,7 +16,8 @@ import { buildNouveauteMetadata } from "./youtube-metadata.js";
 // tied to a theme/episode: theme/visibility fall back to the channel's
 // first theme and default visibility, same reasoning as
 // generate-short-top-artiste.ts (nothing episode-specific to inherit from).
-const DEFAULT_SHORT_TRACK_COUNT = 2;
+// See generate-short.ts's comment on this same constant for why 6, not 2.
+const DEFAULT_SHORT_TRACK_COUNT = 6;
 
 const args = process.argv.slice(2);
 const [channelConfigPath, genreQuery] = args;

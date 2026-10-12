@@ -36,7 +36,8 @@ function findThemeBySeedArtistOrThrow(channel: ChannelConfig, artistName: string
   return theme;
 }
 
-const DEFAULT_SHORT_TRACK_COUNT = 2;
+// See generate-short.ts's comment on this same constant for why 6, not 2.
+const DEFAULT_SHORT_TRACK_COUNT = 6;
 
 const args = process.argv.slice(2);
 const [channelConfigPath, artistName] = args;

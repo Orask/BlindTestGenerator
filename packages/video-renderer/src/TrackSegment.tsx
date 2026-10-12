@@ -15,6 +15,9 @@ export interface TrackSegmentProps {
   /** Passed straight through to CountdownRing/RevealCard — undefined keeps their own (long-form Episode) defaults. */
   readonly ringSize?: number;
   readonly coverSize?: number;
+  /** Overrides the long-form Episode's countdown/reveal pacing — undefined keeps COUNTDOWN_FRAMES/REVEAL_FRAMES. Used by Short.tsx for its own faster pacing (see constants.ts). */
+  readonly countdownFrames?: number;
+  readonly revealFrames?: number;
 }
 
 export function TrackSegment({
@@ -26,19 +29,21 @@ export function TrackSegment({
   totalTracks,
   ringSize,
   coverSize,
+  countdownFrames = COUNTDOWN_FRAMES,
+  revealFrames = REVEAL_FRAMES,
 }: TrackSegmentProps): ReactElement {
   return (
     <AbsoluteFill style={{ backgroundColor: "#0d0d0d" }}>
-      <Sequence durationInFrames={COUNTDOWN_FRAMES}>
+      <Sequence durationInFrames={countdownFrames}>
         <AbsoluteFill style={{ justifyContent: "center", alignItems: "center" }}>
           <CountdownRing
-            durationInFrames={COUNTDOWN_FRAMES}
+            durationInFrames={countdownFrames}
             accentColor={accentColor}
             {...(ringSize !== undefined ? { size: ringSize } : {})}
           />
         </AbsoluteFill>
       </Sequence>
-      <Sequence from={COUNTDOWN_FRAMES} durationInFrames={REVEAL_FRAMES}>
+      <Sequence from={countdownFrames} durationInFrames={revealFrames}>
         <RevealCard
           title={title}
           artist={artist}

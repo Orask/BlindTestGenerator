@@ -7,23 +7,25 @@ export type ShortTypeId =
   | "anniversaire-sortie"
   | "nouveaute-genre";
 
-// Calibrated on the 2026 Shorts research (docs/CLOUD_SESSION_LOG.md,
-// "Recherche stratégie Shorts 2026"), not an arbitrary number: >5/day risks
-// YouTube's spam-detection penalty, growth gains taper hard past ~3/day,
-// and posting quality/regularity beats raw volume above the minimum viable
-// cadence. Decision for this project: ~2 Shorts/day on average, rotating
-// the 6 types across the week instead of publishing every type every day
-// (a day's actual count can come in lower — anniversaire-sortie/nouveaute-
-// genre both skip gracefully when nothing qualifies, see
-// generate-shorts-daily.ts — never higher).
+// Volume (~2/day) still calibrated on the 2026 Shorts research
+// (docs/CLOUD_SESSION_LOG.md, "Recherche stratégie Shorts 2026"): >5/day
+// risks YouTube's spam-detection penalty, growth gains taper hard past
+// ~3/day. But WHICH types fill those slots was rebalanced 2026-10-12 on
+// real YouTube Analytics, not just research: nouveaute-genre ("traffic
+// pur", not tied to any old episode) got 95-380 views, every Family A
+// type (tied to an episode) got under 20 — confirmed live, not a guess.
+// nouveaute-genre now runs every day; the other 4 types still each get at
+// least one slot a week (keeps variety, see weekly-rotation.test.ts) but
+// devine-la-chanson — the weakest even within Family A — is cut back to
+// a single slot instead of three.
 const WEEKLY_ROTATION: Record<Weekday, readonly ShortTypeId[]> = {
-  monday: ["devine-la-chanson", "nouveaute-genre"],
-  tuesday: ["pepite-meconnue", "nouveaute-genre"],
-  wednesday: ["devine-la-chanson", "top-artiste"],
-  thursday: ["pepite-meconnue", "nouveaute-genre"],
-  friday: ["devine-la-chanson", "anniversaire-sortie"],
-  saturday: ["top-artiste", "nouveaute-genre"],
-  sunday: ["pepite-meconnue", "anniversaire-sortie"],
+  monday: ["nouveaute-genre", "devine-la-chanson"],
+  tuesday: ["nouveaute-genre", "pepite-meconnue"],
+  wednesday: ["nouveaute-genre", "top-artiste"],
+  thursday: ["nouveaute-genre", "pepite-meconnue"],
+  friday: ["nouveaute-genre", "anniversaire-sortie"],
+  saturday: ["nouveaute-genre", "top-artiste"],
+  sunday: ["nouveaute-genre", "anniversaire-sortie"],
 };
 
 export function shortTypesForDay(day: Weekday): readonly ShortTypeId[] {

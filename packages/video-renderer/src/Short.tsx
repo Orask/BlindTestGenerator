@@ -1,6 +1,11 @@
 import type { ReactElement } from "react";
 import { Sequence, Series } from "remotion";
-import { CROSSFADE_FRAMES, SEGMENT_FRAMES } from "./constants";
+import {
+  CROSSFADE_FRAMES,
+  SHORT_COUNTDOWN_FRAMES,
+  SHORT_REVEAL_FRAMES,
+  SHORT_SEGMENT_FRAMES,
+} from "./constants";
 import { CrossfadeAudio } from "./CrossfadeAudio";
 import type { ShortProps } from "./short-schema";
 import { SHORT_HEADER_FRAMES, ShortHeader } from "./ShortHeader";
@@ -15,7 +20,7 @@ const SHORT_RING_SIZE = 620;
 const SHORT_COVER_SIZE = 620;
 
 export function totalShortDurationInFrames(trackCount: number): number {
-  return trackCount * SEGMENT_FRAMES + SHORT_OUTRO_FRAMES;
+  return trackCount * SHORT_SEGMENT_FRAMES + SHORT_OUTRO_FRAMES;
 }
 
 // A vertical (9:16) mini blind-test cut from an already-published episode's
@@ -43,7 +48,7 @@ export function Short({
     <>
       <Series>
         {tracks.map((track, index) => (
-          <Series.Sequence key={`${track.title}-${index}`} durationInFrames={SEGMENT_FRAMES}>
+          <Series.Sequence key={`${track.title}-${index}`} durationInFrames={SHORT_SEGMENT_FRAMES}>
             <TrackSegment
               title={track.title}
               artist={track.artist}
@@ -53,6 +58,8 @@ export function Short({
               totalTracks={tracks.length}
               ringSize={SHORT_RING_SIZE}
               coverSize={SHORT_COVER_SIZE}
+              countdownFrames={SHORT_COUNTDOWN_FRAMES}
+              revealFrames={SHORT_REVEAL_FRAMES}
             />
           </Series.Sequence>
         ))}
@@ -74,8 +81,8 @@ export function Short({
         if (!track.audioUrl) {
           return null;
         }
-        const segmentStart = index * SEGMENT_FRAMES;
-        const durationInFrames = SEGMENT_FRAMES + 2 * CROSSFADE_FRAMES;
+        const segmentStart = index * SHORT_SEGMENT_FRAMES;
+        const durationInFrames = SHORT_SEGMENT_FRAMES + 2 * CROSSFADE_FRAMES;
         return (
           <Sequence
             key={`audio-${track.title}-${index}`}

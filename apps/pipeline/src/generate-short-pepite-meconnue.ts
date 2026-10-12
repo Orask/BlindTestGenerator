@@ -15,7 +15,8 @@ import { buildPepiteMeconnueMetadata } from "./youtube-metadata.js";
 // you probably missed" instead of "guess the obvious ones". See
 // shorts/pepite-meconnue.ts for the selection logic and its cost note (one
 // Spotify call per track in the episode, not just the ones used here).
-const DEFAULT_SHORT_TRACK_COUNT = 2;
+// See generate-short.ts's comment on this same constant for why 6, not 2.
+const DEFAULT_SHORT_TRACK_COUNT = 6;
 
 const args = process.argv.slice(2);
 const [channelConfigPath, longVideoRowId] = args;
