@@ -221,6 +221,7 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 80",
+      "releaseYearRange": { "min": 1980, "max": 1989 },
       "youtubePlaylistId": null
     },
     {
@@ -418,6 +419,7 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 90",
+      "releaseYearRange": { "min": 1990, "max": 1999 },
       "youtubePlaylistId": null
     },
     {
@@ -654,6 +656,7 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 2000",
+      "releaseYearRange": { "min": 2000, "max": 2009 },
       "youtubePlaylistId": null
     },
     {
@@ -881,6 +884,7 @@
         }
       ],
       "discoveryQuery": "rap francais",
+      "recencyWindowYears": 10,
       "youtubePlaylistId": null
     },
     {
@@ -1144,6 +1148,7 @@
         }
       ],
       "discoveryQuery": "variete francaise actuelle",
+      "recencyWindowYears": 10,
       "youtubePlaylistId": null
     },
     {

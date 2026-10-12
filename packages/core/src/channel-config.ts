@@ -37,6 +37,21 @@ const channelThemeSchema = z.object({
   curatedTracks: z
     .array(z.object({ title: z.string().min(1), artist: z.string().min(1) }))
     .optional(),
+  // Absolute calendar-year bound for decade-bound themes ("Années 80") —
+  // a candidate released outside this range is a thematic mismatch
+  // regardless of how relevant the artist otherwise is (an artist active
+  // across decades can have tracks from any era). Mutually exclusive in
+  // practice with recencyWindowYears below; never both on the same theme.
+  releaseYearRange: z
+    .object({ min: z.number().int().optional(), max: z.number().int().optional() })
+    .optional(),
+  // Rolling "released within the last N years" bound for genre themes
+  // that aren't decade-bound ("Rap FR", "Variété actuelle") — confirmed
+  // live (YouTube comments, 2026-10-12): viewers complained about tracks
+  // "not from their generation" mixed into a genre theme that spans
+  // decades by design. Computed against the current date at build time,
+  // not a fixed year, so it never goes stale as the channel keeps running.
+  recencyWindowYears: z.number().int().positive().optional(),
   youtubePlaylistId: z.string().nullable(),
 });
 

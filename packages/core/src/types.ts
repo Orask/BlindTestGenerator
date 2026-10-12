@@ -20,4 +20,13 @@ export interface Track {
    * order is the closest available proxy for "their best-known song."
    */
   readonly popularityRank?: number;
+  /**
+   * ISO-ish release date string from Spotify (year, year-month, or full
+   * date depending on the release's own metadata precision) — present on
+   * every track Spotify itself returns (search, lookup), optional here
+   * only because a few synthetic/test call sites don't set it. Used to
+   * keep genre themes ("Rap FR") sounding current and decade themes
+   * ("Années 80") bounded to their actual era — see filter-by-recency.ts.
+   */
+  readonly releaseDate?: string;
 }

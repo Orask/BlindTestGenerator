@@ -38,6 +38,7 @@ import {
 import { collectCandidateTracks } from "./collect-candidates.js";
 import { collectCuratedTracks } from "./collect-curated-tracks.js";
 import { discoverNewArtists } from "./discover-artists.js";
+import { filterByRecency } from "./filter-by-recency.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
 import { renderEpisode } from "./render-episode.js";
@@ -159,10 +160,14 @@ async function buildTracksWithDiscoveryFallback(
   const curatedTracks = theme.curatedTracks
     ? await collectCuratedTracks(deps.spotify, theme.curatedTracks)
     : [];
-  const candidates = [
-    ...curatedTracks,
-    ...(await collectCandidateTracks(deps.spotify, theme.seedArtists, CANDIDATES_PER_ARTIST)),
-  ];
+  // Recency/era filtering applies only to the bulk seedArtists search, not
+  // curatedTracks — those are specific, trusted picks, not something that
+  // needs an automated era/recency sanity check.
+  const seedArtistCandidates = filterByRecency(
+    await collectCandidateTracks(deps.spotify, theme.seedArtists, CANDIDATES_PER_ARTIST),
+    theme,
+  );
+  const candidates = [...curatedTracks, ...seedArtistCandidates];
 
   try {
     return await buildEpisodeTracks(
@@ -196,10 +201,9 @@ async function buildTracksWithDiscoveryFallback(
     // instead of being rediscovered — or silently lost — on every thin run.
     await appendDiscoveredArtists(deps.channelConfigPath, theme.id, newArtists);
 
-    const extraCandidates = await collectCandidateTracks(
-      deps.spotify,
-      newArtists,
-      CANDIDATES_PER_ARTIST,
+    const extraCandidates = filterByRecency(
+      await collectCandidateTracks(deps.spotify, newArtists, CANDIDATES_PER_ARTIST),
+      theme,
     );
     return await buildEpisodeTracks(
       [...candidates, ...extraCandidates],
