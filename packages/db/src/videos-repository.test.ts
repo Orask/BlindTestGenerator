@@ -85,7 +85,7 @@ describe("videos repository", () => {
     expect(row).toEqual({ status: "failed" });
   });
 
-  it("counts videos recorded for a theme", () => {
+  it("counts only successfully uploaded videos for a theme", () => {
     expect(countVideosForTheme(db, "annees-80")).toBe(0);
 
     createVideo(db, {
@@ -97,6 +97,41 @@ describe("videos repository", () => {
       visibility: "private",
       format: "long",
     });
+
+    // Still a 'draft' at this point — not uploaded yet, so not counted.
+    expect(countVideosForTheme(db, "annees-80")).toBe(0);
+
+    markVideoUploaded(db, "video-1", "yt-1");
+
+    expect(countVideosForTheme(db, "annees-80")).toBe(1);
+  });
+
+  it("does not count a 'failed' row left behind by a run that never actually published", () => {
+    // Confirmed live (2026-10-12): nothing ever deletes a 'failed' row, so
+    // counting every row regardless of status used to permanently inflate
+    // every later episode's number by however many failed attempts had
+    // piled up for that theme.
+    createVideo(db, {
+      id: "video-1",
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      createdAt: new Date("2026-08-07T00:00:00Z"),
+      filePath: "/tmp/episode.mp4",
+      visibility: "private",
+      format: "long",
+    });
+    markVideoFailed(db, "video-1");
+
+    createVideo(db, {
+      id: "video-2",
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      createdAt: new Date("2026-08-08T00:00:00Z"),
+      filePath: "/tmp/episode.mp4",
+      visibility: "private",
+      format: "long",
+    });
+    markVideoUploaded(db, "video-2", "yt-2");
 
     expect(countVideosForTheme(db, "annees-80")).toBe(1);
   });

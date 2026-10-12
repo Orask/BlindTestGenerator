@@ -90,9 +90,13 @@ const runId = Date.now();
 const outputDir = fileURLToPath(new URL("../../../data/renders/", import.meta.url));
 const outputPath = `${outputDir}${channel.id}-${theme.id}-${runId}-short.mp4`;
 
+// status = 'uploaded' only: a stale 'failed' row left behind by an
+// earlier crashed run (nothing ever deletes those — see
+// countVideosForTheme's doc comment in @blindtest/db) would otherwise
+// inflate this count, same bug, same fix.
 const episodeNumberRow = db
   .prepare(
-    "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
+    "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND status = 'uploaded' AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
   )
   .get(longVideoRow.theme_id, longVideoRowId) as { count: number };
 

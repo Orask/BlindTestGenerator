@@ -74,10 +74,23 @@ export function getLatestUploadedVideoForTheme(
   return { id: row.id, channelId: row.channel_id, visibility: row.visibility };
 }
 
-/** Used to number episodes in the video title (e.g. "Ép. 12"). */
+/**
+ * Used to number episodes in the video title (e.g. "Ép. 12") — the count
+ * of *actually published* prior episodes for this theme, so the caller
+ * adds 1 for the one currently being published (see pipeline.ts). Counting
+ * every row regardless of status used to inflate this permanently:
+ * confirmed live (2026-10-12), a run that fails after `createVideo` leaves
+ * a `status = 'failed'` row behind forever (nothing ever deletes it), and
+ * every later episode's number was off by however many of those had piled
+ * up for that theme. A `draft` row left behind by a run that crashed
+ * before even reaching its own failure handler doesn't count either, for
+ * the same reason.
+ */
 export function countVideosForTheme(db: Database.Database, themeId: string): number {
   const row = db
-    .prepare<[string], { count: number }>("SELECT COUNT(*) AS count FROM videos WHERE theme_id = ?")
+    .prepare<[string], { count: number }>(
+      "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND status = 'uploaded'",
+    )
     .get(themeId);
   return row?.count ?? 0;
 }

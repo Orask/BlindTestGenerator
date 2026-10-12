@@ -303,7 +303,10 @@ async function generateAndPublishEpisode(
 
   let youtubeVideoId: string;
   try {
-    const episodeNumber = countVideosForTheme(db, theme.id);
+    // +1: countVideosForTheme now counts only prior *uploaded* episodes
+    // (see its doc comment) — this one isn't uploaded yet at this point,
+    // so it has to be added explicitly to number this episode correctly.
+    const episodeNumber = countVideosForTheme(db, theme.id) + 1;
     const { title, description, tags } = buildYoutubeMetadata(theme, episodeNumber, tracks);
 
     // Scheduling only makes sense once the channel is actually meant to go
