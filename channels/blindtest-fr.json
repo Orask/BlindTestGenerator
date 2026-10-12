@@ -221,7 +221,10 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 80",
-      "releaseYearRange": { "min": 1980, "max": 1989 },
+      "releaseYearRange": {
+        "min": 1980,
+        "max": 1989
+      },
       "youtubePlaylistId": null
     },
     {
@@ -419,7 +422,10 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 90",
-      "releaseYearRange": { "min": 1990, "max": 1999 },
+      "releaseYearRange": {
+        "min": 1990,
+        "max": 1999
+      },
       "youtubePlaylistId": null
     },
     {
@@ -656,7 +662,10 @@
         }
       ],
       "discoveryQuery": "chanson francaise annees 2000",
-      "releaseYearRange": { "min": 2000, "max": 2009 },
+      "releaseYearRange": {
+        "min": 2000,
+        "max": 2009
+      },
       "youtubePlaylistId": null
     },
     {
@@ -1483,7 +1492,42 @@
         "Doja Cat",
         "Central Cee",
         "Stormzy",
-        "Bad Bunny"
+        "Bad Bunny",
+        "Lil Baby",
+        "DaBaby",
+        "Roddy Ricch",
+        "Tyler, The Creator",
+        "A$AP Rocky",
+        "Juice WRLD",
+        "XXXTENTACION",
+        "Lil Uzi Vert",
+        "Playboi Carti",
+        "Migos",
+        "2 Chainz",
+        "T.I.",
+        "Ludacris",
+        "Big Sean",
+        "Meek Mill",
+        "Rick Ross",
+        "French Montana",
+        "Pitbull",
+        "Daddy Yankee",
+        "J Balvin",
+        "Dave",
+        "Skepta",
+        "Headie One",
+        "Giggs",
+        "AJ Tracey",
+        "Lil Nas X",
+        "Wiz Khalifa",
+        "Chance the Rapper",
+        "Logic",
+        "Machine Gun Kelly",
+        "NF",
+        "Kodak Black",
+        "Young Thug",
+        "Gunna",
+        "Polo G"
       ],
       "discoveryQuery": "rap us",
       "recencyWindowYears": 10,
@@ -1545,8 +1589,116 @@
           "artist": "Doja Cat"
         },
         {
-          "title": "Life Is Good",
-          "artist": "Future"
+          "title": "In My Feelings",
+          "artist": "Drake"
+        },
+        {
+          "title": "Toosie Slide",
+          "artist": "Drake"
+        },
+        {
+          "title": "Drip Too Hard",
+          "artist": "Lil Baby"
+        },
+        {
+          "title": "BOP",
+          "artist": "DaBaby"
+        },
+        {
+          "title": "ROCKSTAR",
+          "artist": "DaBaby"
+        },
+        {
+          "title": "The Box",
+          "artist": "Roddy Ricch"
+        },
+        {
+          "title": "EARFQUAKE",
+          "artist": "Tyler, The Creator"
+        },
+        {
+          "title": "Lucid Dreams",
+          "artist": "Juice WRLD"
+        },
+        {
+          "title": "SAD!",
+          "artist": "XXXTENTACION"
+        },
+        {
+          "title": "Just Wanna Rock",
+          "artist": "Lil Uzi Vert"
+        },
+        {
+          "title": "Magnolia",
+          "artist": "Playboi Carti"
+        },
+        {
+          "title": "Bad and Boujee",
+          "artist": "Migos"
+        },
+        {
+          "title": "Timber",
+          "artist": "Pitbull"
+        },
+        {
+          "title": "Con Calma",
+          "artist": "Daddy Yankee"
+        },
+        {
+          "title": "Mi Gente",
+          "artist": "J Balvin"
+        },
+        {
+          "title": "Funky Friday",
+          "artist": "Dave"
+        },
+        {
+          "title": "Shutdown",
+          "artist": "Skepta"
+        },
+        {
+          "title": "Both",
+          "artist": "Headie One"
+        },
+        {
+          "title": "Old Town Road",
+          "artist": "Lil Nas X"
+        },
+        {
+          "title": "See You Again",
+          "artist": "Wiz Khalifa"
+        },
+        {
+          "title": "No Problem",
+          "artist": "Chance the Rapper"
+        },
+        {
+          "title": "1-800-273-8255",
+          "artist": "Logic"
+        },
+        {
+          "title": "Rap Devil",
+          "artist": "Machine Gun Kelly"
+        },
+        {
+          "title": "Let You Down",
+          "artist": "NF"
+        },
+        {
+          "title": "Tunnel Vision",
+          "artist": "Kodak Black"
+        },
+        {
+          "title": "Hot",
+          "artist": "Young Thug"
+        },
+        {
+          "title": "Pushin P",
+          "artist": "Gunna"
+        },
+        {
+          "title": "RAPSTAR",
+          "artist": "Polo G"
         }
       ],
       "youtubePlaylistId": null
