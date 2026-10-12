@@ -248,6 +248,25 @@ Session autonome à budget limité (voir `docs/CLOUD_SESSION_LOG.md` pour le dé
 - **Prototype de composition Shorts verticale** (`packages/video-renderer/src/Short.tsx`, `apps/pipeline/src/generate-short.ts`) — voir section 9 (roadmap v1.2).
 - Extraction et tests pour la logique dupliquée des 4 scripts de récupération manuelle (`find-theme-by-id.ts`, `match-blocked-track-rows.ts`).
 
+### 3terdecies. Session du 2026-10-12 — fiabilité du contenu, refonte des Shorts, préparation scalabilité
+
+Déclenchée par les vraies statistiques YouTube (1er mois) et deux commentaires de viewers pointant un vrai problème de sélection musicale. Détail complet dans l'historique Git (messages de commit), résumé ici :
+
+**Fiabilité du contenu** :
+
+- Pseudo-artistes de compilation ("Années 80 Forever", etc.) découverts automatiquement et persistés par erreur — la vérification existante (au moins un morceau sur Spotify) ne les filtrait pas. Corrigé par un filtre par motif avant tout appel réseau (`discover-artists.ts`).
+- Nouveau champ de thème `releaseYearRange` (borne absolue, pour les thèmes de décennie) et `recencyWindowYears` (fenêtre glissante, pour les thèmes de genre comme "Rap FR") — filtre les candidats de recherche en masse par époque/récence (`filter-by-recency.ts`), jamais appliqué aux `curatedTracks` qui restent des choix de confiance.
+- Revue IA (`review-episode.ts`) passée de Haiku à Sonnet — budget API quasiment inutilisé (quelques centimes/mois), la tâche demande un jugement nuancé.
+- Thème "Génériques dessins animés/films" remplacé par "Rap US & International" (même créneau, dimanche) — le plus faible en vues/conversion, loin du reste du workflow.
+
+**Shorts** : rythme dédié (3s décompte + 2s reveal = 5s/morceau, `SHORT_COUNTDOWN_*`/`SHORT_REVEAL_*` dans `constants.ts`) totalement indépendant du format long qui garde son rythme (12s+5s) — les Shorts réutilisaient ce rythme lent, la plupart plafonnaient sous 20 vues. 6 morceaux/Short au lieu de 2 (~34s total, inchangé, mais 6 morceaux distincts). Rotation hebdomadaire rééquilibrée : "nouveauté par genre" (Famille B, jamais lié à un vieil épisode) a fait 5-40x mieux que tout type Famille A — tourne maintenant tous les jours.
+
+**Scalabilité à 20 chaînes — préparation seulement, rien lancé** (décision explicite : attendre que le prototype soit propre avant de créer d'autres chaînes) :
+
+- Cache des prévisualisations iTunes (`itunes_preview_cache`, clé = titre+artiste normalisé, pas liée à une chaîne) — un épisode long re-résolvait ~150-200 morceaux à chaque run sans se souvenir des précédents, probable cause des runs anormalement longs observés (18-48min au lieu de 3-9min, exposition répétée au rate-limit non-officiel d'iTunes). Bénéfice immédiat avec une seule chaîne, partagé par construction dès qu'il y en aura plusieurs.
+- **Quota YouTube Data API à anticiper avant de créer d'autres chaînes** : 10 000 unités/jour **par projet Google Cloud**, pas par chaîne — un upload coûte ~1600 unités, donc ~2 chaînes max par projet avec 1 épisode long + quelques Shorts/jour. Pas encore implémenté : prévoir soit une demande d'extension de quota (délai incertain), soit un projet Google Cloud (et des credentials OAuth) séparé par chaîne ou petit groupe de chaînes — même principe que `SPOTIFY_CLIENT_ID_2`/`_3` déjà en place pour Spotify.
+- **Rate-limit iTunes/Spotify partagé entre chaînes** : le rate-limit informel d'iTunes (~20/min) et les quotas Spotify sont par IP/app, donc partagés entre toutes les chaînes tournant depuis les mêmes runners GitHub Actions — le cache ci-dessus aide, mais plusieurs chaînes simultanées restent un vrai risque à mesurer une fois qu'elles existent, pas avant.
+
 ## 4. Pipeline de génération (par run, exécuté une fois par jour)
 
 0. **Détermination du thème du jour** : lire le jour de la semaine courant, résoudre le thème correspondant dans la config de la chaîne.
