@@ -2,11 +2,14 @@ import { fetchWithTimeout } from "./fetch-with-timeout.js";
 
 const ANTHROPIC_API_VERSION = "2023-06-01";
 
-// Haiku — this client is used for structured QA/classification tasks (see
-// apps/pipeline/src/review-episode.ts), not creative writing, so the
-// cheapest current-generation model is the right default rather than
-// something the caller has to remember to pick.
-const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
+// Sonnet — this client's one call site (apps/pipeline/src/review-episode.ts)
+// makes nuanced judgment calls (is this track actually the wrong era/genre
+// for the theme, confirmed live to matter: 2026-10-12 YouTube comments
+// flagged exactly this), not simple structured classification, and real
+// usage is a fraction of a cent/day against a $20 budget — the quality
+// upgrade from Haiku is essentially free here. Overridable per client for a
+// future call site that genuinely only needs cheap classification.
+const DEFAULT_MODEL = "claude-sonnet-5";
 
 export interface AnthropicCompleteParams {
   readonly system: string;
@@ -25,6 +28,7 @@ interface AnthropicResponse {
 export function createAnthropicClient(
   apiKey: string,
   fetchImpl: typeof fetch = fetch,
+  model: string = DEFAULT_MODEL,
 ): AnthropicClient {
   return {
     async complete({ system, prompt, maxTokens }: AnthropicCompleteParams): Promise<string> {
@@ -36,7 +40,7 @@ export function createAnthropicClient(
           "content-type": "application/json",
         },
         body: JSON.stringify({
-          model: DEFAULT_MODEL,
+          model,
           max_tokens: maxTokens,
           system,
           messages: [{ role: "user", content: prompt }],
