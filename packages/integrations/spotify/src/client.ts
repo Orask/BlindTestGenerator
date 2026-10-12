@@ -273,8 +273,21 @@ export function createSpotifyClient(
       title: string,
       artistName: string,
     ): Promise<SpotifyTrackMetadata | null> {
+      // A curated pair can name a duet/collab as a single string ("Garou,
+      // Daniel Lévi & Patrick Fiori") — Spotify's own `artist:` track
+      // metadata always lists collaborators as separate entries, so that
+      // whole string never equals any one of them. Querying on just the
+      // first name keeps the Spotify-side filter effective, and checking
+      // every split name below still requires an exact match to each
+      // credited collaborator before accepting the track.
+      const artistNames = artistName
+        .split(/,|&/)
+        .map((name) => name.trim())
+        .filter((name) => name.length > 0);
+      const primaryArtist = artistNames[0] ?? artistName;
+
       const accessToken = await tokenProvider.getAccessToken();
-      const query = encodeURIComponent(`track:"${title}" artist:"${artistName}"`);
+      const query = encodeURIComponent(`track:"${title}" artist:"${primaryArtist}"`);
       const response = await fetchWithRetry(
         fetchImpl,
         `https://api.spotify.com/v1/search?q=${query}&type=track&limit=${MAX_SEARCH_LIMIT}`,
@@ -289,16 +302,15 @@ export function createSpotifyClient(
       }
 
       const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
-      const normalizedArtist = normalizeForComparison(artistName);
+      const normalizedArtists = artistNames.map(normalizeForComparison);
       const normalizedTitle = normalizeForComparison(title);
 
       for (const track of data.tracks.items) {
         if (NON_ORIGINAL_VERSION_PATTERN.test(track.name)) {
           continue;
         }
-        const isActuallyByArtist = track.artists.some(
-          (artist) => normalizeForComparison(artist.name) === normalizedArtist,
-        );
+        const trackArtists = track.artists.map((artist) => normalizeForComparison(artist.name));
+        const isActuallyByArtist = normalizedArtists.every((name) => trackArtists.includes(name));
         if (!isActuallyByArtist) {
           continue;
         }

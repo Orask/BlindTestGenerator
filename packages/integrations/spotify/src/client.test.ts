@@ -620,6 +620,50 @@ describe("createSpotifyClient.searchTrackByTitleAndArtist", () => {
       "Spotify title+artist search failed",
     );
   });
+
+  it("matches a duet credited to every collaborator, comma/& separated", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({
+        id: "1",
+        name: "Belle",
+        artists: [{ name: "Garou" }, { name: "Daniel Lévi" }, { name: "Patrick Fiori" }],
+      }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.searchTrackByTitleAndArtist(
+      "Belle",
+      "Garou, Daniel Lévi & Patrick Fiori",
+    );
+
+    expect(result?.id).toBe("1");
+  });
+
+  it("queries Spotify using only the first named artist of a multi-artist pair", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({ id: "1", name: "Belle", artists: [{ name: "Garou" }, { name: "Céline Dion" }] }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    await client.searchTrackByTitleAndArtist("Belle", "Garou & Céline Dion");
+
+    const requestedUrl = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(decodeURIComponent(requestedUrl)).toContain('artist:"Garou"');
+  });
+
+  it("rejects a multi-artist pair when only some of the named collaborators are credited", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({ id: "1", name: "Belle", artists: [{ name: "Garou" }] }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.searchTrackByTitleAndArtist(
+      "Belle",
+      "Garou, Daniel Lévi & Patrick Fiori",
+    );
+
+    expect(result).toBeNull();
+  });
 });
 
 describe("createSpotifyClient.getTrackById", () => {
