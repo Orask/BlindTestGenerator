@@ -22,4 +22,15 @@ export interface YoutubeClient {
   addVideoToPlaylist(videoId: string, playlistId: string): Promise<void>;
   /** Permanent — used only for a video already confirmed unwatchable (e.g. blocked worldwide by Content ID), never as a routine cleanup step. */
   deleteVideo(videoId: string): Promise<void>;
+  /**
+   * Number of regions `contentDetails.regionRestriction.blocked` lists for
+   * each video id (0 when the video has no region restriction at all) — a
+   * worldwide Content ID block shows up here as "blocked in ~every region
+   * YouTube has," confirmed live at 204, vs. a handful for an ordinary
+   * regional licensing gap (confirmed live at 2). The Data API exposes this
+   * directly; it does NOT expose which claim/track caused it (that needs
+   * Content ID/CMS partner access, see replace-blocked-tracks.ts).
+   * Batched internally at the API's own limit of 50 ids per call.
+   */
+  getBlockedRegionCounts(videoIds: readonly string[]): Promise<Map<string, number>>;
 }

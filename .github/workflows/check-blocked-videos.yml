@@ -1,0 +1,44 @@
+name: Check Blocked Videos
+
+on:
+  schedule:
+    # Twice a day — frequent enough to catch a worldwide Content ID block
+    # within a few hours instead of waiting for a human to notice it in
+    # YouTube Studio, without hammering the Data API. Off-the-hour on
+    # purpose, like every other schedule in this repo.
+    - cron: "23 7,19 * * *"
+  workflow_dispatch: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm build
+
+      # Fails the job (red in the Actions tab, same signal already relied
+      # on for daily-pipeline/daily-shorts failures) when a published video
+      # looks blocked worldwide — see apps/pipeline/src/find-blocked-videos.ts
+      # for what "looks blocked worldwide" means and why. This only detects
+      # that a video is blocked, never which track caused it (YouTube's
+      # public API doesn't expose Content ID claim details) — that part
+      # still needs a human reading YouTube Studio's Copyright tab.
+      - name: Check for worldwide-blocked videos
+        working-directory: apps/pipeline
+        env:
+          SPOTIFY_CLIENT_ID: ${{ secrets.SPOTIFY_CLIENT_ID }}
+          SPOTIFY_CLIENT_SECRET: ${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          YOUTUBE_CLIENT_ID: ${{ secrets.YOUTUBE_CLIENT_ID }}
+          YOUTUBE_CLIENT_SECRET: ${{ secrets.YOUTUBE_CLIENT_SECRET }}
+          YOUTUBE_REFRESH_TOKEN: ${{ secrets.YOUTUBE_REFRESH_TOKEN }}
+        run: node dist/check-blocked-videos-cli.js

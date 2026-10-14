@@ -79,5 +79,22 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
     async deleteVideo(videoId: string): Promise<void> {
       await api.videos.delete({ id: videoId });
     },
+
+    async getBlockedRegionCounts(videoIds: readonly string[]): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      const ids = [...videoIds];
+      // videos.list caps at 50 ids per call, same limit as every other
+      // batched list endpoint in this API.
+      for (let i = 0; i < ids.length; i += 50) {
+        const batch = ids.slice(i, i + 50);
+        const response = await api.videos.list({ part: ["contentDetails"], id: batch });
+        for (const item of response.data.items ?? []) {
+          if (item.id) {
+            counts.set(item.id, item.contentDetails?.regionRestriction?.blocked?.length ?? 0);
+          }
+        }
+      }
+      return counts;
+    },
   };
 }
