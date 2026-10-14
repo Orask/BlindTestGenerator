@@ -664,6 +664,39 @@ describe("createSpotifyClient.searchTrackByTitleAndArtist", () => {
 
     expect(result).toBeNull();
   });
+
+  it("matches a duo whose own Spotify artist name contains '&' (not a collab string)", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({ id: "1", name: "Dommage", artists: [{ name: "Bigflo & Oli" }] }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.searchTrackByTitleAndArtist("Dommage", "Bigflo & Oli");
+
+    expect(result?.id).toBe("1");
+  });
+
+  it("matches an artist whose own Spotify name contains ',' (not a collab string)", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({ id: "1", name: "EARFQUAKE", artists: [{ name: "Tyler, The Creator" }] }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.searchTrackByTitleAndArtist("EARFQUAKE", "Tyler, The Creator");
+
+    expect(result?.id).toBe("1");
+  });
+
+  it("matches a title that differs only by straight vs curly apostrophe", async () => {
+    const fetchImpl = fakeFetch([
+      rawTrack({ id: "1", name: "Viens on s’aime", artists: [{ name: "Slimane" }] }),
+    ]);
+    const client = createSpotifyClient(fakeTokenProvider(), fetchImpl);
+
+    const result = await client.searchTrackByTitleAndArtist("Viens on s'aime", "Slimane");
+
+    expect(result?.id).toBe("1");
+  });
 });
 
 describe("createSpotifyClient.getTrackById", () => {

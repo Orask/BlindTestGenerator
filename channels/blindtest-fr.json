@@ -188,8 +188,8 @@
           "artist": "Lio"
         },
         {
-          "title": "New York avec toi",
-          "artist": "Taxi Girl"
+          "title": "New-York avec toi",
+          "artist": "Téléphone"
         },
         {
           "title": "Douce France",
@@ -209,15 +209,7 @@
         },
         {
           "title": "T'en va pas",
-          "artist": "Elsa"
-        },
-        {
-          "title": "Blue jean bleu",
-          "artist": "Renaud"
-        },
-        {
-          "title": "Capitaine abandonné",
-          "artist": "Alain Bashung"
+          "artist": "Elsa Lunghini"
         }
       ],
       "discoveryQuery": "chanson francaise annees 80",
@@ -389,7 +381,7 @@
           "artist": "Étienne Daho"
         },
         {
-          "title": "J'irai où tu iras",
+          "title": "J'irai où tu iras (with Jean-Jacques Goldman)",
           "artist": "Céline Dion & Jean-Jacques Goldman"
         },
         {
@@ -410,7 +402,7 @@
         },
         {
           "title": "Belle",
-          "artist": "Garou, Daniel Lévi & Patrick Fiori"
+          "artist": "Garou, Daniel Lavoie & Patrick Fiori"
         },
         {
           "title": "Le Temps des cathédrales",
@@ -641,7 +633,7 @@
           "artist": "Stromae"
         },
         {
-          "title": "La Boulette",
+          "title": "La Boulette (Génération Nan Nan)",
           "artist": "Diam's"
         },
         {
@@ -657,7 +649,7 @@
           "artist": "Renaud & Axelle Red"
         },
         {
-          "title": "Femme like you",
+          "title": "Femme Like U",
           "artist": "K.Maro"
         }
       ],
@@ -845,7 +837,7 @@
         },
         {
           "title": "Bella",
-          "artist": "Maître Gims, Dadju, Slimane & Vianney"
+          "artist": "GIMS"
         },
         {
           "title": "Ramenez la coupe à la maison",
@@ -864,14 +856,6 @@
           "artist": "Booba"
         },
         {
-          "title": "Tourner dans le vide",
-          "artist": "Nekfeu"
-        },
-        {
-          "title": "Demain",
-          "artist": "Bigflo & Oli"
-        },
-        {
           "title": "Suicide social",
           "artist": "Orelsan"
         },
@@ -880,7 +864,7 @@
           "artist": "Kaaris"
         },
         {
-          "title": "Fresh Prince",
+          "title": "Fresh Prince (feat. Uncle Phil)",
           "artist": "Soprano"
         },
         {
@@ -1024,10 +1008,6 @@
           "artist": "Hoshi"
         },
         {
-          "title": "T'inquiète",
-          "artist": "Suzane"
-        },
-        {
           "title": "Kid",
           "artist": "Eddy de Pretto"
         },
@@ -1060,16 +1040,12 @@
           "artist": "Tal"
         },
         {
-          "title": "Non non non",
+          "title": "Non non non (Ecouter Barbara)",
           "artist": "Camélia Jordana"
         },
         {
           "title": "Au soleil",
           "artist": "Jenifer"
-        },
-        {
-          "title": "Beau malgré moi",
-          "artist": "Emmanuel Moire"
         },
         {
           "title": "Double je",
@@ -1096,20 +1072,8 @@
           "artist": "Marina Kaye"
         },
         {
-          "title": "Flip",
-          "artist": "Lomepal"
-        },
-        {
-          "title": "Ficelle",
-          "artist": "Feu! Chatterton"
-        },
-        {
           "title": "L'Amour en solitaire",
           "artist": "Juliette Armanet"
-        },
-        {
-          "title": "Ceux qu'on été",
-          "artist": "Pierre de Maere"
         },
         {
           "title": "La Symphonie des éclairs",
@@ -1136,16 +1100,8 @@
           "artist": "Kendji Girac"
         },
         {
-          "title": "Petite sœur",
-          "artist": "Vitaa & Slimane"
-        },
-        {
           "title": "À nos souvenirs",
           "artist": "Trois Cafés Gourmands"
-        },
-        {
-          "title": "Encore une fois",
-          "artist": "Vianney"
         },
         {
           "title": "Tout oublier",
@@ -1281,7 +1237,7 @@
           "artist": "Sacha Distel"
         },
         {
-          "title": "Aux Champs-Élysées",
+          "title": "Aux Champs Élysées",
           "artist": "Joe Dassin"
         },
         {
@@ -1313,11 +1269,11 @@
           "artist": "Salvatore Adamo"
         },
         {
-          "title": "Capri, c'est fini",
+          "title": "Capri c'est fini",
           "artist": "Hervé Vilard"
         },
         {
-          "title": "Femmes je vous aime",
+          "title": "Femmes... Je vous aime",
           "artist": "Julien Clerc"
         },
         {
@@ -1365,16 +1321,8 @@
           "artist": "Tino Rossi"
         },
         {
-          "title": "Le Chanteur de Mexico",
-          "artist": "Luis Mariano"
-        },
-        {
           "title": "Viens, viens",
           "artist": "Marie Laforêt"
-        },
-        {
-          "title": "Le Temps du muguet",
-          "artist": "Nana Mouskouri"
         },
         {
           "title": "Lily",
@@ -1669,7 +1617,7 @@
           "artist": "Wiz Khalifa"
         },
         {
-          "title": "No Problem",
+          "title": "No Problem (feat. Lil Wayne & 2 Chainz)",
           "artist": "Chance the Rapper"
         },
         {
@@ -1678,7 +1626,7 @@
         },
         {
           "title": "Rap Devil",
-          "artist": "Machine Gun Kelly"
+          "artist": "mgk"
         },
         {
           "title": "Let You Down",
@@ -1689,7 +1637,7 @@
           "artist": "Kodak Black"
         },
         {
-          "title": "Hot",
+          "title": "Hot (feat. Gunna)",
           "artist": "Young Thug"
         },
         {

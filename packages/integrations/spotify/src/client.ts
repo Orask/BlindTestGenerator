@@ -34,11 +34,22 @@ const MAX_SEARCH_LIMIT = 10;
 const MAX_ARTIST_SEARCH_PAGES = 3;
 
 const COMBINING_DIACRITICS = /[\u0300-\u036f]/g;
+// Spotify's own catalog mixes the curly apostrophe (\u2019) and the plain ASCII
+// one (') across titles inconsistently ("Viens on s\u2019aime" vs a curated
+// "Viens on s'aime") \u2014 confirmed live, both exist in the wild for titles
+// that are otherwise identical, so an exact-match policy needs them folded
+// to one form or it rejects real matches over a single character.
+const APOSTROPHE_VARIANTS = /[\u2018\u2019\u02bc]/g;
 
 // Shared by artist-name and track-title comparisons - both need the same
 // diacritic/case-insensitive exact match to avoid false negatives on accents.
 function normalizeForComparison(name: string): string {
-  return name.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
+  return name
+    .normalize("NFD")
+    .replace(COMBINING_DIACRITICS, "")
+    .replace(APOSTROPHE_VARIANTS, "'")
+    .trim()
+    .toLowerCase();
 }
 
 function sleep(ms: number): Promise<void> {
@@ -274,12 +285,15 @@ export function createSpotifyClient(
       artistName: string,
     ): Promise<SpotifyTrackMetadata | null> {
       // A curated pair can name a duet/collab as a single string ("Garou,
-      // Daniel Lévi & Patrick Fiori") — Spotify's own `artist:` track
+      // Daniel Lavoie & Patrick Fiori") — Spotify's own `artist:` track
       // metadata always lists collaborators as separate entries, so that
-      // whole string never equals any one of them. Querying on just the
-      // first name keeps the Spotify-side filter effective, and checking
-      // every split name below still requires an exact match to each
-      // credited collaborator before accepting the track.
+      // whole string never equals any one of them; splitting on ","/"&" and
+      // requiring every piece among the track's credited artists fixes that.
+      // But some acts' own Spotify artist name legitimately CONTAINS "&" or
+      // "," ("Bigflo & Oli", "Tyler, The Creator") — splitting those breaks a
+      // previously-working exact match, confirmed live. isActuallyByArtist
+      // below therefore accepts either reading: the whole string as one
+      // artist, or every split piece as a separate credited collaborator.
       const artistNames = artistName
         .split(/,|&/)
         .map((name) => name.trim())
@@ -302,6 +316,7 @@ export function createSpotifyClient(
       }
 
       const data = (await response.json()) as { tracks: { items: RawSpotifyTrack[] } };
+      const normalizedWholeArtist = normalizeForComparison(artistName);
       const normalizedArtists = artistNames.map(normalizeForComparison);
       const normalizedTitle = normalizeForComparison(title);
 
@@ -310,7 +325,9 @@ export function createSpotifyClient(
           continue;
         }
         const trackArtists = track.artists.map((artist) => normalizeForComparison(artist.name));
-        const isActuallyByArtist = normalizedArtists.every((name) => trackArtists.includes(name));
+        const isActuallyByArtist =
+          trackArtists.includes(normalizedWholeArtist) ||
+          normalizedArtists.every((name) => trackArtists.includes(name));
         if (!isActuallyByArtist) {
           continue;
         }
