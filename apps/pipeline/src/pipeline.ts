@@ -8,6 +8,7 @@ import {
   weekdayFromDate,
   type ChannelConfig,
   type ChannelTheme,
+  type Track,
 } from "@blindtest/core";
 import type { AnthropicClient } from "@blindtest/anthropic";
 import {
@@ -111,12 +112,28 @@ export interface PipelineDeps {
  * API key is actually configured — this feature is an optional quality
  * upgrade layered on top of an already-working pipeline, so its absence
  * must never block a run that worked fine before it existed.
+ *
+ * A track the review removes is backfilled from the same candidate pool
+ * the original selection drew from, instead of just shipping an episode a
+ * few tracks short — confirmed live, this is why real episodes kept coming
+ * out at 51/56/57/58/59 tracks instead of the full `tracksPerEpisode`.
+ * `buildEpisodeTracks`'s `alreadySelected` param does the actual topping
+ * up, so the backfill respects the exact same per-artist cap and
+ * cooldown/reuse priority as the original selection. The backfill call can
+ * itself still fall short (a thin pool was *already* thin before the
+ * review ran) — that failure is swallowed and the reviewed-but-short list
+ * is used as-is, same as today, rather than failing a run the review step
+ * was never meant to be able to fail.
  */
 async function reviewEpisodeIfConfigured(
   db: Database.Database,
   deps: PipelineDeps,
   theme: ChannelTheme,
   tracks: readonly EpisodeTrack[],
+  candidatePool: readonly Track[],
+  recentlyUsedTrackIds: ReadonlySet<string>,
+  allTimeUsedTrackIds: ReadonlySet<string>,
+  tracksPerEpisode: number,
 ): Promise<readonly EpisodeTrack[]> {
   if (!deps.anthropic) {
     return tracks;
@@ -135,13 +152,46 @@ async function reviewEpisodeIfConfigured(
     recentTracks,
   });
 
-  if (removed.length > 0) {
-    console.log(
-      `Revue IA : ${removed.length} morceau(x) retiré(s) — ${removed.map((t) => `"${t.title}" (${t.artist})`).join(", ")}${notes ? ` (${notes})` : ""}`,
-    );
+  if (removed.length === 0) {
+    return reviewed;
   }
 
-  return reviewed;
+  console.log(
+    `Revue IA : ${removed.length} morceau(x) retiré(s) — ${removed.map((t) => `"${t.title}" (${t.artist})`).join(", ")}${notes ? ` (${notes})` : ""}`,
+  );
+
+  try {
+    const toppedUp = await buildEpisodeTracks(
+      candidatePool,
+      new Set([...recentlyUsedTrackIds, ...removed.map((t) => t.id)]),
+      allTimeUsedTrackIds,
+      deps.itunes,
+      tracksPerEpisode,
+      undefined,
+      reviewed,
+    );
+    const addedCount = toppedUp.length - reviewed.length;
+    if (addedCount > 0) {
+      console.log(
+        `${addedCount} morceau(x) de remplacement ajouté(s) pour revenir à ${tracksPerEpisode}.`,
+      );
+    }
+    return toppedUp;
+  } catch (error) {
+    if (!(error instanceof InsufficientTracksError)) {
+      throw error;
+    }
+    console.warn(
+      `Vivier déjà trop mince pour compenser les ${removed.length} retrait(s) de la revue IA — épisode publié à ${reviewed.length} morceaux.`,
+    );
+    return reviewed;
+  }
+}
+
+interface TracksWithPool {
+  readonly tracks: EpisodeTrack[];
+  /** Every candidate considered for this episode, win or lose — kept around so a post-review backfill (see generateAndPublishEpisode) can top back up without re-querying Spotify. */
+  readonly candidatePool: readonly Track[];
 }
 
 /**
@@ -158,7 +208,7 @@ async function buildTracksWithDiscoveryFallback(
   recentlyUsedTrackIds: ReadonlySet<string>,
   allTimeUsedTrackIds: ReadonlySet<string>,
   tracksPerEpisode: number,
-): Promise<EpisodeTrack[]> {
+): Promise<TracksWithPool> {
   const curatedTracks = theme.curatedTracks
     ? await collectCuratedTracks(deps.spotify, theme.curatedTracks)
     : [];
@@ -172,13 +222,14 @@ async function buildTracksWithDiscoveryFallback(
   const candidates = [...curatedTracks, ...seedArtistCandidates];
 
   try {
-    return await buildEpisodeTracks(
+    const tracks = await buildEpisodeTracks(
       candidates,
       recentlyUsedTrackIds,
       allTimeUsedTrackIds,
       deps.itunes,
       tracksPerEpisode,
     );
+    return { tracks, candidatePool: candidates };
   } catch (error) {
     if (!(error instanceof InsufficientTracksError) || !theme.discoveryQuery) {
       throw error;
@@ -207,13 +258,15 @@ async function buildTracksWithDiscoveryFallback(
       await collectCandidateTracks(deps.spotify, newArtists, CANDIDATES_PER_ARTIST),
       theme,
     );
-    return await buildEpisodeTracks(
-      [...candidates, ...extraCandidates],
+    const allCandidates = [...candidates, ...extraCandidates];
+    const tracks = await buildEpisodeTracks(
+      allCandidates,
       recentlyUsedTrackIds,
       allTimeUsedTrackIds,
       deps.itunes,
       tracksPerEpisode,
     );
+    return { tracks, candidatePool: allCandidates };
   }
 }
 
@@ -243,7 +296,7 @@ async function generateAndPublishEpisode(
   ]);
   const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
 
-  const selectedTracks = await buildTracksWithDiscoveryFallback(
+  const { tracks: selectedTracks, candidatePool } = await buildTracksWithDiscoveryFallback(
     theme,
     deps,
     recentlyUsedTrackIds,
@@ -252,12 +305,16 @@ async function generateAndPublishEpisode(
   );
   console.log(`${selectedTracks.length} morceaux sélectionnés avec extrait audio résolu.`);
 
-  // A track the AI review removes isn't backfilled — see review-episode.ts's
-  // MAX_REMOVE_RATIO cap — so an episode can occasionally come out a couple
-  // tracks short of tracksPerEpisode. Accepted tradeoff for v1: catching a
-  // genuine anachronism (see the ROSÉ/"APT." incident this was built for)
-  // matters more than an exact, unreviewed track count.
-  const tracks = await reviewEpisodeIfConfigured(db, deps, theme, selectedTracks);
+  const tracks = await reviewEpisodeIfConfigured(
+    db,
+    deps,
+    theme,
+    selectedTracks,
+    candidatePool,
+    recentlyUsedTrackIds,
+    allTimeUsedTrackIds,
+    tracksPerEpisode,
+  );
 
   // Covers must land on disk BEFORE bundling: Remotion's bundler snapshots
   // public/ at bundle time, so anything downloaded afterward 404s from the

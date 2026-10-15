@@ -336,4 +336,67 @@ describe("buildEpisodeTracks", () => {
       ),
     ).rejects.toThrow(InsufficientTracksError);
   });
+
+  describe("alreadySelected (post-review top-up)", () => {
+    it("keeps the seeded tracks and tops up to the requested count from fresh candidates", async () => {
+      const alreadySelected = [
+        { ...track("kept-1"), audioUrl: "https://preview.example.com/kept-1" },
+      ];
+      const candidates = [track("new-1"), track("new-2")];
+
+      const result = await buildEpisodeTracks(
+        candidates,
+        new Set(),
+        new Set(),
+        itunesThatFindsAllPreviews(),
+        2,
+        0,
+        alreadySelected,
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result.map((t) => t.id)).toEqual(expect.arrayContaining(["kept-1", "new-1"]));
+    });
+
+    it("counts a seeded track's artist against the per-artist cap for new picks", async () => {
+      const alreadySelected = [
+        { ...track("kept-1", 1, ["Same Artist"]), audioUrl: "https://preview.example.com/kept-1" },
+        { ...track("kept-2", 1, ["Same Artist"]), audioUrl: "https://preview.example.com/kept-2" },
+      ];
+      // A 3rd "Same Artist" track must never be picked — the cap (2) is
+      // already met by the seeded tracks alone.
+      const candidates = [track("new-1", 1, ["Same Artist"]), track("new-2", 1, ["Other Artist"])];
+
+      const result = await buildEpisodeTracks(
+        candidates,
+        new Set(),
+        new Set(),
+        itunesThatFindsAllPreviews(),
+        3,
+        0,
+        alreadySelected,
+      );
+
+      expect(result.map((t) => t.id).sort()).toEqual(["kept-1", "kept-2", "new-2"]);
+    });
+
+    it("does not re-add a seeded track even if it still appears in the candidate list", async () => {
+      const alreadySelected = [
+        { ...track("kept-1"), audioUrl: "https://preview.example.com/kept-1" },
+      ];
+      const candidates = [track("kept-1"), track("new-1")];
+
+      const result = await buildEpisodeTracks(
+        candidates,
+        new Set(),
+        new Set(),
+        itunesThatFindsAllPreviews(),
+        2,
+        0,
+        alreadySelected,
+      );
+
+      expect(result.filter((t) => t.id === "kept-1")).toHaveLength(1);
+    });
+  });
 });

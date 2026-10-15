@@ -87,6 +87,12 @@ async function safeFindPreview(
  *
  * The result is then reordered so the strongest tracks open the episode
  * (see buildOpeningHook) and same-artist picks never end up back-to-back.
+ *
+ * `alreadySelected` seeds the result with tracks picked by a previous call
+ * (e.g. the subset the AI review kept — see reviewEpisodeIfConfigured in
+ * pipeline.ts) so a top-up call can fill back up to `count` without
+ * re-picking them or blowing past the per-artist cap they already count
+ * against.
  */
 export async function buildEpisodeTracks(
   candidates: readonly Track[],
@@ -95,12 +101,24 @@ export async function buildEpisodeTracks(
   itunes: ItunesClient,
   count: number,
   lookupDelayMs: number = ITUNES_LOOKUP_DELAY_MS,
+  alreadySelected: readonly EpisodeTrack[] = [],
 ): Promise<EpisodeTrack[]> {
   const seenIds = new Set<string>();
   const seenTitleArtistKeys = new Set<string>();
   const artistCounts = new Map<string, number>();
-  const result: EpisodeTrack[] = [];
+  const result: EpisodeTrack[] = [...alreadySelected];
   let reusedCount = 0;
+
+  for (const track of alreadySelected) {
+    seenIds.add(track.id);
+    seenTitleArtistKeys.add(titleArtistKey(track.title, track.artist));
+    for (const name of track.artistNames) {
+      artistCounts.set(name, (artistCounts.get(name) ?? 0) + 1);
+    }
+    if (allTimeUsedTrackIds.has(track.id)) {
+      reusedCount++;
+    }
+  }
 
   async function tryAdd(track: Track, allowReuse: boolean): Promise<void> {
     if (recentlyUsedTrackIds.has(track.id) || seenIds.has(track.id)) {
