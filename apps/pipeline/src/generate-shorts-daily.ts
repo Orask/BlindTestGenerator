@@ -108,11 +108,12 @@ async function attemptDevineLaChanson(ctx: Ctx): Promise<boolean> {
   const fullEpisodeTrackCountRow = ctx.db
     .prepare("SELECT COUNT(*) AS count FROM tracks_used WHERE video_id = ?")
     .get(source.id) as { count: number };
-  // status = 'uploaded' only — see countVideosForTheme's doc comment in
-  // @blindtest/db for why counting every status inflates this.
+  // status = 'uploaded' AND format = 'long' only — see
+  // countVideosForTheme's doc comment in @blindtest/db for why counting
+  // every status (or every format) inflates this.
   const episodeNumberRow = ctx.db
     .prepare(
-      "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND status = 'uploaded' AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
+      "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND format = 'long' AND status = 'uploaded' AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
     )
     .get(theme.id, source.id) as { count: number };
   const metadata = buildShortMetadata(

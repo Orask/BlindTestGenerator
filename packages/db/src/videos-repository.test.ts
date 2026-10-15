@@ -136,6 +136,36 @@ describe("videos repository", () => {
     expect(countVideosForTheme(db, "annees-80")).toBe(1);
   });
 
+  it("does not count a Short published for the same theme", () => {
+    // Confirmed live (2026-10-15): without filtering by format, a Content
+    // ID replacement re-upload's episode number jumped from "Ép. 5" to
+    // "Ép. 6" because a Short published for the same theme got counted
+    // alongside the long episodes.
+    createVideo(db, {
+      id: "short-1",
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      createdAt: new Date("2026-08-07T00:00:00Z"),
+      filePath: "/tmp/short.mp4",
+      visibility: "public",
+      format: "short",
+    });
+    markVideoUploaded(db, "short-1", "yt-short-1");
+
+    createVideo(db, {
+      id: "video-1",
+      channelId: "blindtest-fr",
+      themeId: "annees-80",
+      createdAt: new Date("2026-08-08T00:00:00Z"),
+      filePath: "/tmp/episode.mp4",
+      visibility: "private",
+      format: "long",
+    });
+    markVideoUploaded(db, "video-1", "yt-1");
+
+    expect(countVideosForTheme(db, "annees-80")).toBe(1);
+  });
+
   describe("hasUploadedVideoForThemeToday", () => {
     it("is false when no video exists yet for the theme", () => {
       expect(
@@ -231,6 +261,28 @@ describe("videos repository", () => {
         format: "long",
       });
       markVideoUploaded(db, "video-1", "yt-abc123");
+
+      expect(
+        hasUploadedVideoForThemeToday(
+          db,
+          "blindtest-fr",
+          "annees-80",
+          new Date("2026-09-27T09:00:00Z"),
+        ),
+      ).toBe(false);
+    });
+
+    it("is false for a same-day Short when checking for the long episode (its default format)", () => {
+      createVideo(db, {
+        id: "short-1",
+        channelId: "blindtest-fr",
+        themeId: "annees-80",
+        createdAt: new Date("2026-09-27T05:00:00Z"),
+        filePath: "/tmp/short.mp4",
+        visibility: "public",
+        format: "short",
+      });
+      markVideoUploaded(db, "short-1", "yt-short-1");
 
       expect(
         hasUploadedVideoForThemeToday(

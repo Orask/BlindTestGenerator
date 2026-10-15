@@ -235,11 +235,16 @@ await renderThumbnail({
 });
 console.log(`Miniature rendue : ${thumbnailPath}`);
 
-// status = 'uploaded' only — see countVideosForTheme's doc comment in
-// @blindtest/db for why counting every status inflates this.
+// status = 'uploaded' AND format = 'long' only — see
+// countVideosForTheme's doc comment in @blindtest/db for why counting
+// every status (or every format) inflates this. Confirmed live
+// (2026-10-15): without the format filter, a Content ID replacement
+// re-upload picked up every Short published for the same theme too, which
+// is why two such replacements on 2026-10-14 jumped from "Ép. 5"/"Ép. 2"
+// to "Ép. 6"/"Ép. 3".
 const episodeNumberRow = db
   .prepare(
-    "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND status = 'uploaded' AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
+    "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND format = 'long' AND status = 'uploaded' AND created_at <= (SELECT created_at FROM videos WHERE id = ?)",
   )
   .get(theme.id, videoRowId) as { count: number };
 

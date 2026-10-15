@@ -76,48 +76,56 @@ export function getLatestUploadedVideoForTheme(
 
 /**
  * Used to number episodes in the video title (e.g. "Ép. 12") — the count
- * of *actually published* prior episodes for this theme, so the caller
- * adds 1 for the one currently being published (see pipeline.ts). Counting
- * every row regardless of status used to inflate this permanently:
- * confirmed live (2026-10-12), a run that fails after `createVideo` leaves
- * a `status = 'failed'` row behind forever (nothing ever deletes it), and
- * every later episode's number was off by however many of those had piled
- * up for that theme. A `draft` row left behind by a run that crashed
- * before even reaching its own failure handler doesn't count either, for
- * the same reason.
+ * of *actually published* prior LONG episodes for this theme, so the
+ * caller adds 1 for the one currently being published (see pipeline.ts).
+ * Counting every row regardless of status used to inflate this
+ * permanently: confirmed live (2026-10-12), a run that fails after
+ * `createVideo` leaves a `status = 'failed'` row behind forever (nothing
+ * ever deletes it), and every later episode's number was off by however
+ * many of those had piled up for that theme. A `draft` row left behind by
+ * a run that crashed before even reaching its own failure handler doesn't
+ * count either, for the same reason. Also filtered to `format = 'long'`
+ * since 2026-10-15 — confirmed live, not filtering format mixed Shorts for
+ * the same theme into the count, which is why two Content ID replacement
+ * re-uploads jumped from "Ép. 5"/"Ép. 2" to "Ép. 6"/"Ép. 3": each had
+ * picked up 1-3 Shorts published for `annees-80` before it.
  */
 export function countVideosForTheme(db: Database.Database, themeId: string): number {
   const row = db
     .prepare<[string], { count: number }>(
-      "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND status = 'uploaded'",
+      "SELECT COUNT(*) AS count FROM videos WHERE theme_id = ? AND format = 'long' AND status = 'uploaded'",
     )
     .get(themeId);
   return row?.count ?? 0;
 }
 
 /**
- * Whether this theme already has a successfully published video for the
- * same UTC calendar day as `referenceDate` — used to make a daily run
- * idempotent when it can be triggered more than once for the same day (the
- * native GitHub Actions `schedule` trigger plus an external trigger set up
- * to work around its imprecise firing time, or a manual re-run after an
- * already-successful one). Only `status = 'uploaded'` counts: a `draft` or
- * `failed` row means the previous attempt never actually published, so a
- * retry must still be allowed to go through.
+ * Whether this theme already has a successfully published video of the
+ * given format for the same UTC calendar day as `referenceDate` — used to
+ * make a daily run idempotent when it can be triggered more than once for
+ * the same day (the native GitHub Actions `schedule` trigger plus an
+ * external trigger set up to work around its imprecise firing time, or a
+ * manual re-run after an already-successful one). Only `status =
+ * 'uploaded'` counts: a `draft` or `failed` row means the previous attempt
+ * never actually published, so a retry must still be allowed to go
+ * through. Filtered to `format` (defaulting to "long", its only caller
+ * today) since a Short published earlier the same day for this theme would
+ * otherwise look like "today's long episode already ran" and skip it.
  */
 export function hasUploadedVideoForThemeToday(
   db: Database.Database,
   channelId: string,
   themeId: string,
   referenceDate: Date,
+  format: VideoFormat = "long",
 ): boolean {
   const row = db
-    .prepare<[string, string, string], { found: number }>(
+    .prepare<[string, string, string, string], { found: number }>(
       `SELECT 1 AS found FROM videos
-       WHERE channel_id = ? AND theme_id = ? AND status = 'uploaded'
+       WHERE channel_id = ? AND theme_id = ? AND format = ? AND status = 'uploaded'
          AND date(created_at) = date(?)
        LIMIT 1`,
     )
-    .get(channelId, themeId, referenceDate.toISOString());
+    .get(channelId, themeId, format, referenceDate.toISOString());
   return row !== undefined;
 }
