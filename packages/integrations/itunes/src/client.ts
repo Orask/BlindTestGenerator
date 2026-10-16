@@ -67,7 +67,7 @@ export function createItunesClient(fetchImpl: typeof fetch = fetch): ItunesClien
       artist: string,
     ): Promise<ItunesPreviewResult | null> {
       const term = `${artist} ${title}`;
-      const params = new URLSearchParams({ term, entity: "song", limit: "5" });
+      const params = new URLSearchParams({ term, entity: "song", limit: "5", country: "FR" });
       const url = `https://itunes.apple.com/search?${params.toString()}`;
 
       let lastError: Error | undefined;

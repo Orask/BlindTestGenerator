@@ -11,6 +11,20 @@ function fakeFetch(body: unknown, ok = true, status = 200): typeof fetch {
 }
 
 describe("createItunesClient.findPreviewByTitleAndArtist", () => {
+  it("searches the French storefront, not iTunes' US default", async () => {
+    // Confirmed live (2026-10-16): the US default storefront has almost no
+    // French rap at all (0 results for tracks with tens of millions of
+    // streams on Spotify), which was silently starving every French-content
+    // theme of iTunes previews.
+    const fetchImpl = fakeFetch({ resultCount: 0, results: [] });
+    const client = createItunesClient(fetchImpl);
+
+    await client.findPreviewByTitleAndArtist("92i veyron", "Booba");
+
+    const requestedUrl = (fetchImpl as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(new URL(requestedUrl).searchParams.get("country")).toBe("FR");
+  });
+
   it("returns the preview URL for a matching track", async () => {
     const client = createItunesClient(
       fakeFetch({
