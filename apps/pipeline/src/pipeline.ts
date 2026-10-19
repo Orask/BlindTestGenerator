@@ -467,6 +467,18 @@ export async function runPipeline(channel: ChannelConfig, deps: PipelineDeps): P
     );
     return;
   }
+  // Second, independent guard against the channel itself — not just the
+  // local DB. Confirmed live (2026-10-18): a successful local run that was
+  // never committed left the DB with no record of it, so the next
+  // scheduled CI run's DB-only check above saw nothing and published a
+  // second "Ép. 1" for Rap US & International the same day. This asks the
+  // one source that can't be out of date.
+  if (await cachedDeps.youtube.hasRecentUploadForTheme(theme.label, now)) {
+    console.log(
+      `Épisode "${theme.label}" déjà présent sur la chaîne aujourd'hui (détecté via YouTube, pas seulement la base locale), run ignoré.`,
+    );
+    return;
+  }
 
   await generateAndPublishEpisode(db, channel, theme, cachedDeps, undefined);
 }

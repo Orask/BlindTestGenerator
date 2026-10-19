@@ -80,6 +80,35 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
       await api.videos.delete({ id: videoId });
     },
 
+    async hasRecentUploadForTheme(
+      themeLabel: string,
+      referenceDate: Date,
+      maxResults = 10,
+    ): Promise<boolean> {
+      const channelResponse = await api.channels.list({ part: ["contentDetails"], mine: true });
+      const uploadsPlaylistId =
+        channelResponse.data.items?.[0]?.contentDetails?.relatedPlaylists?.uploads;
+      if (!uploadsPlaylistId) {
+        return false;
+      }
+
+      const itemsResponse = await api.playlistItems.list({
+        part: ["snippet"],
+        playlistId: uploadsPlaylistId,
+        maxResults,
+      });
+
+      const referenceDay = referenceDate.toISOString().slice(0, 10);
+      return (itemsResponse.data.items ?? []).some((item) => {
+        const title = item.snippet?.title ?? "";
+        const publishedAt = item.snippet?.publishedAt;
+        if (!publishedAt || !title.includes(themeLabel)) {
+          return false;
+        }
+        return publishedAt.slice(0, 10) === referenceDay;
+      });
+    },
+
     async getBlockedRegionCounts(videoIds: readonly string[]): Promise<Map<string, number>> {
       const counts = new Map<string, number>();
       const ids = [...videoIds];
