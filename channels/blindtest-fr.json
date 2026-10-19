@@ -1190,6 +1190,62 @@
         {
           "title": "On dirait",
           "artist": "Amir"
+        },
+        {
+          "title": "CIEL",
+          "artist": "GIMS"
+        },
+        {
+          "title": "NINAO",
+          "artist": "GIMS"
+        },
+        {
+          "title": "Je te promets",
+          "artist": "Zaho"
+        },
+        {
+          "title": "L'horizon",
+          "artist": "Pierre Garnier"
+        },
+        {
+          "title": "Nous on sait",
+          "artist": "Pierre Garnier"
+        },
+        {
+          "title": "Ma soeur",
+          "artist": "Vitaa"
+        },
+        {
+          "title": "Pourquoi les hommes ?",
+          "artist": "Vitaa"
+        },
+        {
+          "title": "PLUS FORT",
+          "artist": "Julien Granel"
+        },
+        {
+          "title": "FEEL GOOD",
+          "artist": "Julien Granel"
+        },
+        {
+          "title": "Le temps",
+          "artist": "Tayc"
+        },
+        {
+          "title": "Comme toi",
+          "artist": "Tayc"
+        },
+        {
+          "title": "Flemme",
+          "artist": "Angèle"
+        },
+        {
+          "title": "Je vole",
+          "artist": "Louane"
+        },
+        {
+          "title": "Je m'en vais",
+          "artist": "Vianney"
         }
       ],
       "discoveryQuery": "variete francaise actuelle",
