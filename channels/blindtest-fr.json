@@ -230,6 +230,94 @@
         {
           "title": "T'en va pas",
           "artist": "Elsa Lunghini"
+        },
+        {
+          "title": "Allumer le feu",
+          "artist": "Johnny Hallyday"
+        },
+        {
+          "title": "L'envie",
+          "artist": "Johnny Hallyday"
+        },
+        {
+          "title": "Mourir sur scène",
+          "artist": "Dalida"
+        },
+        {
+          "title": "Laissez-moi danser",
+          "artist": "Dalida"
+        },
+        {
+          "title": "Alexandrie Alexandra",
+          "artist": "Claude François"
+        },
+        {
+          "title": "Magnolias for ever",
+          "artist": "Claude François"
+        },
+        {
+          "title": "Mon amie la rose",
+          "artist": "Françoise Hardy"
+        },
+        {
+          "title": "Le temps de l'amour",
+          "artist": "Françoise Hardy"
+        },
+        {
+          "title": "Je t'aime moi non plus",
+          "artist": "Serge Gainsbourg"
+        },
+        {
+          "title": "La javanaise",
+          "artist": "Serge Gainsbourg"
+        },
+        {
+          "title": "Emmenez-moi",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "La bohème",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "La Maritza",
+          "artist": "Sylvie Vartan"
+        },
+        {
+          "title": "La plus belle pour aller danser",
+          "artist": "Sylvie Vartan"
+        },
+        {
+          "title": "Et si tu n'existais pas",
+          "artist": "Joe Dassin"
+        },
+        {
+          "title": "Les Champs-Élysées",
+          "artist": "Joe Dassin"
+        },
+        {
+          "title": "Joe le taxi",
+          "artist": "Vanessa Paradis"
+        },
+        {
+          "title": "Mon mec à moi",
+          "artist": "Patricia Kaas"
+        },
+        {
+          "title": "Mademoiselle chante le blues",
+          "artist": "Patricia Kaas"
+        },
+        {
+          "title": "Je l'aime à mourir",
+          "artist": "Francis Cabrel"
+        },
+        {
+          "title": "La corrida",
+          "artist": "Francis Cabrel"
+        },
+        {
+          "title": "Qui a le droit",
+          "artist": "Patrick Bruel"
         }
       ],
       "discoveryQuery": "chanson francaise annees 80",
@@ -671,6 +759,110 @@
         {
           "title": "Femme Like U",
           "artist": "K.Maro"
+        },
+        {
+          "title": "L'hymne de nos campagnes",
+          "artist": "Tryo"
+        },
+        {
+          "title": "Désolé pour hier soir",
+          "artist": "Tryo"
+        },
+        {
+          "title": "Avec toi",
+          "artist": "Tunisiano"
+        },
+        {
+          "title": "De marbre",
+          "artist": "Sinik"
+        },
+        {
+          "title": "Au bout de ma life",
+          "artist": "Sinik"
+        },
+        {
+          "title": "Respire",
+          "artist": "Mickey 3D"
+        },
+        {
+          "title": "Matador",
+          "artist": "Mickey 3D"
+        },
+        {
+          "title": "Qui de nous deux",
+          "artist": "-M-"
+        },
+        {
+          "title": "Tourner ma page",
+          "artist": "Jenifer"
+        },
+        {
+          "title": "Au soleil",
+          "artist": "Jenifer"
+        },
+        {
+          "title": "La lettre",
+          "artist": "Renan Luce"
+        },
+        {
+          "title": "Les voisines",
+          "artist": "Renan Luce"
+        },
+        {
+          "title": "Une journée parfaite",
+          "artist": "Dumas"
+        },
+        {
+          "title": "Jour 1",
+          "artist": "Louane"
+        },
+        {
+          "title": "Avenir",
+          "artist": "Louane"
+        },
+        {
+          "title": "Je suis malade",
+          "artist": "Lara Fabian"
+        },
+        {
+          "title": "Sous le vent",
+          "artist": "Garou"
+        },
+        {
+          "title": "Seul",
+          "artist": "Garou"
+        },
+        {
+          "title": "Hier encore",
+          "artist": "Charles Aznavour"
+        },
+        {
+          "title": "Quelqu'un m'a dit",
+          "artist": "Carla Bruni"
+        },
+        {
+          "title": "Divine idylle",
+          "artist": "Vanessa Paradis"
+        },
+        {
+          "title": "Non, je ne regrette rien",
+          "artist": "Édith Piaf"
+        },
+        {
+          "title": "Dans les yeux d'Émilie",
+          "artist": "Joe Dassin"
+        },
+        {
+          "title": "Tous les garçons et les filles",
+          "artist": "Françoise Hardy"
+        },
+        {
+          "title": "Paroles, paroles",
+          "artist": "Dalida"
+        },
+        {
+          "title": "Ella, elle l'a",
+          "artist": "France Gall"
         }
       ],
       "discoveryQuery": "chanson francaise annees 2000",
@@ -773,7 +965,10 @@
         "Indila",
         "Vegedream",
         "Leto",
-        "26keuss"
+        "26keuss",
+        "disiz",
+        "Niro",
+        "Nono La Grinta"
       ],
       "curatedTracks": [
         {
@@ -1028,7 +1223,9 @@
         "Paris Combo",
         "Zazie",
         "Saez",
-        "Jean-Jacques Goldman"
+        "Jean-Jacques Goldman",
+        "Soprano",
+        "Bigflo & Oli"
       ],
       "curatedTracks": [
         {
@@ -1216,7 +1413,7 @@
           "artist": "Vitaa"
         },
         {
-          "title": "Pourquoi les hommes ?",
+          "title": "Pourquoi les hommes?",
           "artist": "Vitaa"
         },
         {
@@ -1246,6 +1443,82 @@
         {
           "title": "Je m'en vais",
           "artist": "Vianney"
+        },
+        {
+          "title": "Jaloux",
+          "artist": "Dadju"
+        },
+        {
+          "title": "Reine",
+          "artist": "Dadju"
+        },
+        {
+          "title": "French kiss",
+          "artist": "Black M"
+        },
+        {
+          "title": "Seul au monde",
+          "artist": "Corneille"
+        },
+        {
+          "title": "Ta marinière",
+          "artist": "Hoshi"
+        },
+        {
+          "title": "Mon roi",
+          "artist": "Camélia Jordana"
+        },
+        {
+          "title": "Respire encore",
+          "artist": "Clara Luciani"
+        },
+        {
+          "title": "Mon amour",
+          "artist": "Slimane"
+        },
+        {
+          "title": "Première fois",
+          "artist": "Slimane"
+        },
+        {
+          "title": "J'ai laissé",
+          "artist": "Christophe Maé"
+        },
+        {
+          "title": "Il est où le bonheur",
+          "artist": "Christophe Maé"
+        },
+        {
+          "title": "Qu'importe",
+          "artist": "Juliette Armanet"
+        },
+        {
+          "title": "Pookie",
+          "artist": "Aya Nakamura"
+        },
+        {
+          "title": "Ceux qui rêvent",
+          "artist": "Pomme"
+        },
+        {
+          "title": "En feu",
+          "artist": "Soprano"
+        },
+        {
+          "title": "Cosmo",
+          "artist": "Soprano"
+        },
+        {
+          "title": "Dommage",
+          "artist": "Bigflo & Oli"
+        },
+        {
+          "title": "Nous aussi",
+          "artist": "Bigflo & Oli"
+        },
+        {
+          "title": "Mesdames",
+          "artist": "Grand Corps Malade"
         }
       ],
       "discoveryQuery": "variete francaise actuelle",
