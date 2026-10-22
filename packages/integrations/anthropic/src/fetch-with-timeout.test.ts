@@ -35,7 +35,7 @@ describe("fetchWithTimeout", () => {
       body: "{}",
     });
     const expectation = expect(promise).rejects.toThrow();
-    await vi.advanceTimersByTimeAsync(35_000);
+    await vi.advanceTimersByTimeAsync(95_000);
 
     await expectation;
   });
