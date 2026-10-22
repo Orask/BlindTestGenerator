@@ -1,6 +1,11 @@
 import Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
-import { upsertCatalogTrack } from "./catalog-tracks-repository.js";
+import {
+  countAudioReadyCatalogTracks,
+  getCatalogTracksNeedingAudioCheck,
+  markCatalogTrackAudioChecked,
+  upsertCatalogTrack,
+} from "./catalog-tracks-repository.js";
 import { upsertChannel, upsertChannelTheme } from "./channel-repository.js";
 import { SCHEMA_SQL } from "./schema.js";
 
@@ -115,5 +120,83 @@ describe("upsertCatalogTrack", () => {
 
     expect(row("rap-fr", "id-1")).toBeDefined();
     expect(row("variete-actuelle", "id-1")).toBeDefined();
+  });
+});
+
+function seedDiscoveredTrack(id: string, title: string, artist: string) {
+  upsertCatalogTrack(db, {
+    themeId: "rap-fr",
+    spotifyTrackId: id,
+    title,
+    artist,
+    artistNames: [artist],
+    source: "curated",
+    cacheKey: `${title.toLowerCase()}|${artist.toLowerCase()}`,
+    discoveredAt: new Date("2026-10-22T10:00:00.000Z"),
+  });
+}
+
+describe("getCatalogTracksNeedingAudioCheck", () => {
+  it("returns a 'discovered' row that has never been audio-checked", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+
+    expect(getCatalogTracksNeedingAudioCheck(db, "rap-fr", 10)).toEqual([
+      { spotifyTrackId: "id-1", title: "Avant toi", artist: "Vitaa" },
+    ]);
+  });
+
+  it("excludes a row already settled as audio_ready or ineligible", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+    seedDiscoveredTrack("id-2", "Reine", "Dadju");
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-1", { status: "audio_ready" });
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-2", {
+      status: "ineligible",
+      ineligibleReason: "no_itunes_preview",
+    });
+
+    expect(getCatalogTracksNeedingAudioCheck(db, "rap-fr", 10)).toEqual([]);
+  });
+
+  it("respects the limit", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+    seedDiscoveredTrack("id-2", "Reine", "Dadju");
+
+    expect(getCatalogTracksNeedingAudioCheck(db, "rap-fr", 1)).toHaveLength(1);
+  });
+});
+
+describe("markCatalogTrackAudioChecked", () => {
+  it("promotes a row to audio_ready with no ineligible reason", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-1", { status: "audio_ready" });
+
+    expect(row("rap-fr", "id-1")).toMatchObject({ status: "audio_ready", ineligible_reason: null });
+  });
+
+  it("records an ineligible reason", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-1", {
+      status: "ineligible",
+      ineligibleReason: "no_itunes_preview",
+    });
+
+    expect(row("rap-fr", "id-1")).toMatchObject({
+      status: "ineligible",
+      ineligible_reason: "no_itunes_preview",
+    });
+  });
+});
+
+describe("countAudioReadyCatalogTracks", () => {
+  it("counts only audio_ready rows for the given theme", () => {
+    seedDiscoveredTrack("id-1", "Avant toi", "Vitaa");
+    seedDiscoveredTrack("id-2", "Reine", "Dadju");
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-1", { status: "audio_ready" });
+    markCatalogTrackAudioChecked(db, "rap-fr", "id-2", { status: "ineligible" });
+
+    expect(countAudioReadyCatalogTracks(db, "rap-fr")).toBe(1);
+    expect(countAudioReadyCatalogTracks(db, "variete-actuelle")).toBe(0);
   });
 });

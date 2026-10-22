@@ -43,8 +43,12 @@ export {
 } from "./itunes-preview-cache-repository.js";
 export {
   upsertCatalogTrack,
+  getCatalogTracksNeedingAudioCheck,
+  markCatalogTrackAudioChecked,
+  countAudioReadyCatalogTracks,
   type CatalogTrackSource,
   type CatalogTrackStatus,
+  type CatalogTrackNeedingAudioCheck,
   type UpsertCatalogTrackParams,
 } from "./catalog-tracks-repository.js";
 export {
