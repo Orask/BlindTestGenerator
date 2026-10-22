@@ -1,3 +1,4 @@
+import type { AnthropicClient } from "@blindtest/anthropic";
 import type { ChannelTheme, Track } from "@blindtest/core";
 import {
   countAudioReadyCatalogTracks,
@@ -75,6 +76,7 @@ export async function populateCatalogForTheme(
   theme: ChannelTheme,
   targetDepth: number,
   lookupDelayMs: number = ITUNES_LOOKUP_DELAY_MS,
+  anthropic?: AnthropicClient,
 ): Promise<PopulateCatalogResult> {
   let discovered = 0;
 
@@ -156,6 +158,7 @@ export async function populateCatalogForTheme(
       theme.discoveryQuery,
       theme.seedArtists,
       DISCOVERY_MAX_NEW_ARTISTS,
+      anthropic,
     );
     if (newArtists.length > 0) {
       discoveryRan = true;

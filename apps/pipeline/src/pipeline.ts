@@ -306,6 +306,7 @@ async function buildTracksWithDiscoveryFallback(
       theme.discoveryQuery,
       theme.seedArtists,
       DISCOVERY_MAX_NEW_ARTISTS,
+      deps.anthropic,
     );
     if (newArtists.length === 0) {
       throw error;

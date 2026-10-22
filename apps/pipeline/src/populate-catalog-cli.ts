@@ -38,7 +38,7 @@ if (themes.length === 0) {
 
 const dbPath = fileURLToPath(new URL("../../../data/blindtest.sqlite", import.meta.url));
 const db = openDatabase(dbPath);
-const { spotify, itunes } = createClientsFromEnv();
+const { spotify, itunes, anthropic } = createClientsFromEnv();
 const cachedItunes = createCachingItunesClient(db, itunes);
 
 let exitCode = 0;
@@ -52,6 +52,8 @@ for (const theme of themes) {
       channelConfigPath,
       theme,
       targetDepth,
+      undefined,
+      anthropic,
     );
     console.log(
       `  découverts: ${result.discovered}, vérifiés iTunes: ${result.audioChecked} ` +

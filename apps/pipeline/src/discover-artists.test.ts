@@ -1,6 +1,11 @@
+import type { AnthropicClient } from "@blindtest/anthropic";
 import type { SpotifyClient, SpotifyTrackMetadata } from "@blindtest/spotify";
 import { describe, expect, it, vi } from "vitest";
 import { discoverNewArtists } from "./discover-artists.js";
+
+function fakeAnthropic(complete: AnthropicClient["complete"]): AnthropicClient {
+  return { complete };
+}
 
 function verified(): SpotifyTrackMetadata[] {
   return [
@@ -119,5 +124,56 @@ describe("discoverNewArtists", () => {
     const result = await discoverNewArtists(spotify, "obscure query", [], 5);
 
     expect(result).toEqual([]);
+  });
+
+  it("over-collects candidates and keeps only the ones an AI notoriety check approves", async () => {
+    const names = ["A1", "A2", "A3", "A4", "A5", "A6"];
+    const spotify = fakeSpotify({ searchArtists: vi.fn().mockResolvedValueOnce(names) });
+    const complete = vi.fn().mockResolvedValue('{"known": [2, 5]}');
+    const anthropic = fakeAnthropic(complete);
+
+    // maxNew=2 with an anthropic client over-collects up to 2*3=6 verified
+    // candidates first — all 6 are supplied in one page here, so there's
+    // no need for a 2nd page despite maxNew being only 2.
+    const result = await discoverNewArtists(spotify, "rap francais", [], 2, anthropic);
+
+    expect(result).toEqual(["A2", "A5"]);
+    expect(complete).toHaveBeenCalledTimes(1);
+    const prompt = complete.mock.calls[0]![0].prompt as string;
+    expect(prompt).toContain("1. A1");
+    expect(prompt).toContain("6. A6");
+  });
+
+  it("rejects every candidate when the AI response is malformed JSON", async () => {
+    const spotify = fakeSpotify({
+      searchArtists: vi.fn().mockResolvedValueOnce(["A1", "A2"]).mockResolvedValue([]),
+    });
+    const anthropic = fakeAnthropic(vi.fn().mockResolvedValue("not json at all"));
+
+    const result = await discoverNewArtists(spotify, "rap francais", [], 2, anthropic);
+
+    expect(result).toEqual([]);
+  });
+
+  it("rejects every candidate when the AI call itself fails", async () => {
+    const spotify = fakeSpotify({
+      searchArtists: vi.fn().mockResolvedValueOnce(["A1", "A2"]).mockResolvedValue([]),
+    });
+    const anthropic = fakeAnthropic(vi.fn().mockRejectedValue(new Error("network error")));
+
+    const result = await discoverNewArtists(spotify, "rap francais", [], 2, anthropic);
+
+    expect(result).toEqual([]);
+  });
+
+  it("never calls the AI when there are no live-verified candidates to judge", async () => {
+    const spotify = fakeSpotify({ searchArtists: vi.fn().mockResolvedValue([]) });
+    const complete = vi.fn();
+    const anthropic = fakeAnthropic(complete);
+
+    const result = await discoverNewArtists(spotify, "obscure query", [], 5, anthropic);
+
+    expect(result).toEqual([]);
+    expect(complete).not.toHaveBeenCalled();
   });
 });
