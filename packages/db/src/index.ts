@@ -41,3 +41,13 @@ export {
   setCachedItunesPreview,
   type CachedPreviewLookup,
 } from "./itunes-preview-cache-repository.js";
+export {
+  upsertCatalogTrack,
+  type CatalogTrackSource,
+  type CatalogTrackStatus,
+  type UpsertCatalogTrackParams,
+} from "./catalog-tracks-repository.js";
+export {
+  recordSpotifyResolution,
+  type SpotifyResolutionStatus,
+} from "./spotify-resolution-cache-repository.js";

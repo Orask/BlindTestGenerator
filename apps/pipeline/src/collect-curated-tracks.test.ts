@@ -57,4 +57,38 @@ describe("collectCuratedTracks", () => {
     expect(result).toHaveLength(1);
     expect(result[0]?.title).toBe("He's a Pirate");
   });
+
+  it("calls onResolution for every pair, with null on a failure", async () => {
+    const spotify: SpotifyClient = {
+      searchTracksByArtist: vi.fn(),
+      searchArtists: vi.fn(),
+      getTrackById: vi.fn(),
+      getArtistImage: vi.fn(),
+      searchTrackByTitleAndArtist: vi
+        .fn()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(track("He's a Pirate", "Klaus Badelt")),
+    };
+    const onResolution = vi.fn();
+
+    await collectCuratedTracks(
+      spotify,
+      [
+        { title: "Nonexistent Song", artist: "Nobody" },
+        { title: "He's a Pirate", artist: "Klaus Badelt" },
+      ],
+      onResolution,
+    );
+
+    expect(onResolution).toHaveBeenNthCalledWith(
+      1,
+      { title: "Nonexistent Song", artist: "Nobody" },
+      null,
+    );
+    expect(onResolution).toHaveBeenNthCalledWith(
+      2,
+      { title: "He's a Pirate", artist: "Klaus Badelt" },
+      expect.objectContaining({ title: "He's a Pirate" }),
+    );
+  });
 });

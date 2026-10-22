@@ -98,4 +98,50 @@ CREATE TABLE IF NOT EXISTS itunes_preview_cache (
   preview_url TEXT,
   cached_at TEXT NOT NULL
 );
+
+-- A theme's episode is still rebuilt live from Spotify/iTunes every run
+-- (2026-10-22: this caused several real incidents — a curatedTrack typo or
+-- a Live-only version fails its Spotify search identically on every future
+-- run with no memory of it, and a candidate's eventual iTunes-preview
+-- outcome is likewise never recorded against the candidate itself). This
+-- table is step 1 of migrating toward a persistent per-theme catalog: it is
+-- written to in parallel with today's live collection (shadow-write only,
+-- see apps/pipeline/src/pipeline.ts), without yet being read from — the
+-- live path keeps deciding what gets selected until the catalog has had
+-- time to prove it mirrors reality.
+CREATE TABLE IF NOT EXISTS catalog_tracks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  theme_id TEXT NOT NULL REFERENCES channel_themes(id),
+  spotify_track_id TEXT NOT NULL,
+  title TEXT NOT NULL,
+  artist TEXT NOT NULL,
+  artist_names TEXT NOT NULL,
+  source TEXT NOT NULL CHECK (source IN ('seed_artist', 'curated', 'discovered')),
+  status TEXT NOT NULL CHECK (status IN ('discovered', 'verified', 'audio_ready', 'ineligible', 'blocked'))
+    DEFAULT 'discovered',
+  ineligible_reason TEXT,
+  cache_key TEXT NOT NULL,
+  discovered_at TEXT NOT NULL,
+  verified_at TEXT,
+  audio_checked_at TEXT,
+  UNIQUE (theme_id, spotify_track_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_catalog_tracks_theme_status
+  ON catalog_tracks(theme_id, status);
+
+-- Remembers a curatedTrack (title, artist) pair's Spotify search outcome —
+-- specifically the "introuvable" (not_found) and "rejected as a
+-- Live/remix/feat version" (rejected_version) cases, which today fail
+-- silently and identically every single run (see collect-curated-tracks.ts
+-- and NON_ORIGINAL_VERSION_PATTERN in @blindtest/spotify's client.ts).
+-- Keyed and shared the same way itunes_preview_cache is (normalized
+-- title|artist, not scoped to a channel): the same pair fails or resolves
+-- to the same Spotify track regardless of which theme or channel asks.
+CREATE TABLE IF NOT EXISTS spotify_resolution_cache (
+  cache_key TEXT PRIMARY KEY,
+  status TEXT NOT NULL CHECK (status IN ('resolved', 'not_found', 'rejected_version')),
+  spotify_track_id TEXT,
+  checked_at TEXT NOT NULL
+);
 `;

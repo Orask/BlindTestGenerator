@@ -23,8 +23,11 @@ import {
   markVideoFailed,
   markVideoUploaded,
   openDatabase,
+  recordSpotifyResolution,
   recordTrackUsage,
   setPlaylistId,
+  upsertCatalogTrack,
+  type CatalogTrackSource,
 } from "@blindtest/db";
 import type { ItunesClient } from "@blindtest/itunes";
 import type Database from "better-sqlite3";
@@ -38,7 +41,7 @@ import {
   type EpisodeTrack,
 } from "./build-episode-tracks.js";
 import { collectCandidateTracks } from "./collect-candidates.js";
-import { collectCuratedTracks } from "./collect-curated-tracks.js";
+import { collectCuratedTracks, type CuratedTrackSpec } from "./collect-curated-tracks.js";
 import { discoverNewArtists } from "./discover-artists.js";
 import { filterByRecency } from "./filter-by-recency.js";
 import { resolvePublicCoverUrls } from "./download-cover-images.js";
@@ -194,6 +197,58 @@ interface TracksWithPool {
   readonly candidatePool: readonly Track[];
 }
 
+const COMBINING_DIACRITICS = /[̀-ͯ]/g;
+
+function catalogCacheKey(title: string, artist: string): string {
+  const normalize = (value: string): string =>
+    value.normalize("NFD").replace(COMBINING_DIACRITICS, "").trim().toLowerCase();
+  return `${normalize(title)}|${normalize(artist)}`;
+}
+
+// Step 1 of migrating toward a persistent per-theme catalog (see
+// schema.ts's comment on catalog_tracks): every candidate this run already
+// discovers live gets mirrored into catalog_tracks, purely as an
+// observational record — nothing yet reads this table back, so this can
+// never change what gets selected or published.
+function shadowWriteCatalog(
+  db: Database.Database,
+  themeId: string,
+  tracks: readonly Track[],
+  source: CatalogTrackSource,
+): void {
+  const now = new Date();
+  for (const track of tracks) {
+    upsertCatalogTrack(db, {
+      themeId,
+      spotifyTrackId: track.id,
+      title: track.title,
+      artist: track.artist,
+      artistNames: track.artistNames,
+      source,
+      cacheKey: catalogCacheKey(track.title, track.artist),
+      discoveredAt: now,
+    });
+  }
+}
+
+// Same shadow-write principle as shadowWriteCatalog, but for a curatedTrack
+// pair's resolution outcome itself (success or failure) — the one thing
+// that today fails identically and silently on every single run with no
+// memory of it (a typo, or a title only available as a Live/remix version
+// that the Spotify client's NON_ORIGINAL_VERSION_PATTERN filter correctly
+// rejects — this session hit both). The Spotify client doesn't currently
+// report *why* a pair failed, so every failure is recorded as 'not_found'
+// for now; distinguishing 'rejected_version' is a follow-up, not a
+// regression — the schema already reserves the status for it.
+function recordCuratedResolution(
+  db: Database.Database,
+  pair: CuratedTrackSpec,
+  match: Track | null,
+): void {
+  const key = catalogCacheKey(pair.title, pair.artist);
+  recordSpotifyResolution(db, key, match ? "resolved" : "not_found", match?.id ?? null);
+}
+
 /**
  * Builds the episode's tracks from the theme's configured seedArtists, and
  * if that falls short (InsufficientTracksError), automatically searches for
@@ -203,6 +258,7 @@ interface TracksWithPool {
  * section 3octies) each time a theme's pool thinned out again.
  */
 async function buildTracksWithDiscoveryFallback(
+  db: Database.Database,
   theme: ChannelTheme,
   deps: PipelineDeps,
   recentlyUsedTrackIds: ReadonlySet<string>,
@@ -210,15 +266,24 @@ async function buildTracksWithDiscoveryFallback(
   tracksPerEpisode: number,
 ): Promise<TracksWithPool> {
   const curatedTracks = theme.curatedTracks
-    ? await collectCuratedTracks(deps.spotify, theme.curatedTracks)
+    ? await collectCuratedTracks(deps.spotify, theme.curatedTracks, (pair, match) =>
+        recordCuratedResolution(db, pair, match),
+      )
     : [];
+  shadowWriteCatalog(db, theme.id, curatedTracks, "curated");
   // Recency/era filtering applies only to the bulk seedArtists search, not
   // curatedTracks — those are specific, trusted picks, not something that
   // needs an automated era/recency sanity check.
-  const seedArtistCandidates = filterByRecency(
-    await collectCandidateTracks(deps.spotify, theme.seedArtists, CANDIDATES_PER_ARTIST),
-    theme,
+  const rawSeedArtistCandidates = await collectCandidateTracks(
+    deps.spotify,
+    theme.seedArtists,
+    CANDIDATES_PER_ARTIST,
   );
+  // Shadow-written before the recency filter runs — recency is a
+  // selection-time concern for this theme today, not a reason to leave a
+  // real, verifiable candidate out of the catalog altogether.
+  shadowWriteCatalog(db, theme.id, rawSeedArtistCandidates, "seed_artist");
+  const seedArtistCandidates = filterByRecency(rawSeedArtistCandidates, theme);
   const candidates = [...curatedTracks, ...seedArtistCandidates];
 
   try {
@@ -254,10 +319,13 @@ async function buildTracksWithDiscoveryFallback(
     // instead of being rediscovered — or silently lost — on every thin run.
     await appendDiscoveredArtists(deps.channelConfigPath, theme.id, newArtists);
 
-    const extraCandidates = filterByRecency(
-      await collectCandidateTracks(deps.spotify, newArtists, CANDIDATES_PER_ARTIST),
-      theme,
+    const rawExtraCandidates = await collectCandidateTracks(
+      deps.spotify,
+      newArtists,
+      CANDIDATES_PER_ARTIST,
     );
+    shadowWriteCatalog(db, theme.id, rawExtraCandidates, "discovered");
+    const extraCandidates = filterByRecency(rawExtraCandidates, theme);
     const allCandidates = [...candidates, ...extraCandidates];
     const tracks = await buildEpisodeTracks(
       allCandidates,
@@ -297,6 +365,7 @@ async function generateAndPublishEpisode(
   const allTimeUsedTrackIds = getUsedTrackIds(db, channel.id);
 
   const { tracks: selectedTracks, candidatePool } = await buildTracksWithDiscoveryFallback(
+    db,
     theme,
     deps,
     recentlyUsedTrackIds,

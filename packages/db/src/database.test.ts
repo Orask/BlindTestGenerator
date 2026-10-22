@@ -53,6 +53,16 @@ describe("openDatabase", () => {
     db.close();
   });
 
+  it("creates catalog_tracks and spotify_resolution_cache on a fresh database", () => {
+    const db = openDatabase(dbPath);
+    const tableNames = (
+      db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]
+    ).map((row) => row.name);
+    expect(tableNames).toContain("catalog_tracks");
+    expect(tableNames).toContain("spotify_resolution_cache");
+    db.close();
+  });
+
   it("is idempotent — opening an already-migrated database again is a no-op", () => {
     openDatabase(dbPath).close();
     const db = openDatabase(dbPath);
