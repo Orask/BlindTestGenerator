@@ -111,6 +111,8 @@ importers:
 
   packages/integrations/itunes: {}
 
+  packages/integrations/musicbrainz: {}
+
   packages/integrations/spotify:
     devDependencies:
       '@types/node':
