@@ -15,6 +15,7 @@ import { collectCandidateTracks } from "./collect-candidates.js";
 import { collectCuratedTracks } from "./collect-curated-tracks.js";
 import { discoverNewArtists } from "./discover-artists.js";
 import { appendDiscoveredArtists } from "./persist-discovered-artists.js";
+import { proposeCuratedTracksForArtist } from "./propose-curated-tracks.js";
 
 // Mirrors pipeline.ts's own constants of the same name — kept as a
 // separate local copy rather than a shared import, matching how small
@@ -45,6 +46,8 @@ export interface PopulateCatalogResult {
   readonly promoted: number;
   /** Of those, how many were rejected (no preview found). */
   readonly ineligible: number;
+  /** Of the ineligible ones, how many got a same-artist AI-suggested replacement that itself turned out audio_ready. */
+  readonly fallbackRecovered: number;
   /** audio_ready rows for this theme once this run finished. */
   readonly audioReadyDepth: number;
   /** Whether a discovery pass ran because the depth was still short of targetDepth. */
@@ -100,6 +103,62 @@ export async function populateCatalogForTheme(
   let audioChecked = 0;
   let promoted = 0;
   let ineligible = 0;
+  let fallbackRecovered = 0;
+
+  // Only one attempt per ineligible candidate, asking for a single
+  // alternative — this is capacity recovery for an otherwise-lost
+  // candidate, not a second discovery pass, so it stays cheap. Upserts
+  // the alternative as its own catalog_tracks row (source 'discovered':
+  // it wasn't in the original seedArtists/curatedTracks collection, it
+  // was found specifically to replace a dud) rather than overwriting the
+  // ineligible row, which stays on record as a settled, known-bad outcome.
+  async function tryAiFallback(candidate: { title: string; artist: string }): Promise<void> {
+    if (!anthropic) {
+      return;
+    }
+    const alternatives = await proposeCuratedTracksForArtist(
+      anthropic,
+      spotify,
+      candidate.artist,
+      theme.label,
+      1,
+      [candidate.title],
+    );
+    for (const alt of alternatives) {
+      const now = new Date();
+      upsertCatalogTrack(db, {
+        themeId: theme.id,
+        spotifyTrackId: alt.id,
+        title: alt.title,
+        artist: alt.artist,
+        artistNames: alt.artistNames,
+        source: "discovered",
+        cacheKey: catalogCacheKey(alt.title, alt.artist),
+        discoveredAt: now,
+      });
+      discovered++;
+
+      let preview;
+      try {
+        preview = await itunes.findPreviewByTitleAndArtist(alt.title, alt.artist);
+      } catch {
+        preview = null;
+      }
+      await sleep(lookupDelayMs);
+      audioChecked++;
+      if (preview) {
+        markCatalogTrackAudioChecked(db, theme.id, alt.id, { status: "audio_ready" });
+        promoted++;
+        fallbackRecovered++;
+        return;
+      }
+      markCatalogTrackAudioChecked(db, theme.id, alt.id, {
+        status: "ineligible",
+        ineligibleReason: "no_itunes_preview",
+      });
+      ineligible++;
+    }
+  }
 
   // Bounded per run, not "until the theme is fully checked" — iTunes's
   // informal rate limit means a thin theme's backlog is worked down over
@@ -126,6 +185,7 @@ export async function populateCatalogForTheme(
           ineligibleReason: "no_itunes_preview",
         });
         ineligible++;
+        await tryAiFallback(candidate);
       }
     }
   }
@@ -178,6 +238,7 @@ export async function populateCatalogForTheme(
     audioChecked,
     promoted,
     ineligible,
+    fallbackRecovered,
     audioReadyDepth: countAudioReadyCatalogTracks(db, theme.id),
     discoveryRan,
   };

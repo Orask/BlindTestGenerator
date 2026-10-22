@@ -1,6 +1,7 @@
 import { mkdtemp, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import type { AnthropicClient } from "@blindtest/anthropic";
 import type { ChannelTheme } from "@blindtest/core";
 import { openDatabase, upsertChannel, upsertChannelTheme } from "@blindtest/db";
 import type { ItunesClient } from "@blindtest/itunes";
@@ -33,6 +34,10 @@ function fakeSpotify(overrides: Partial<SpotifyClient> = {}): SpotifyClient {
     getArtistImage: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
+}
+
+function fakeAnthropic(complete: AnthropicClient["complete"]): AnthropicClient {
+  return { complete };
 }
 
 function fakeItunes(previewFor: (title: string) => boolean): ItunesClient {
@@ -166,6 +171,60 @@ describe("populateCatalogForTheme", () => {
       .prepare("SELECT status, ineligible_reason FROM catalog_tracks WHERE spotify_track_id = 's1'")
       .get();
     expect(row).toEqual({ status: "ineligible", ineligible_reason: "no_itunes_preview" });
+  });
+
+  it("recovers capacity with an AI-suggested same-artist alternative when a candidate is ineligible", async () => {
+    const spotify = fakeSpotify({
+      searchTracksByArtist: vi.fn().mockResolvedValue([track("s1", "No Preview Song", "Booba")]),
+      searchTrackByTitleAndArtist: vi
+        .fn()
+        .mockImplementation((title: string) =>
+          Promise.resolve(title === "Alt Song" ? track("s2", "Alt Song", "Booba") : null),
+        ),
+    });
+    const anthropic = fakeAnthropic(vi.fn().mockResolvedValue('{"titles": ["Alt Song"]}'));
+    const configPath = await writeConfig(theme());
+
+    const result = await populateCatalogForTheme(
+      db,
+      spotify,
+      fakeItunes((title) => title === "Alt Song"),
+      configPath,
+      theme(),
+      10,
+      0,
+      anthropic,
+    );
+
+    expect(result.ineligible).toBe(1); // the original candidate, still recorded as a settled dud
+    expect(result.fallbackRecovered).toBe(1);
+    expect(result.promoted).toBe(1); // only the alternative
+    const altRow = db
+      .prepare("SELECT status, source FROM catalog_tracks WHERE spotify_track_id = 's2'")
+      .get();
+    expect(altRow).toEqual({ status: "audio_ready", source: "discovered" });
+  });
+
+  it("never attempts an AI fallback when no anthropic client is supplied", async () => {
+    const searchTrackByTitleAndArtist = vi.fn().mockResolvedValue(null);
+    const spotify = fakeSpotify({
+      searchTracksByArtist: vi.fn().mockResolvedValue([track("s1", "No Preview Song", "Booba")]),
+      searchTrackByTitleAndArtist,
+    });
+    const configPath = await writeConfig(theme());
+
+    const result = await populateCatalogForTheme(
+      db,
+      spotify,
+      fakeItunes(() => false),
+      configPath,
+      theme(),
+      10,
+      0,
+    );
+
+    expect(result.fallbackRecovered).toBe(0);
+    expect(searchTrackByTitleAndArtist).not.toHaveBeenCalled();
   });
 
   it("skips discovery when audio_ready depth already meets the target", async () => {

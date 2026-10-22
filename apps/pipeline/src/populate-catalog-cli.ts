@@ -57,7 +57,8 @@ for (const theme of themes) {
     );
     console.log(
       `  découverts: ${result.discovered}, vérifiés iTunes: ${result.audioChecked} ` +
-        `(prêts: ${result.promoted}, inéligibles: ${result.ineligible}), ` +
+        `(prêts: ${result.promoted}, inéligibles: ${result.ineligible}, ` +
+        `récupérés par repli IA: ${result.fallbackRecovered}), ` +
         `profondeur audio_ready: ${result.audioReadyDepth}/${targetDepth}` +
         (result.discoveryRan ? " — découverte lancée" : ""),
     );

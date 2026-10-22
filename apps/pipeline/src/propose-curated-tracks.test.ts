@@ -46,7 +46,8 @@ describe("proposeCuratedTracksForArtist", () => {
 
     const result = await proposeCuratedTracksForArtist(anthropic, spotify, "Vitaa", "Rap FR", 2);
 
-    expect(result).toEqual([{ title: "Avant toi", artist: "Vitaa" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ title: "Avant toi", artist: "Vitaa" });
   });
 
   it("returns Spotify's own title, not the AI's spelling — avoids reintroducing typo mismatches", async () => {
@@ -67,7 +68,8 @@ describe("proposeCuratedTracksForArtist", () => {
       1,
     );
 
-    expect(result).toEqual([{ title: "Pourquoi les hommes?", artist: "Vitaa" }]);
+    expect(result).toHaveLength(1);
+    expect(result[0]).toMatchObject({ title: "Pourquoi les hommes?", artist: "Vitaa" });
   });
 
   it("returns an empty list when the AI response is malformed", async () => {
