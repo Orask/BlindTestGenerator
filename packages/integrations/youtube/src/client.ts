@@ -98,11 +98,19 @@ export function createYoutubeClient(auth: OAuth2Client): YoutubeClient {
         maxResults,
       });
 
+      // Matches only a long-form episode's own title (every one starts
+      // with this exact prefix, see buildYoutubeMetadata) — a plain
+      // `title.includes(themeLabel)` also matched unrelated Shorts whose
+      // title happens to mention the theme (confirmed live: a "Tu connais
+      // ces pépites Rap FR ?" Short published the same day made this
+      // return true for the "Rap FR" long episode even though no long
+      // episode had actually gone out, skipping a legitimate catch-up run).
       const referenceDay = referenceDate.toISOString().slice(0, 10);
+      const titlePrefix = `BLIND TEST ${themeLabel}`;
       return (itemsResponse.data.items ?? []).some((item) => {
         const title = item.snippet?.title ?? "";
         const publishedAt = item.snippet?.publishedAt;
-        if (!publishedAt || !title.includes(themeLabel)) {
+        if (!publishedAt || !title.startsWith(titlePrefix)) {
           return false;
         }
         return publishedAt.slice(0, 10) === referenceDay;

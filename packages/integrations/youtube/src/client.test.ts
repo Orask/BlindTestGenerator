@@ -100,6 +100,32 @@ describe("createYoutubeClient.hasRecentUploadForTheme", () => {
     expect(result).toBe(false);
   });
 
+  it("returns false for a same-day Short whose title merely mentions the theme", async () => {
+    channelsList.mockResolvedValue({
+      data: { items: [{ contentDetails: { relatedPlaylists: { uploads: "PL123" } } }] },
+    });
+    playlistItemsList.mockResolvedValue({
+      data: {
+        items: [
+          {
+            snippet: {
+              title: "Tu connais ces pépites Rap FR ? 🎧 #Shorts",
+              publishedAt: "2026-10-22T09:50:03.000Z",
+            },
+          },
+        ],
+      },
+    });
+
+    const client = createYoutubeClient(fakeAuth());
+    const result = await client.hasRecentUploadForTheme(
+      "Rap FR",
+      new Date("2026-10-22T13:00:00.000Z"),
+    );
+
+    expect(result).toBe(false);
+  });
+
   it("returns false when the channel has no uploads playlist", async () => {
     channelsList.mockResolvedValue({ data: { items: [] } });
 
