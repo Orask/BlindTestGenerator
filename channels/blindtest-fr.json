@@ -84,7 +84,13 @@
         "Charles Trenet",
         "Sacha Distel",
         "Brigitte Bardot",
-        "Paris Combo"
+        "Paris Combo",
+        "Michel Polnareff",
+        "Dave",
+        "Diane Tell",
+        "Nicole Croisille",
+        "Catherine Lara",
+        "Nana Mouskouri"
       ],
       "curatedTracks": [
         {
@@ -316,8 +322,56 @@
           "artist": "Francis Cabrel"
         },
         {
-          "title": "Qui a le droit",
+          "title": "Casser la voix",
           "artist": "Patrick Bruel"
+        },
+        {
+          "title": "La poupée qui fait non",
+          "artist": "Michel Polnareff"
+        },
+        {
+          "title": "Goodbye Marylou",
+          "artist": "Michel Polnareff"
+        },
+        {
+          "title": "Vanina (Runaway)",
+          "artist": "Dave"
+        },
+        {
+          "title": "Du côté de chez Swann",
+          "artist": "Dave"
+        },
+        {
+          "title": "Si j'étais un homme",
+          "artist": "Diane Tell"
+        },
+        {
+          "title": "La légende de Jimmy",
+          "artist": "Diane Tell"
+        },
+        {
+          "title": "Une femme avec toi",
+          "artist": "Nicole Croisille"
+        },
+        {
+          "title": "Parlez-moi de lui",
+          "artist": "Nicole Croisille"
+        },
+        {
+          "title": "Nuit magique",
+          "artist": "Catherine Lara"
+        },
+        {
+          "title": "La rockeuse de diamants",
+          "artist": "Catherine Lara"
+        },
+        {
+          "title": "Quand tu chantes",
+          "artist": "Nana Mouskouri"
+        },
+        {
+          "title": "Pour mieux t'aimer",
+          "artist": "Nana Mouskouri"
         }
       ],
       "discoveryQuery": "chanson francaise annees 80",
