@@ -33,6 +33,28 @@ describe("matchBlockedTrackRows", () => {
     expect(result).toEqual([trackRows[1], trackRows[0]]);
   });
 
+  it("matches when the claim title drops a parenthetical the stored title has", () => {
+    const rows: TrackRow[] = [
+      {
+        spotify_track_id: "id-1",
+        title: "Comme Caroline (feat. MC Solaar)",
+        artist: "Zaho, MC Solaar",
+      },
+    ];
+    const result = matchBlockedTrackRows(rows, [{ title: "Comme Caroline", artist: "Zaho" }]);
+    expect(result).toEqual([rows[0]]);
+  });
+
+  it("matches when the claim title adds a parenthetical the stored title doesn't have", () => {
+    const rows: TrackRow[] = [
+      { spotify_track_id: "id-1", title: "Quand même", artist: "M. Pokora" },
+    ];
+    const result = matchBlockedTrackRows(rows, [
+      { title: "Quand même (Classic Version)", artist: "M. Pokora" },
+    ]);
+    expect(result).toEqual([rows[0]]);
+  });
+
   it("throws when a spec matches no track", () => {
     expect(() =>
       matchBlockedTrackRows(trackRows, [{ title: "Nonexistent", artist: "Nobody" }]),
