@@ -25,6 +25,15 @@ export async function hydrateShortTrack(
   albumCoverUrl: string,
   lookupDelayMs: number = ITUNES_LOOKUP_DELAY_MS,
 ): Promise<ShortCandidateTrack | null> {
+  // Spotify legitimately returns tracks with an empty `images` array for some
+  // albums/compilations (confirmed live, 2026-10-24, on the long-episode path
+  // — see build-episode-tracks.ts's matching guard: it crashed the whole run
+  // with an uncaught `TypeError: Failed to parse URL from ''` deep inside
+  // cover-image download). Every Short selector funnels through here, so
+  // this one guard covers them all.
+  if (!albumCoverUrl) {
+    return null;
+  }
   const preview = await itunes.findPreviewByTitleAndArtist(title, artist);
   await sleep(lookupDelayMs);
   if (!preview) {
