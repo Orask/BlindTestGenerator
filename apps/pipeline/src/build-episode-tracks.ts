@@ -141,6 +141,15 @@ export async function buildEpisodeTracks(
     if (wouldExceedCap) {
       return;
     }
+    // Spotify legitimately returns tracks with an empty `images` array for
+    // some albums/compilations (confirmed live, 2026-10-24: crashed the
+    // whole run with an uncaught `TypeError: Failed to parse URL from ''`
+    // deep inside the cover-image download step, well after this track had
+    // already been selected). Treated as disqualifying up front, the same
+    // way a missing iTunes preview already is below.
+    if (!track.albumCoverUrl) {
+      return;
+    }
     seenIds.add(track.id);
     seenTitleArtistKeys.add(titleArtistKey(track.title, track.artist));
 
@@ -210,6 +219,9 @@ export async function buildEpisodeTracks(
         allTimeUsedTrackIds.has(track.id) ||
         seenTitleArtistKeys.has(titleArtistKey(track.title, track.artist))
       ) {
+        continue;
+      }
+      if (!track.albumCoverUrl) {
         continue;
       }
 

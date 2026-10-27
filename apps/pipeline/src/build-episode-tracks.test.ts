@@ -56,6 +56,27 @@ describe("buildEpisodeTracks", () => {
     expect(result.map((t) => t.id)).toEqual(["2", "3"]);
   });
 
+  it("skips a candidate with no album cover art", async () => {
+    // Confirmed live, 2026-10-24: Spotify legitimately returns an empty
+    // `images` array for some albums/compilations, which crashed the whole
+    // run with an uncaught `TypeError: Failed to parse URL from ''` deep
+    // inside the cover-image download step, long after this track had
+    // already been selected and committed to.
+    const noCover: Track = { ...track("1"), albumCoverUrl: "" };
+    const candidates = [noCover, track("2"), track("3")];
+
+    const result = await buildEpisodeTracks(
+      candidates,
+      new Set(),
+      new Set(),
+      itunesThatFindsAllPreviews(),
+      2,
+      0,
+    );
+
+    expect(result.map((t) => t.id)).toEqual(["2", "3"]);
+  });
+
   it("never picks the same song twice under two different Spotify track ids", async () => {
     // Confirmed live: "Pour que tu m'aimes encore" (Céline Dion) had two
     // distinct Spotify catalog ids (a remaster/re-release), both picked in
